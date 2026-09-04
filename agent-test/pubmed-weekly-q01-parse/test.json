@@ -1,0 +1,24 @@
+{
+  "id": "pubmed-weekly-q01-parse",
+  "name": "PubMed weekly: parse a trimmed updatefiles sample into combined.xlsx",
+  "level": "L1",
+  "purpose": "L1 fixture case: the agent loads the bioresearcher-pubmed-weekly skill and parses {DATA_DIR}/pubmed-sample.xml.gz (6 articles + 2 deleted PMIDs) into combined.xlsx, reporting sheet names, row counts, and deleted PMIDs; output is rubric-verified against expected/summary.json.",
+  "prompt": "In {DATA_DIR}/pubmed-sample.xml.gz you have a trimmed PubMed updatefiles sample. Load the bioresearcher-pubmed-weekly skill and parse this file into combined.xlsx in the working directory, then report the sheet names, row counts, and the deleted PMIDs.",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-combined-xlsx"
+    }
+  ],
+  "expectedOutputs": [
+    "expected/summary.json"
+  ]
+}

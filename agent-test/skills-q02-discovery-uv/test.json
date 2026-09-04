@@ -1,0 +1,42 @@
+{
+  "id": "skills-q02-discovery-uv",
+  "name": "Skill discovery: bioresearcher-python-setup-uv",
+  "level": "L0",
+  "purpose": "L0 hermetic discovery: the agent loads the injected project skill bioresearcher-python-setup-uv and reports its first instruction (no MCP, no installation).",
+  "prompt": "Load the skill named bioresearcher-python-setup-uv, read it fully, then summarize in 2 sentences what it instructs you to do first. Do not create any environment or install anything.",
+  "inlineResources": [],
+  "timeoutMs": 180000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1,
+      "max": 5
+    },
+    {
+      "type": "args",
+      "tool": "skill",
+      "path": "name",
+      "op": "equals",
+      "expect": "bioresearcher-python-setup-uv"
+    },
+    {
+      "type": "status",
+      "tool": "skill",
+      "status": "completed"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "contains",
+      "expect": "Base directory for this skill:"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "not_contains",
+      "expect": ".config/opencode"
+    }
+  ],
+  "expectedOutputs": []
+}

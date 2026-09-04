@@ -1,0 +1,22 @@
+{
+  "id": "python-setup-uv-q01",
+  "name": "uv-managed .venv setup via skill",
+  "level": "L1",
+  "purpose": "L1 side-effect case: the agent creates a uv-managed Python virtual environment named .venv using the bioresearcher-python-setup-uv skill; this case mutates its disposable run dir only (never the repo).",
+  "prompt": "Set up a uv-managed Python virtual environment named .venv in the working directory using the bioresearcher-python-setup-uv skill. Do not install extra packages.",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-venv-created"
+    }
+  ],
+  "expectedOutputs": []
+}

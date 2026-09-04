@@ -1,0 +1,42 @@
+{
+  "id": "skills-q03-discovery-pubmed",
+  "name": "Skill discovery: bioresearcher-pubmed-weekly",
+  "level": "L0",
+  "purpose": "L0 hermetic discovery: the agent loads the injected project skill bioresearcher-pubmed-weekly and reports its first instruction (no MCP).",
+  "prompt": "Load the skill named bioresearcher-pubmed-weekly, read it fully, then summarize in 2 sentences what it instructs you to do first.",
+  "inlineResources": [],
+  "timeoutMs": 180000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1,
+      "max": 5
+    },
+    {
+      "type": "args",
+      "tool": "skill",
+      "path": "name",
+      "op": "equals",
+      "expect": "bioresearcher-pubmed-weekly"
+    },
+    {
+      "type": "status",
+      "tool": "skill",
+      "status": "completed"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "contains",
+      "expect": "Base directory for this skill:"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "not_contains",
+      "expect": ".config/opencode"
+    }
+  ],
+  "expectedOutputs": []
+}

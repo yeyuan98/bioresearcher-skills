@@ -1,0 +1,36 @@
+{
+  "id": "deep-research-q01-light",
+  "name": "Light research: BRCA1 DNA repair survey via biomcp article search",
+  "level": "L2",
+  "purpose": "L2 end-to-end: the deep-research skill plus the keyless biomcp MCP server; the agent runs an article_search-driven survey of BRCA1 DNA repair and cites PMIDs.",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "tool_seq",
+      "seq": [
+        ["article_search", "*"]
+      ],
+      "mode": "subsequence"
+    },
+    {
+      "type": "tool_count",
+      "tool": "biomcp_article_search",
+      "min": 1,
+      "max": 12
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "PMID"
+    }
+  ],
+  "expectedOutputs": []
+}
