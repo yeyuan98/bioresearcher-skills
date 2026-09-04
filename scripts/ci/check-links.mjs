@@ -5,6 +5,7 @@
 // one directory level deep from the skill root.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname, relative, resolve } from "node:path";
+import path from "node:path";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..", "..");
 const SKILLS_DIR = join(ROOT, "skills");
@@ -28,30 +29,47 @@ for (const file of files) {
   const text = readFileSync(file, "utf8");
   const lines = text.split("\n");
 
-  // Duplicate headings (skip fenced code blocks).
+  // Duplicate headings (skip fenced code blocks; a fence of N backticks
+  // closes only on >= N backticks).
   const seen = new Map();
-  let fence = false;
+  let fence = 0;
   for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) { fence = !fence; continue; }
+    const fm = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fm) {
+      const n = fm[1].length;
+      if (fence === 0 || n >= fence) fence = fence === 0 ? n : 0;
+      continue;
+    }
     if (fence) continue;
     const m = line.match(/^(#{1,6})\s+(.*)$/);
     if (!m) continue;
     const h = m[2].trim().toLowerCase();
-    if (seen.has(h)) fail(rel, `duplicate heading "${m[2].trim()}" (lines ${seen.get(h)} + repeat)`);
-    else seen.set(h, null); // line numbers not tracked precisely; report value
+    if (seen.has(h)) fail(rel, `duplicate heading "${m[2].trim()}"`);
+    else seen.set(h, null);
   }
 
-  // Relative links resolve. Skip fenced code.
-  fence = false;
+  // Relative links resolve and stay inside the skill root. Skip fenced code.
+  fence = 0;
   for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) { fence = !fence; continue; }
+    const fm = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fm) {
+      const n = fm[1].length;
+      if (fence === 0 || n >= fence) fence = fence === 0 ? n : 0;
+      continue;
+    }
     if (fence) continue;
     for (const m of line.matchAll(/\[[^\]]*\]\(([^)\s]+)[^)]*\)/g)) {
       const target = m[1];
       if (/^(https?:|mailto:|ftp:|#|<)/.test(target)) continue;
       const clean = target.split("#")[0];
       if (!clean) continue;
+      // Links must not escape the skills/ root (standalone installs).
       const abs = resolve(dirname(file), clean);
+      const relToSkills = relative(SKILLS_DIR, abs);
+      if (relToSkills.startsWith("..") || path.isAbsolute(relToSkills)) {
+        fail(rel, `link escapes skills/: ${target}`);
+        continue;
+      }
       let exists = false;
       try { exists = statSync(abs).isFile() || statSync(abs).isDirectory(); } catch {}
       if (!exists) fail(rel, `broken relative link: ${target}`);

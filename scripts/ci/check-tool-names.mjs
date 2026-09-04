@@ -20,15 +20,29 @@ function walk(dir, acc = []) {
   return acc;
 }
 
+// SCREAMING_SNAKE tokens with the biomcp_ prefix are env vars, not tools
+// (e.g. BIOMCP_PROJECT_CONFIG, the .biomcp.json kill switch).
+const ENV_ALLOWLIST = new Set(["biomcp_project_config"]);
+
 let failures = 0;
 let refs = 0;
 for (const file of walk(join(ROOT, "skills"))) {
+  // Case-insensitive pass catches BIOMCP_SEARCH-style drift too.
   const text = readFileSync(file, "utf8");
-  for (const m of text.matchAll(/biomcp_([a-z0-9_]+)/g)) {
+  for (const m of text.matchAll(/biomcp_([a-z0-9_]+)/gi)) {
+    const token = m[0];
+    if (token === token.toUpperCase() && token !== token.toLowerCase()) {
+      // Uppercase form: env var lane.
+      if (!ENV_ALLOWLIST.has(token.toLowerCase())) {
+        console.error(`FAIL unknown BIOMCP_* env var "${token}" in ${file}`);
+        failures++;
+      }
+      continue;
+    }
     refs++;
     // Accept both plain tool names and self-prefixed ones (biomcp_configure).
-    if (!known.has(m[1]) && !known.has(m[0])) {
-      console.error(`FAIL unknown biomcp tool reference "${m[0]}" in ${file}`);
+    if (!known.has(m[1].toLowerCase()) && !known.has(token.toLowerCase())) {
+      console.error(`FAIL unknown biomcp tool reference "${token}" in ${file}`);
       failures++;
     }
   }

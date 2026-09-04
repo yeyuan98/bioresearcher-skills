@@ -26,7 +26,7 @@ Use it to obtain the canonical `disease_id` for `disease_get`.
 
 | Parameter | Type | Notes |
 |-----------|------|-------|
-| disease_id | string (required) | Disease ID: DOID (`DOID:0060268`), MONDO, OMIM, EFO, Orphanet (`ORPHA...`/`Orphanet:...`), or UMLS CUI (`C0018794`, matches `C` + 7 digits) |
+| disease_id | string (required) | Disease ID: DOID (`DOID:0060268`), MONDO, OMIM, OMOPS, EFO, Orphanet (`ORPHA...`/`Orphanet:...`), or UMLS CUI (`C0018794`, matches `C` + 7 digits) |
 | sections | enum array, optional | `core`, `gene_associations`, `phenotypes`, `pathways`, `all` |
 | limit | int 1-100, default 20 | Caps arrays (gene association rows, phenotype rows, etc.) |
 

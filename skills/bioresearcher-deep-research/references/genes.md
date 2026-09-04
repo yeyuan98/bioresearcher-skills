@@ -43,7 +43,7 @@ Protein Atlas - see pacing note below), `druggability` (DGIdb),
 | gene_diseases | symbol, limit (1-50, default 10) | DisGeNET associations NEED `DISGENET_API_KEY`; without it the tool falls back to OpenTargets gene-disease associations |
 | gene_drugs | symbol | Drugs targeting the gene |
 | gene_trials | symbol | Clinical trials referencing the gene |
-| gene_articles | symbol | Recent articles about the gene |
+| gene_articles | symbol | Articles about the gene (relevance search, no recency sort) |
 | gene_enrich | genes (list of HGNC symbols) | Reactome pathway enrichment; returns `_error` row on failure |
 
 ## Worked examples

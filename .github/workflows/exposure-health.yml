@@ -37,7 +37,7 @@ jobs:
           status() { echo "$1: $2"; }
           notes=""
           if [ "${{ inputs.check_awesome_opencode }}" = "true" ]; then
-            if curl -fsSL "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/data/other/bioresearcher-skills.yaml" -o /dev/null; then
+            if curl -fsSL "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/data/plugins/bioresearcher-skills.yaml" -o /dev/null; then
               status awesome-opencode LISTED
             else notes="$notes awesome-opencode:MISSING"; status awesome-opencode MISSING; fi
           fi

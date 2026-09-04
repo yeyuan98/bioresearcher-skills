@@ -29,7 +29,10 @@ for (const s of registry.skills) {
   needed.add(s.version);
   if (!semver(s.version)) { fail(`skills.json ${s.name} version not semver`); continue; }
   const skillMd = readFileSync(join(ROOT, "skills", s.name, "SKILL.md"), "utf8");
-  const m = skillMd.match(/^metadata:[\s\S]*?^\s+version:\s*"?(\d+\.\d+\.\d+)"?/m);
+  // Anchor to the metadata block (indented lines only) so a `version:` in the
+  // body can never satisfy the check.
+  const metaBlock = skillMd.match(/^metadata:\n((?:[ \t]+[^\n]*\n)+)/m);
+  const m = metaBlock?.[1].match(/[ \t]+version:[ \t]*"?(\d+\.\d+\.\d+)"?/);
   if (!m) fail(`${s.name}: metadata.version missing`);
   else if (m[1] !== s.version) fail(`${s.name}: metadata.version ${m[1]} != skills.json ${s.version}`);
 }

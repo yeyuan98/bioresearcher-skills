@@ -30,6 +30,14 @@ repo), never memory.
   summary` PR, human-merged; CI cuts the GitHub release on push to main.
 - `.claude-plugin/plugin.json` version must equal repo `VERSION` (users only
   receive plugin updates when it changes).
+- Deviation from plan (documented): the Claude Code plugin is rooted at the
+  repo root (`source: "./"` + root `.claude-plugin/plugin.json`) instead of a
+  `plugins/bioresearcher/` subtree — legal per the marketplace docs and keeps
+  `skills/` at the root for skills-CLI/hub discovery. Install copies the whole
+  repo into the plugin cache; keep the repo lean.
+- Inline version pins (`skills@…` and `opencode-ai@…` in workflows, the
+  uvx commit pin, `scripts/ci/biomcp-tools.json`) are NOT covered by
+  dependabot — bump them manually when warranted.
 
 ## Branching
 

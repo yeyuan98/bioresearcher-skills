@@ -44,7 +44,7 @@ jobs:
         if: steps.ver.outputs.exists == 'false' || inputs.force_notes
         run: |
           awk -v ver="${{ steps.ver.outputs.version }}" '
-            $0 == "## [" ver "]" {grab=1; next}
+            $0 ~ "^## \\[" ver "\\]" {grab=1; next}
             grab && /^## \[/ {exit}
             grab {print}
           ' CHANGELOG.md > /tmp/opencode-release-notes.md

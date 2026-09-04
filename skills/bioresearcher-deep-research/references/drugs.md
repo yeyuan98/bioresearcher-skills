@@ -84,5 +84,5 @@ Regulatory snapshot + targets + indications in one call:
 - openFDA rate limits improve with `OPENFDA_API_KEY`
   (references/rate-limiting-auth.md).
 - MyChem and openFDA are server-limited at 100 ms - no manual throttling.
-- Cite drugs with identifiers (DrugBank/ChEMBL where present in core output)
+- Cite drugs with identifiers (ChEMBL/ChEBI/UNII where present in core output; drugBank IDs are not returned by drug_get)
   per references/citations.md.

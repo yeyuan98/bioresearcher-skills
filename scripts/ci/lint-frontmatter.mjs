@@ -24,11 +24,14 @@ const ok = (skill, msg) => console.log(`ok   [${skill}] ${msg}`);
 // Minimal YAML frontmatter parser for our constrained schema:
 // flat scalar keys + one optional nested `metadata:` map of scalar strings.
 function parseFrontmatter(text) {
-  if (!text.startsWith("---\n")) return { error: "file must start with '---' frontmatter fence" };
-  const end = text.indexOf("\n---", 4);
+  // Normalize CRLF so fence detection is newline-ending agnostic.
+  const norm = text.replace(/\r\n/g, "\n");
+  if (!norm.startsWith("---\n")) return { error: "file must start with '---' frontmatter fence" };
+  const end = norm.indexOf("\n---", 4);
   if (end === -1) return { error: "missing closing '---' fence" };
-  const lines = text.slice(4, end).split("\n");
+  const lines = norm.slice(4, end).split("\n");
   const fm = {};
+  const seen = new Set();
   let inMeta = false;
   for (const raw of lines) {
     const line = raw.replace(/\r$/, "");
@@ -37,6 +40,9 @@ function parseFrontmatter(text) {
       if (!inMeta) return { error: `indented line outside metadata: ${line.trim()}` };
       const m = line.match(/^\s+([A-Za-z0-9_-]+):\s*(.*)$/);
       if (!m) return { error: `unparseable metadata line: ${line.trim()}` };
+      const mk = `metadata.${m[1]}`;
+      if (seen.has(mk)) return { error: `duplicate key: ${mk}` };
+      seen.add(mk);
       let v = m[2].trim();
       if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
       if (fm.metadata == null || typeof fm.metadata === "string") return { error: "metadata key defined twice" };
@@ -45,6 +51,8 @@ function parseFrontmatter(text) {
     }
     const m = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (!m) return { error: `unparseable line: ${line.trim()}` };
+    if (seen.has(m[1])) return { error: `duplicate key: ${m[1]}` };
+    seen.add(m[1]);
     inMeta = m[1] === "metadata";
     let v = m[2].trim();
     if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
@@ -55,6 +63,7 @@ function parseFrontmatter(text) {
 
 function walk(dir, acc = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.name.startsWith(".") || e.name === "__pycache__") continue;
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, acc);
     else acc.push(p);

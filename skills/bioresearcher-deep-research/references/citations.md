@@ -88,13 +88,13 @@ Example:
 ### Drugs (from drug_search / drug_get)
 
 ```
-[N] Drug Name. Indication: [indication]. [DrugBank ID / ChEMBL ID when present]. URL
+[N] Drug Name. Indication: [indication]. [ChEMBL ID / ChEBI ID / UNII when present]. URL
 ```
 
 Example:
 
 ```
-[6] Vemurafenib. Indication: BRAF V600E-mutant melanoma. DrugBank: DB08881. https://go.drugbank.com/drugs/DB08881
+[6] Vemurafenib. Indication: BRAF V600E-mutant melanoma. ChEMBL: CHEMBL1229517. https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL1229517/
 ```
 
 FDA label findings cite the safety section: append "Source: FDA label

@@ -71,7 +71,7 @@ Everything else: call sequentially, no timers.
 | `NCBI_API_KEY` | NCBI E-utilities rate: 3 -> 10 req/s (eutils limiter 334 -> 100 ms). Recommended for literature-heavy research |
 | `NCBI_EMAIL` | Polite tool/email parameters on E-utilities requests |
 | `S2_API_KEY` | Semantic Scholar higher limits (2 s -> 1 s interval) |
-| `OPENFDA_API_KEY` | openFDA higher limits (drug_get regulatory/FAERS sections) |
+| `OPENFDA_API_KEY` | openFDA higher upstream limits (drug_get regulatory/FAERS sections; unlike NCBI_API_KEY this does not change the in-process limiter interval) |
 | `CROSSREF_EMAIL` | Crossref polite pool - faster citation metadata |
 | `EPO_OPS_CONSUMER_KEY` + `EPO_OPS_CONSUMER_SECRET` | EPO OPS patent backend: worldwide search + EP/WO claims (BOTH must be set together) |
 | `USPTO_API_KEY` | USPTO Open Data Portal application search backend |

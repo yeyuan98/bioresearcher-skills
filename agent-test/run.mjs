@@ -142,7 +142,7 @@ function usage() {
 }
 
 function globToRegExp(glob) {
-  const esc = glob.replace(/[.+^${}()|[\]\\]/g, "\\&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  const esc = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
   return new RegExp(`^${esc}$`);
 }
 
@@ -460,6 +460,9 @@ function runSession(test, rep, args, dataRoot, skillsDir) {
       // DELTA 4: AGENT_TEST_DATA = resolved data root, exported for
       // {env:AGENT_TEST_DATA} substitution (DELTA 2 removed AGENT_TEST_BUNDLE).
       AGENT_TEST_DATA: path.resolve(dataRoot),
+      // DELTA: never write __pycache__ into skills/ during provisioning —
+      // the strict layout lint walks the filesystem and would see it.
+      PYTHONDONTWRITEBYTECODE: "1",
     };
     const cfgSrc = path.join(test.dir, "opencode.json");
     if (fs.existsSync(cfgSrc)) {

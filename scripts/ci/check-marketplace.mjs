@@ -30,7 +30,9 @@ for (const p of market.plugins ?? []) {
   if (!KEBAB.test(p.name ?? "")) fail(`plugin name "${p.name}" not kebab-case`);
   if (typeof p.source !== "string" || !p.source.startsWith("./")) fail(`plugin ${p.name}: source must be a relative "./" path`);
   const pluginDir = resolve(ROOT, p.source);
-  if (!statSync(pluginDir).isDirectory()) fail(`plugin ${p.name}: source dir missing: ${p.source}`);
+  let isDir = false;
+  try { isDir = statSync(pluginDir).isDirectory(); } catch {}
+  if (!isDir) fail(`plugin ${p.name}: source dir missing: ${p.source}`);
   const pluginJson = join(pluginDir, ".claude-plugin", "plugin.json");
   if (!existsSync(pluginJson)) { fail(`plugin ${p.name}: missing .claude-plugin/plugin.json under ${p.source}`); continue; }
   const plugin = JSON.parse(readFileSync(pluginJson, "utf8"));

@@ -23,9 +23,13 @@ jobs:
 
       - name: Discover skills
         env:
-          # Isolate from the runner's global config; project skills suffice.
-          OPENCODE_CONFIG_DIR: /tmp/opencode-config
+          # Isolate from any global config: a fresh HOME + XDG config dir means
+          # only project-level .opencode/skills are discovered.
+          HOME: /tmp/opencode-home
+          XDG_CONFIG_HOME: /tmp/opencode-home/.config
+          OPENCODE_CONFIG_DIR: /tmp/opencode-home/.config/opencode
         run: |
+          mkdir -p "$HOME/.config/opencode"
           mkdir -p .opencode
           cp -r skills .opencode/skills
           opencode debug skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err || { cat /tmp/opencode-skills.err >&2; exit 1; }

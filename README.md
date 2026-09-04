@@ -45,7 +45,7 @@ or `.gemini/skills/`:
 git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bioresearcher-skills
 ```
 
-Gemini CLI: `gemini skills install https://github.com/yeyuan98/bioresearcher-skills`.
+Gemini CLI: `gemini skills install https://github.com/yeyuan98/bioresearcher-skills` (skills install is currently a preview-channel command).
 
 ## Development
 
