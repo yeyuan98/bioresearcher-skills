@@ -82,3 +82,7 @@ jobs:
           node --check agent-test/run.mjs
           node agent-test/run.mjs --list
           node agent-test/run.mjs --dry-run
+          # --dry-run parses test.json only; validate every case opencode.json too
+          for f in agent-test/*/opencode.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8')); console.log('json ok $f')"
+          done
