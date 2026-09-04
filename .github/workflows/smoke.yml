@@ -1,0 +1,36 @@
+name: smoke
+
+# Manual opencode discovery smoke. Requires the opencode CLI; listing skills
+# does not need model auth. Enable the weekly cron once verified green once.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  opencode-skill-discovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install opencode
+        run: npm install -g opencode-ai@1.18.27
+
+      - name: Discover skills
+        env:
+          # Isolate from the runner's global config; project skills suffice.
+          OPENCODE_CONFIG_DIR: /tmp/opencode-config
+        run: |
+          mkdir -p .opencode
+          cp -r skills .opencode/skills
+          opencode debug skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err || { cat /tmp/opencode-skills.err >&2; exit 1; }
+          cat /tmp/opencode-skills.json
+          for s in bioresearcher-deep-research bioresearcher-python-setup-uv bioresearcher-pubmed-weekly; do
+            grep -q "\"$s\"" /tmp/opencode-skills.json || { echo "skill not discovered: $s" >&2; exit 1; }
+          done
+          echo "All repo skills discovered."

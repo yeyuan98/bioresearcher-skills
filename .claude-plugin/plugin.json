@@ -1,0 +1,18 @@
+{
+  "name": "bioresearcher",
+  "description": "Deep biomedical research, PubMed weekly updates, and uv Python setup skills for the biomcp-ts MCP server",
+  "version": "1.0.0",
+  "author": {
+    "name": "Ye Yuan",
+    "url": "https://github.com/yeyuan98"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/yeyuan98/bioresearcher-skills",
+  "repository": "https://github.com/yeyuan98/bioresearcher-skills",
+  "keywords": ["biomedical", "biomcp", "research", "deep-research", "pubmed"],
+  "skills": [
+    "./skills/bioresearcher-deep-research",
+    "./skills/bioresearcher-python-setup-uv",
+    "./skills/bioresearcher-pubmed-weekly"
+  ]
+}

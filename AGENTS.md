@@ -1,0 +1,47 @@
+You are working in bioresearcher-skills: an Agent Skills package (open
+standard, strict-6 frontmatter) for biomedical research with the biomcp-ts
+MCP server.
+
+Principles: DRY, separation of concerns, no premature optimization. Base all
+biomcp-ts tool guidance on TRUE source (the pinned checkout or upstream
+repo), never memory.
+
+## Skill standards (CI-enforced, binding)
+
+- Frontmatter keys exactly: name, description, license (Apache-2.0),
+  compatibility, metadata, allowed-tools. No other keys.
+- name == directory name, ^[a-z0-9]+(-[a-z0-9]+)*$, <=64 chars.
+- description 1-500 chars (repo policy), front-loaded with triggers.
+- metadata: string values only (quote versions).
+- SKILL.md <= 500 lines; references/scripts one directory level deep.
+- UTF-8 without BOM; no duplicate headings; <=1000 files / <=10 MiB per skill.
+- Never use retired biomcp-python tool names (the 16 listed in
+  scripts/ci/check-legacy-names.sh). Use canonical biomcp-ts names
+  (scripts/ci/biomcp-tools.json is the pinned registry).
+- Fan-out workflows must include a sequential fallback for harnesses without
+  subagent tools.
+
+## Versioning & release
+
+- Per-skill independent semver: bump `skills/<name>/SKILL.md`
+  `metadata.version` AND `skills.json` AND add a CHANGELOG `## [x.y.z]`
+  heading in the same PR.
+- Repo `VERSION` (drives tags/releases) bumps in a `chore(release): vX.Y.Z —
+  summary` PR, human-merged; CI cuts the GitHub release on push to main.
+- `.claude-plugin/plugin.json` version must equal repo `VERSION` (users only
+  receive plugin updates when it changes).
+
+## Branching
+
+- After bootstrap: all work on `agent/coder/<issue-description>` branches,
+  PR into main, `ci` check required, conventional commits
+  (`feat(skill):`, `fix(skill):`, `docs:`, `chore(release):`, `chore(deps):`).
+
+## Testing
+
+- Fast static checks: `node scripts/ci/*.mjs` + shell scripts (see README).
+- Empirical agent tests in `agent-test/` are MANUAL-ONLY (real opencode CLI +
+  LLM tokens + network). CI only validates them with `--list` / `--dry-run`.
+- When editing biomcp guidance, re-verify tool names against the pinned
+  registry and update `scripts/ci/biomcp-tools.json` when bumping the
+  biomcp-ts pin.

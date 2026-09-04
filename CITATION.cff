@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: >-
+  If you use these Agent Skills in your research, please cite this repository.
+title: bioresearcher-skills
+authors:
+  - family-names: Yuan
+    given-names: Ye
+type: software
+version: 1.0.0
+date-released: "2026-09-04"
+license: Apache-2.0
+repository-code: "https://github.com/yeyuan98/bioresearcher-skills"
+abstract: >-
+  Agent Skills (SKILL.md) for biomedical research with the biomcp-ts MCP
+  server: deep multi-aspect research orchestration, PubMed weekly update
+  processing, and uv Python environment bootstrap.
+keywords:
+  - agent-skills
+  - biomedical-research
+  - biomcp
+  - mcp
+  - literature-review

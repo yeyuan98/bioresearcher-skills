@@ -1,0 +1,60 @@
+name: exposure-health
+
+# Advisory exposure checks. Non-failing by design: absence from a directory
+# may mean "PR never merged", not "silently removed". Enable a channel's
+# input only after that channel's listing PR is confirmed merged.
+on:
+  workflow_dispatch:
+    inputs:
+      check_awesome_opencode:
+        description: "Assert listed in awesome-opencode data/"
+        type: boolean
+        default: false
+      check_composio:
+        description: "Assert listed in ComposioHQ/awesome-claude-skills README"
+        type: boolean
+        default: false
+      check_ecosystem:
+        description: "Assert listed in opencode ecosystem docs"
+        type: boolean
+        default: false
+      check_skills_badge:
+        description: "Assert skills.sh badge URL resolves"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  exposure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check channels
+        run: |
+          status() { echo "$1: $2"; }
+          notes=""
+          if [ "${{ inputs.check_awesome_opencode }}" = "true" ]; then
+            if curl -fsSL "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/data/other/bioresearcher-skills.yaml" -o /dev/null; then
+              status awesome-opencode LISTED
+            else notes="$notes awesome-opencode:MISSING"; status awesome-opencode MISSING; fi
+          fi
+          if [ "${{ inputs.check_composio }}" = "true" ]; then
+            if curl -fsSL "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/master/README.md" | grep -q "yeyuan98/bioresearcher-skills"; then
+              status composio LISTED
+            else notes="$notes composio:MISSING"; status composio MISSING; fi
+          fi
+          if [ "${{ inputs.check_ecosystem }}" = "true" ]; then
+            if curl -fsSL "https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/web/src/content/docs/ecosystem.mdx" | grep -q "bioresearcher-skills"; then
+              status ecosystem LISTED
+            else notes="$notes ecosystem:MISSING"; status ecosystem MISSING; fi
+          fi
+          if [ "${{ inputs.check_skills_badge }}" = "true" ]; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://skills.sh/b/yeyuan98/bioresearcher-skills")
+            status skills-badge "HTTP $code"
+          fi
+          echo "summary:$notes" >> "$GITHUB_STEP_SUMMARY"
+          # Advisory: always exit 0.
+          exit 0

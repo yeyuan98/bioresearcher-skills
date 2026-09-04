@@ -1,0 +1,27 @@
+{
+  "biomcp_ts_version": "1.1.1",
+  "pinned_at": "2026-09-04",
+  "source": "https://github.com/yeyuan98/biomcp-ts src/server/tools (local verification)",
+  "core": [
+    "gene_search", "gene_get", "gene_diseases", "gene_drugs", "gene_trials", "gene_articles", "gene_enrich",
+    "variant_search", "variant_get", "variant_oncokb", "variant_trials",
+    "drug_search", "drug_get", "drug_trials",
+    "disease_search", "disease_get", "disease_drugs", "disease_trials",
+    "article_search", "article_get",
+    "trial_search", "trial_get",
+    "discover", "batch_get",
+    "pdb",
+    "patent_search", "patent_get",
+    "geo_search", "geo_get", "sra_search", "sra_get",
+    "genbank_search", "genbank_get", "genbank_genes",
+    "gtex_expression", "gtex_eqtl",
+    "ensembl_lookup", "ensembl_homology", "ensembl_consequence", "ensembl_region",
+    "biomcp_configure"
+  ],
+  "optional": [
+    "db_query", "db_list_tables", "db_describe_table",
+    "analysis_r_deseq2", "analysis_r_edger", "analysis_r_limma", "analysis_r_session_info",
+    "analysis_bam_summary", "analysis_bam_view_region", "analysis_bcf_summary", "analysis_bcf_view_region",
+    "analysis_bed_op", "analysis_biowasm_convert", "analysis_biowasm_session_info", "analysis_biowasm_cli"
+  ]
+}

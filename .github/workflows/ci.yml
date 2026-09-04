@@ -1,0 +1,79 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Frontmatter strict-6 lint
+        run: node scripts/ci/lint-frontmatter.mjs
+
+      - name: Version drift check
+        run: node scripts/ci/check-drift.mjs
+
+      - name: Link + heading lint
+        run: node scripts/ci/check-links.mjs
+
+      - name: Bundle caps
+        run: bash scripts/ci/check-bundle.sh
+
+      - name: Legacy tool-name gate
+        run: bash scripts/ci/check-legacy-names.sh
+
+      - name: biomcp-ts tool-name drift gate
+        run: node scripts/ci/check-tool-names.mjs
+
+      - name: Marketplace validation
+        run: node scripts/ci/check-marketplace.mjs
+
+      # Supplementary: official spec reference validator, pinned by commit.
+      # Non-blocking (upstream marks it "not for production").
+      - name: skills-ref validate (supplementary)
+        continue-on-error: true
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          for d in skills/*/; do
+            ~/.local/bin/uvx --from git+https://github.com/agentskills/agentskills@69ef37e9424c0a7ea9dd2293b559e43ec8176379#subdirectory=skills-ref \
+              skills-ref validate "$d"
+          done
+
+      # End-to-end discovery smoke via the skills CLI, against the LOCAL tree.
+      # DISABLE_TELEMETRY keeps CI runs out of skills.sh rankings.
+      - name: skills CLI discovery smoke
+        env:
+          DISABLE_TELEMETRY: "1"
+        run: npx -y skills@1.5.23 add ./ --list
+
+      - name: Python script checks
+        run: |
+          python3 -m py_compile skills/bioresearcher-deep-research/scripts/markdown-to-html.py \
+            skills/bioresearcher-pubmed-weekly/scripts/parse_updatefiles.py \
+            skills/bioresearcher-pubmed-weekly/scripts/pubmed_weekly.py
+          uv run --with openpyxl python -c "import openpyxl; print('openpyxl', openpyxl.__version__)"
+
+      - name: agent-test suite validation (no LLM spawn)
+        run: |
+          node --check agent-test/run.mjs
+          node agent-test/run.mjs --list
+          node agent-test/run.mjs --dry-run

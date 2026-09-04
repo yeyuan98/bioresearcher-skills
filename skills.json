@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "notes": "Internal registry. Each skill carries an independent semver; the repository VERSION drives release tags only. CI drift-checks this file against skills/<name>/SKILL.md metadata.version and CHANGELOG headings.",
+  "skills": [
+    { "name": "bioresearcher-deep-research", "version": "1.0.0" },
+    { "name": "bioresearcher-python-setup-uv", "version": "1.0.0" },
+    { "name": "bioresearcher-pubmed-weekly", "version": "1.0.0" }
+  ]
+}

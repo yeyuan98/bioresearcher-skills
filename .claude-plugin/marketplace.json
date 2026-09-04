@@ -1,0 +1,20 @@
+{
+  "$schema": "https://claude.ai/docs/en/plugin-marketplaces",
+  "name": "bioresearcher-skills",
+  "owner": {
+    "name": "Ye Yuan",
+    "url": "https://github.com/yeyuan98"
+  },
+  "description": "Agent Skills for biomedical research with the biomcp-ts MCP server",
+  "plugins": [
+    {
+      "name": "bioresearcher",
+      "source": "./",
+      "description": "Deep biomedical research, PubMed weekly updates, and uv Python setup skills for the biomcp-ts MCP server",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/yeyuan98/bioresearcher-skills",
+      "keywords": ["biomedical", "biomcp", "research", "deep-research", "pubmed"]
+    }
+  ]
+}

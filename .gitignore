@@ -1,0 +1,19 @@
+# Junk / editor
+*.swp
+*~
+.DS_Store
+
+# Test runs (see agent-test/.gitignore as well)
+agent-test/.runs/
+agent-test/data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# Local scratch
+tmp/

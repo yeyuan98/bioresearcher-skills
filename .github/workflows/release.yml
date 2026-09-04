@@ -1,0 +1,69 @@
+name: release
+
+# biomcp-ts release pattern: version bumped in a human-merged PR
+# (chore(release): vX.Y.Z); on push to main, cut the tag/release if missing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_notes:
+        description: "Re-create release notes even if tag exists"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version + tag
+        id: ver
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract release notes from CHANGELOG
+        if: steps.ver.outputs.exists == 'false' || inputs.force_notes
+        run: |
+          awk -v ver="${{ steps.ver.outputs.version }}" '
+            $0 == "## [" ver "]" {grab=1; next}
+            grab && /^## \[/ {exit}
+            grab {print}
+          ' CHANGELOG.md > /tmp/opencode-release-notes.md
+          test -s /tmp/opencode-release-notes.md || { echo "no CHANGELOG section for ${{ steps.ver.outputs.version }}" >&2; exit 1; }
+
+      - name: Create release
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" \
+            --latest \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.ver.outputs.tag }}" \
+            --notes-file /tmp/opencode-release-notes.md
+
+      - name: Update release notes (force)
+        if: steps.ver.outputs.exists == 'true' && inputs.force_notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ steps.ver.outputs.tag }}" --notes-file /tmp/opencode-release-notes.md
