@@ -5,6 +5,19 @@ MCP server (npm package `biomcp`, tested against **1.1.1**). This page gives
 the minimal wiring for common agents. See the server's
 `docs/AGENT-INSTALL.md` for the full matrix.
 
+## Quick start: Automated onboarding
+
+If you are using the skills package, the easiest way to bootstrap and configure
+BioMCP is with the `bioresearcher-onboard` skill:
+
+```bash
+npx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard
+```
+
+This automatically downloads a portable Node.js 22 runtime into
+`.bioresearcher-runtime/` (if missing from your host), vendors `biomcp`, and
+registers the server in your harness config.
+
 ## Requirements
 
 - Node.js **>= 22.13**
@@ -13,9 +26,9 @@ the minimal wiring for common agents. See the server's
 
   | Variant | Command array |
   |---|---|
-  | All features (db + R analysis) | `["npx","-y","-p","biomcp@1.1","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-  | Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.1","-p","webr@0.6","biomcp"]` |
-  | Core only | `["npx","-y","-p","biomcp@1.1","biomcp"]` |
+  | All features (db + R analysis) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+  | Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","biomcp"]` |
+  | Core only | `["npx","-y","-p","biomcp@1.1.1","biomcp"]` |
 
 - Diagnostics (never starts the server):
   `npx -y biomcp doctor --client opencode` (also `claude-code`, `codex`, ...).
@@ -30,7 +43,7 @@ the minimal wiring for common agents. See the server's
   "mcp": {
     "biomcp": {
       "type": "local",
-      "command": ["npx", "-y", "-p", "biomcp@1.1", "biomcp"],
+      "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"],
       "environment": { "NCBI_API_KEY": "..." }
     }
   }

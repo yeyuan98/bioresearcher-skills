@@ -1,10 +1,10 @@
 ---
 name: bioresearcher-python-setup-uv
-description: "Sets up a project-local Python environment with the uv package manager: downloads the uv binary (official astral.sh installer or China mainland gitee uv-custom mirror), symlinks or copies it into the working directory, creates a .venv with pandas, verifies the install, and appends uv usage rules to AGENTS.md. Use when uv or Python is missing, when biomedical analysis scripts need pandas/openpyxl, or on requests like install uv, set up Python, use a China mirror, or prepare .scripts/py/."
+description: "Sets up a project-local Python environment with the uv package manager: downloads the uv binary from official astral.sh, symlinks or copies it into working directory, creates a .venv with pandas, verifies install, and appends uv usage rules to AGENTS.md. Supports regional PyPI mirrors (Aliyun/Tsinghua). Use when uv or Python is missing, when analysis scripts need pandas/openpyxl, or on requests like install uv, set up Python, use a China mirror, or prepare .scripts/py/."
 license: Apache-2.0
 compatibility: "Unix-like shells (Linux, macOS, Git Bash) and Windows cmd.exe; requires curl or PowerShell for download"
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Bash Read
 ---
@@ -19,14 +19,14 @@ This skill sets up a Python environment using the uv package manager.
 
 ## Steps
 
-**ABSOLUTE RULE:** Follow steps below EXACTLY AS IS. Do NOT skip/modify steps (nor detailed subtasks in each step) nor assume anything based on user platform information. Use URLs below EXACTLY AS IS. Follow steps below INCLUDING ALL DETAILS AND SUBSTEPS EXACTLY AS IS.
+Follow the sequence below in order. Perform environment verification before proceeding.
 
 ### Step 1: Ask user which installer to use
 
-Ask the user which installer should be used:
+Ask the user which installation source and mirror configuration should be used:
 
-- Official astral-uv installer (https://astral.sh)
-- China mainland uv-custom installer (https://gitee.com/wangnov/uv-custom)
+- Official Astral uv installer (https://astral.sh)
+- Regional PyPI mirror acceleration (Aliyun / Tsinghua mirror via `UV_INDEX_URL`)
 
 ### Step 2: Detect Shell and Download uv Binary
 
@@ -44,22 +44,19 @@ else
 fi
 ```
 
-Then download uv based on your shell (see below).
+Download the official standalone installer script to disk, verify, and run locally into `.uv`:
 
-Choose the correct `UV_INSTALLER_URL` depending on the answer you received from the user in Step 1:
-
-- If opted "Official astral-uv", UV_INSTALLER_URL should be `https://astral.sh/uv/install.sh` (Unix-like) or `https://astral.sh/uv/install.ps1` (Windows)
-- If opted "China mainland uv-custom", UV_INSTALLER_URL should be `https://gitee.com/wangnov/uv-custom/releases/download/latest/uv-installer-custom.sh` (Unix-like) or `https://gitee.com/wangnov/uv-custom/releases/download/latest/uv-installer-custom.ps1` (Windows)
-
-**For Unix-like shells (Git Bash / macOS / Linux; use correct UV_INSTALLER_URL):**
+**For Unix-like shells (Git Bash / macOS / Linux):**
 ```bash
 mkdir -p .uv
-curl -LsSf UV_INSTALLER_URL | UV_INSTALL_DIR="$(pwd)/.uv" sh
+curl -LsSf https://astral.sh/uv/install.sh -o .uv/install-uv.sh
+UV_INSTALL_DIR="$(pwd)/.uv" sh .uv/install-uv.sh
+rm -f .uv/install-uv.sh
 ```
 
-**For Windows cmd.exe (if Git Bash unavailable; use correct UV_INSTALLER_URL):**
+**For Windows cmd.exe (if Git Bash unavailable):**
 ```bash
-powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path .uv | Out-Null; $env:UV_INSTALL_DIR = (Get-Location).Path + '\.uv'; Invoke-RestMethod UV_INSTALLER_URL | Invoke-Expression"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "New-Item -ItemType Directory -Force -Path .uv | Out-Null; $env:UV_INSTALL_DIR = (Get-Location).Path + '\.uv'; Invoke-WebRequest -Uri 'https://astral.sh/uv/install.ps1' -OutFile '.uv\install-uv.ps1'; & '.uv\install-uv.ps1'; Remove-Item -Force '.uv\install-uv.ps1'"
 ```
 
 ### Step 3: Create Symlink or Copy uv to Working Directory
@@ -117,11 +114,13 @@ Ask the user whether they want to update AGENTS.md (or CLAUDE.md / other agent i
 Content block:
 
 ```md
+<!-- BEGIN BIORESEARCHER UV ENVIRONMENT GUIDELINES -->
 ## Important note about Python
 
 ALWAYS use the uv package manager available in WORKING DIRECTORY, including `uv add ...` or `uv pip ...` for package management and `uv run ...` to run python package executables.
 
 ALWAYS save python scripts under path `./.scripts/py/` and run the script with `uv run python ...` whenever your work involves executing python scripts. Your script MUST contain concise docstrings and comments and use good engineering practices including separation of concerns.
+<!-- END BIORESEARCHER UV ENVIRONMENT GUIDELINES -->
 ```
 
 ### Step 7: Return summary to user (Usage After Setup)
