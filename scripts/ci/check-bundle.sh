@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 fail=0
 for d in skills/*/; do
-  name="${d%/skills/}"; name="${name#skills/}"; name="${d%/}"; name="${name##*/}"
+  name="${d%/}"; name="${name##*/}"
   files=$(find "$d" -type f | wc -l)
   bytes=$(du -sb "$d" | cut -f1)
   if (( files > 1000 )); then echo "FAIL [$name] $files files > 1000"; fail=1; fi
