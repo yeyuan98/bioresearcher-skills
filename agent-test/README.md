@@ -26,7 +26,13 @@ node agent-test/run.mjs --dry-run  # discovery + schema validation + provisionin
   --format json` per rep.
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
 - Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.1
-  biomcp`, keyless — no credentials anywhere).
+  biomcp`, keyless — no credentials anywhere). **Unrestricted egress
+  required**: the biomcp-ts server's own outbound fetches (mygene.info,
+  eutils.ncbi.nlm.nih.gov, and other registry endpoints) must be reachable
+  from the spawned server process — restricted/proxied sandboxes where host
+  `curl` works but server-side `fetch` fails will (correctly) fail this case
+  (observed: agent exhausts the retry ladder, falls back to official NCBI
+  sources per the skill, and the case times out).
 - `uv` + `python3` for `groundtruth/generate.py`; the host probe also records
   `pandoc`.
 - Skills to test: `../skills/` relative to this directory (override with

@@ -3,7 +3,7 @@
   "name": "uv-managed .venv setup via skill",
   "level": "L1",
   "purpose": "L1 side-effect case: the agent creates a uv-managed Python virtual environment named .venv using the bioresearcher-python-setup-uv skill; this case mutates its disposable run dir only (never the repo).",
-  "prompt": "Set up a uv-managed Python virtual environment named .venv in the working directory using the bioresearcher-python-setup-uv skill. Do not install extra packages.",
+  "prompt": "Set up a uv-managed Python virtual environment named .venv in the working directory using the bioresearcher-python-setup-uv skill. Use the official astral.sh installer (no mirror); if a uv binary is already available on PATH you may use it directly. Do not install extra packages; skip the pandas install/verification step. Do not ask any clarifying questions.",
   "inlineResources": [],
   "timeoutMs": 600000,
   "checks": [
