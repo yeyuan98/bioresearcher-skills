@@ -12,8 +12,9 @@ __pycache__/
 *.pyc
 .venv/
 
-# Node
+# Node & local runtime
 node_modules/
+.bioresearcher-runtime/
 
 # Local scratch
 tmp/

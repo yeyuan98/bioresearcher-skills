@@ -1,0 +1,44 @@
+{
+  "id": "onboard-q01-bootstrap",
+  "name": "BioMCP runtime bootstrap via skill",
+  "level": "L1",
+  "purpose": "L1 side-effect case: the agent bootstraps the project-local BioMCP runtime in the disposable run directory in non-interactive mode; mutates run dir only.",
+  "prompt": "Run the bioresearcher-onboard skill to bootstrap the project-local BioMCP runtime in the current working directory in non-interactive mode. Locate the bootstrap script in the skill's base directory (under .opencode/skills/bioresearcher-onboard/scripts/bootstrap.sh) and execute it. Skip optional features (do not enable R analysis, Biowasm, or MySQL). Do not ask any clarifying questions.",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "tool_count",
+      "tool": "bash",
+      "min": 1
+    },
+    {
+      "type": "group",
+      "anyOf": [
+        {
+          "type": "text",
+          "source": "tool:*",
+          "op": "contains",
+          "expect": "BioMCP runtime bootstrapped successfully"
+        },
+        {
+          "type": "text",
+          "source": "tool:*",
+          "op": "contains",
+          "expect": "Pre-flight check PASSED"
+        }
+      ]
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-runtime-and-config-created"
+    }
+  ],
+  "expectedOutputs": []
+}

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
 
+## [1.1.0] - 2026-09-04
+
+### bioresearcher-onboard 1.0.0
+- Initial release. Automated project-local onboarding skill for BioMCP:
+  - Two-stage zero-dependency bootstrap (POSIX shell / PowerShell) for hosts without Node.js >= 22.13.
+  - Portable Node.js v22.14.0 vendoring into `.bioresearcher-runtime/node/` with SHA256 verification and automatic pruning (-49 MB).
+  - Adaptive 1.2s mirror probe (official distribution vs. npmmirror in mainland China).
+  - Hermetic local npm installation of `biomcp@1.1.1` into `.bioresearcher-runtime/node_modules/` (sub-100ms startup, 100% offline resilient).
+  - Non-destructive deep-merging of harness configs (OpenCode, Claude Code, Cursor, Codex).
+  - Pre-flight diagnostic verification via `biomcp doctor --json`.
+
+### Infrastructure & Docs
+- Bump repository VERSION to 1.1.0.
+- Update `README.md` skills catalog and installation guide.
+- Update `docs/biomcp-ts-setup.md` with the automated onboarding pathway.
+
+## [1.0.1] - 2026-09-04
+
+### bioresearcher-deep-research 1.0.1
+- Security hardening: clarify npm package `biomcp` canonical repository provenance (`yeyuan98/biomcp-ts`) pinned to `1.1.1`.
+- Add data boundary and literature prompt injection defense guidelines.
+
+### bioresearcher-python-setup-uv 1.0.1
+- Security hardening: eliminate piped shell execution (`curl | sh` / `Invoke-Expression`) in favor of verified disk download and local execution.
+- Remove unverified third-party mirror; add standard regional PyPI mirror acceleration configuration (`UV_INDEX_URL`).
+- Add machine-readable boundary comments and explicit user consent for `AGENTS.md` environment rules.
+
 ## [1.0.0] - 2026-09-04
 
 ### bioresearcher-deep-research 1.0.0

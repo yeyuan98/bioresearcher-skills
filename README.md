@@ -1,33 +1,40 @@
 # bioresearcher-skills
 
-[![skills.sh](https://skills.sh/b/yeyuan98/bioresearcher-skills)](https://skills.sh/yeyuan98/bioresearcher-skills)
+[![skills.sh](https://www.skills.sh/b/yeyuan98/bioresearcher-skills)](https://www.skills.sh/yeyuan98/bioresearcher-skills)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
 
 Agent Skills ([agentskills.io](https://agentskills.io) open standard) for
 **biomedical research with the [biomcp-ts](https://github.com/yeyuan98/biomcp-ts)
 MCP server** — deep multi-aspect research with citations, PubMed weekly
-update processing, and uv Python environment bootstrap. Works in opencode,
-Claude Code, Codex, Cursor, Gemini CLI, and every harness that reads
-`SKILL.md`.
+update processing, uv Python environment bootstrap, and automated local
+runtime onboarding. Works in opencode, Claude Code, Codex, Cursor, Gemini CLI,
+and every harness that reads `SKILL.md`.
 
 ## Skills
 
 | Skill | What it does |
 |---|---|
+| [`bioresearcher-onboard`](./skills/bioresearcher-onboard/SKILL.md) | Bootstraps a project-local biomcp MCP server runtime in `.bioresearcher-runtime/`: downloads portable Node.js 22 (if missing), vendors biomcp with fast mirror support (official or npmmirror), configures optional features (R, Biowasm, SQLite), and registers the server in OpenCode, Claude Code, Cursor, or Codex. |
 | [`bioresearcher-deep-research`](./skills/bioresearcher-deep-research/SKILL.md) | Orchestrates multi-aspect biomedical research (literature, trials, genes, variants, drugs, diseases, patents, omics) through biomcp-ts: interview → decompose → parallel-or-sequential research → cited report. 18 domain reference guides included. |
 | [`bioresearcher-pubmed-weekly`](./skills/bioresearcher-pubmed-weekly/SKILL.md) | Downloads the past week's PubMed updatefiles from NCBI and parses them (pure-Python streaming parser, handles `<PubmedArticle>` **and** `<DeleteCitation>`) into one Excel workbook. |
 | [`bioresearcher-python-setup-uv`](./skills/bioresearcher-python-setup-uv/SKILL.md) | Bootstraps a project-local uv-managed Python environment (official or China mirror). |
 
 ## Install
 
-Requires the biomcp-ts MCP server — see
-[docs/biomcp-ts-setup.md](./docs/biomcp-ts-setup.md) (pinned `npx` command,
-env vars, timeouts).
+Requires the biomcp-ts MCP server — either bootstrap it automatically with
+the [`bioresearcher-onboard`](./skills/bioresearcher-onboard/SKILL.md) skill, or
+see [docs/biomcp-ts-setup.md](./docs/biomcp-ts-setup.md) for manual wiring.
 
 **Any harness (skills CLI):**
 
 ```bash
 npx skills add yeyuan98/bioresearcher-skills
+```
+
+To run onboarding immediately:
+
+```bash
+npx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard
 ```
 
 **Claude Code (plugin marketplace):**
