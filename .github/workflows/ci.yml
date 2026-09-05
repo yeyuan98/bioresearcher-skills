@@ -74,7 +74,11 @@ jobs:
         run: |
           python3 -m py_compile skills/bioresearcher-deep-research/scripts/markdown-to-html.py \
             skills/bioresearcher-pubmed-weekly/scripts/parse_updatefiles.py \
-            skills/bioresearcher-pubmed-weekly/scripts/pubmed_weekly.py
+            skills/bioresearcher-pubmed-weekly/scripts/pubmed_weekly.py \
+            skills/bioresearcher-plot-making/scripts/plot_helpers.py \
+            skills/bioresearcher-plot-making/scripts/audit_panel_alignment.py \
+            skills/bioresearcher-plot-making/scripts/audit_figure_collisions.py \
+            skills/bioresearcher-plot-making/scripts/audit_pdf_text.py
           uv run --with openpyxl python -c "import openpyxl; print('openpyxl', openpyxl.__version__)"
 
       - name: agent-test suite validation (no LLM spawn)

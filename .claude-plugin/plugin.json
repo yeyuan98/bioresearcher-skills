@@ -13,6 +13,7 @@
   "skills": [
     "./skills/bioresearcher-deep-research",
     "./skills/bioresearcher-onboard",
+    "./skills/bioresearcher-plot-making",
     "./skills/bioresearcher-python-setup-uv",
     "./skills/bioresearcher-pubmed-weekly"
   ]

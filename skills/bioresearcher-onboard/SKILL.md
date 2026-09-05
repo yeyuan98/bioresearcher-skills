@@ -1,10 +1,10 @@
 ---
 name: bioresearcher-onboard
-description: "Bootstraps a project-local biomcp MCP server runtime in .bioresearcher-runtime/: downloads portable Node.js 22 (if missing), vendors biomcp with fast mirror support (official or npmmirror), configures optional features (R, Biowasm, SQLite), and registers the server in OpenCode, Claude Code, Cursor, or Codex. Use when biomcp is not installed, when biomedical tools are missing, or on requests like setup bioresearcher, install biomcp, or onboard."
+description: "Bootstraps a project-local biomcp MCP server runtime in .bioresearcher-runtime/: downloads portable Node.js 22 (if missing), vendors biomcp with fast mirror support (official or npmmirror), configures optional features (R, Biowasm, SQLite), and registers the server in OpenCode, Claude Code, Cursor, ZCode, Pi, CodeBuddy, or WorkBuddy. Use when biomcp is not installed, when biomedical tools are missing, or on requests like setup bioresearcher, install biomcp, or onboard."
 license: Apache-2.0
-compatibility: "Unix-like shells (Linux, macOS) and Windows (PowerShell, cmd.exe); OpenCode, Claude Code, Cursor, Codex"
+compatibility: "Unix-like shells (Linux, macOS) and Windows (PowerShell, cmd.exe); OpenCode, Claude Code, Cursor, ZCode, Pi Coding Agent, CodeBuddy, WorkBuddy"
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   source: "bioresearcher-skills"
 allowed-tools: Bash Read Write Edit
 ---
@@ -73,8 +73,9 @@ bootstrap script or set environment variables before running:
 - **Local SQLite Database**:
   Pass `--sqlite-path=<path_to_db>` (e.g. `--sqlite-path=data/research.db`).
 - **Client Override**:
-  Pass `--client=opencode` or `--client=claude-code` or `--client=cursor` if
-  auto-detection should be overridden.
+  Pass `--client=opencode`, `--client=claude-code`, `--client=cursor`,
+  `--client=zcode`, `--client=pi`, `--client=codebuddy`, or
+  `--client=workbuddy` if auto-detection should be overridden.
 
 Example with R analysis and SQLite enabled:
 
@@ -103,6 +104,10 @@ agent session or IDE to activate the newly connected BioMCP tools:
 - **OpenCode**: Restart the session or open a new terminal session.
 - **Claude Code**: Start a new session (`claude`).
 - **Cursor / VS Code**: Reload the window or restart the application.
+- **ZCode**: Reload the workspace or start a new ADE session.
+- **Pi Coding Agent**: Start a new agent session (`pi`).
+- **CodeBuddy**: Reload the window or restart the CLI session.
+- **WorkBuddy**: Restart the application or switch workspace.
 
 After restarting, verify connectivity by asking the agent to search for a gene
 or article (e.g., `gene_search(query="BRAF")`).
