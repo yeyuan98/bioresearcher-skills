@@ -1,0 +1,17 @@
+{
+  "notes": "WorkBuddy connector bundle manifest. Keys are the skills bundled into connector/workbuddy; skills absent here are intentionally excluded (see docs/connector-workbuddy.md). description_en/version/author are derived at build time from SKILL.md, skills.json and .claude-plugin/plugin.json.",
+  "skills": {
+    "bioresearcher-deep-research": {
+      "description_zh": "深度生物医学研究编排器：先澄清问题，把主题分解为 2-5 个研究方面，经并行子代理（或顺序回退）逐方面调研（文献、临床试验、基因、变异、药物、疾病、专利、组学），最终在 reports/<topic>/ 下生成带完整引用的研究报告。"
+    },
+    "bioresearcher-plot-making": {
+      "description_zh": "生物医学可视化路由与绘图引擎：对研究数据分类并产出发表级科研图表（蛋白质-binder 复合物结构、构象动力学、文献方法汇总、发育病例登记与证据表），内置对齐、碰撞与字体 QA 把关。"
+    },
+    "bioresearcher-pubmed-weekly": {
+      "description_zh": "下载最近一周 NCBI PubMed updatefiles 更新文件，流式解析 PubmedArticle 与 DeleteCitation 记录，汇总输出一个 Excel 工作簿与摘要 JSON，用于每周生物医学文献跟踪。"
+    },
+    "bioresearcher-python-setup-uv": {
+      "description_zh": "在项目本地搭建 uv 管理的 Python 环境：下载 uv、创建 .venv、安装科学计算与绘图依赖，并自动竞速官方与国内镜像。"
+    }
+  }
+}

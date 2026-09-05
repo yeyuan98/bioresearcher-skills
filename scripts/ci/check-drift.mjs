@@ -3,8 +3,9 @@
 // Enforces: VERSION semver; skills.json names == skills/ dirs; per-skill
 // skills.json version == SKILL.md metadata.version; CHANGELOG has a heading
 // for every skills.json version AND for VERSION; plugin.json version and
-// marketplace entry version == VERSION.
-import { readdirSync, readFileSync } from "node:fs";
+// marketplace entry version == VERSION; workbuddy connector-meta.json
+// version == VERSION.
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..", "..");
@@ -44,6 +45,14 @@ ok(`CHANGELOG covers repo ${version} + all skill versions`);
 const plugin = JSON.parse(readFileSync(join(ROOT, ".claude-plugin", "plugin.json"), "utf8"));
 if (plugin.version !== version) fail(`plugin.json version ${plugin.version} != VERSION ${version}`);
 else ok(`plugin.json version == VERSION`);
+
+const wbMetaPath = join(ROOT, "connector", "workbuddy", "connector-meta.json");
+if (!existsSync(wbMetaPath)) fail("connector/workbuddy/connector-meta.json missing");
+else {
+  const wbMeta = JSON.parse(readFileSync(wbMetaPath, "utf8"));
+  if (wbMeta.version !== version) fail(`connector/workbuddy/connector-meta.json version ${wbMeta.version} != VERSION ${version}`);
+  else ok("workbuddy connector-meta.json version == VERSION");
+}
 
 const market = JSON.parse(readFileSync(join(ROOT, ".claude-plugin", "marketplace.json"), "utf8"));
 for (const p of market.plugins ?? []) {

@@ -55,6 +55,11 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 Gemini CLI: `gemini skills install https://github.com/yeyuan98/bioresearcher-skills` (skills install is currently a preview-channel command).
 
+**WorkBuddy (connector market):** the same server + skills ship as a
+WorkBuddy connector — see [docs/connector-workbuddy.md](./docs/connector-workbuddy.md).
+Releases from v1.3.0 on carry a `bioresearcher-connector_workbuddy-v*.tar.gz`
+bundle for market submission.
+
 ## Development
 
 ```bash
@@ -65,6 +70,7 @@ bash scripts/ci/check-bundle.sh        # <=1000 files / <=10 MiB per skill
 bash scripts/ci/check-legacy-names.sh  # no retired biomcp-python tool names
 node scripts/ci/check-tool-names.mjs   # biomcp tool refs match pinned registry
 node scripts/ci/check-marketplace.mjs  # .claude-plugin validation
+node scripts/ci/build-connector-workbuddy.mjs  # WorkBuddy connector bundle -> dist/
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus the official

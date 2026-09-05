@@ -36,14 +36,35 @@ repo), never memory.
   `skills/` at the root for skills-CLI/hub discovery. Install copies the whole
   repo into the plugin cache; keep the repo lean.
 - Inline version pins (`skills@…` and `opencode-ai@…` in workflows, the
-  uvx commit pin, `scripts/ci/biomcp-tools.json`) are NOT covered by
-  dependabot — bump them manually when warranted.
+  uvx commit pin, `scripts/ci/biomcp-tools.json`, and the
+  `connector/workbuddy/mcp.json` pins — `biomcp@x.y.z` + npm registry URL)
+  are NOT covered by dependabot — bump them manually when warranted.
+
+## WorkBuddy connector
+
+- Sources live in `connector/workbuddy/` only (`connector/` is reserved for
+  future marketplace flavors). Never commit build output (`dist/`).
+- `connector/workbuddy/connector-meta.json` `version` must equal repo
+  `VERSION` (check-drift gate); every WorkBuddy resubmission therefore rides
+  a repo release PR.
+- The bundled-skill list is defined exactly once: keys of
+  `connector/workbuddy/skill-locales.json`. `bioresearcher-onboard` is
+  intentionally excluded (conflicts with the connector; see
+  docs/connector-workbuddy.md) — extend, never duplicate, that rationale.
+- Repo SKILL.md files stay strict-6; WorkBuddy-required frontmatter keys are
+  added to STAGED copies only by
+  `scripts/ci/build-connector-workbuddy.mjs`.
+- Icon source of truth: `connector/workbuddy/icon.jpg` (512x512 JPG
+  prepared from the uncommitted logo master; provenance + prep command in
+  docs/connector-workbuddy.md).
+- No credentials, tokens, or real API keys in any connector file.
 
 ## Branching
 
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,
   PR into main, `ci` check required, conventional commits
-  (`feat(skill):`, `fix(skill):`, `docs:`, `chore(release):`, `chore(deps):`).
+  (`feat(skill):`, `fix(skill):`, `feat(connector):`, `fix(connector):`,
+  `docs:`, `chore(release):`, `chore(deps):`).
 
 ## Testing
 

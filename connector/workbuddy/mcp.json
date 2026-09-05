@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "biomcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "runtime": { "type": "node", "version": "22" },
+      "npmRegistry": "https://registry.npmmirror.com",
+      "timeout": 120000
+    }
+  }
+}
