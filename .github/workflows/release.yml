@@ -27,6 +27,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
       - name: Compute version + tag
         id: ver
         run: |
@@ -67,3 +71,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release edit "${{ steps.ver.outputs.tag }}" --notes-file /tmp/opencode-release-notes.md
+
+      # WorkBuddy connector asset. Idempotent: builds from the tag target when
+      # the release is new, from the tag checkout when forcing or when an
+      # earlier run was interrupted before uploading; skips old tags that
+      # predate connector/workbuddy/.
+      - name: Bundle + attach WorkBuddy connector tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          VERSION="${{ steps.ver.outputs.version }}"
+          TAG="${{ steps.ver.outputs.tag }}"
+          ASSET="bioresearcher-connector_workbuddy-v${VERSION}.tar.gz"
+          CLOBBER=""
+          if [ "${{ steps.ver.outputs.exists }}" = "false" ]; then
+            test -f connector/workbuddy/connector-meta.json || { echo "skip: no connector at HEAD"; exit 0; }
+          else
+            git cat-file -e "refs/tags/${TAG}:connector/workbuddy/connector-meta.json" || { echo "skip: no connector at ${TAG}"; exit 0; }
+            if [ "${{ inputs.force_notes }}" = "true" ]; then
+              CLOBBER="--clobber"
+            elif gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "$ASSET"; then
+              echo "skip: $ASSET already attached to ${TAG}"
+              exit 0
+            fi
+            git checkout -q "refs/tags/${TAG}"
+          fi
+          node scripts/ci/build-connector-workbuddy.mjs --out dist
+          gh release upload "$TAG" "dist/${ASSET}" $CLOBBER

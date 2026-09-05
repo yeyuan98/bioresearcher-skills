@@ -51,6 +51,19 @@ jobs:
       - name: Marketplace validation
         run: node scripts/ci/check-marketplace.mjs
 
+      - name: WorkBuddy connector build smoke
+        run: |
+          OUT="$(mktemp -d)"
+          node scripts/ci/build-connector-workbuddy.mjs --out "$OUT"
+          TARBALL="$OUT/bioresearcher-connector_workbuddy-v$(tr -d '[:space:]' < VERSION).tar.gz"
+          test -s "$TARBALL"
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/connector-meta.json'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/mcp.json'
+          tar -tzf "$TARBALL" | grep -qx "bioresearcher/$(cd connector/workbuddy && ls icon.* | head -1)"
+          N="$(node -p 'Object.keys(require("./connector/workbuddy/skill-locales.json").skills).length')"
+          M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
+          test "$N" -eq "$M"
+
       # Supplementary: official spec reference validator, pinned by commit.
       # Non-blocking (upstream marks it "not for production").
       - name: skills-ref validate (supplementary)

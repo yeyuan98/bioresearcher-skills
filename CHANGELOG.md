@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
 
+## [1.3.0] - 2026-09-05
+
+### Infrastructure
+- Add the WorkBuddy connector flavor under `connector/workbuddy/`
+  (`connector-meta.json`, `mcp.json`, `icon.jpg`, `skill-locales.json`):
+  the pinned core-only biomcp stdio server (Node 22 runtime, npmmirror,
+  120 s timeout) plus four skills — `bioresearcher-onboard` intentionally
+  excluded (conflicts with the connector's own registration; see
+  docs/connector-workbuddy.md).
+- Add `scripts/ci/build-connector-workbuddy.mjs`: stages the bundle under
+  `dist/bioresearcher/`, augments only the staged SKILL.md frontmatter with
+  the WorkBuddy-required keys (`description_zh`/`description_en`/`version`/
+  `author`, derived from skill-locales.json, SKILL.md, skills.json, and
+  plugin.json), validates it, and emits a reproducible
+  `bioresearcher-connector_workbuddy-v<VERSION>.tar.gz`.
+- CI: new "WorkBuddy connector build smoke" gate; `check-drift.mjs` now also
+  enforces `connector-meta.json` version == repo `VERSION`.
+- Release: every GitHub release from a commit containing `connector/workbuddy/`
+  attaches the versioned connector tarball (idempotent, old tags skip).
+- Icon: 512x512 optimized progressive JPEG prepared from the uncommitted
+  Bioresearcher-Logo-v2.jpg master (sha256 recorded in
+  docs/connector-workbuddy.md).
+
 ## [1.2.0] - 2026-09-05
 
 ### bioresearcher-plot-making 1.0.0
