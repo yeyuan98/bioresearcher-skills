@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
 
-## [1.3.0] - 2026-09-05
+## [1.3.0] - 2026-09-06
 
 ### Infrastructure
 - Add the WorkBuddy connector flavor under `connector/workbuddy/`
