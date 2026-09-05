@@ -7,7 +7,7 @@
   "description_en": "Biomedical research connector: biomcp MCP server tools for literature, clinical trials, genes, variants, drugs, diseases and patents, plus skills for publication-grade figures.",
   "source": "bioresearcher",
   "type": "mcp",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "examples_zh": [
     "帮我做一个关于肿瘤免疫治疗的多方面文献综述并附引用",
     "总结上周 PubMed 更新中与 CRISPR 相关的文献",
