@@ -1,0 +1,71 @@
+{
+  "id": "plot-making-q01-structural",
+  "name": "KRAS Switch I/II dynamics and multi-inhibitor convergence plotting",
+  "level": "L2",
+  "purpose": "L2 procedural case: agent chains bioresearcher-python-setup-uv and bioresearcher-plot-making to generate publication-quality figures from structural data fixtures, passing 3-layer QA gates.",
+  "prompt": "Using the input data in {DATA_DIR}, first use bioresearcher-python-setup-uv to install the scientific visualization dependencies (pymol-open-source, matplotlib, pymupdf, numpy, pillow, biopython). Then use bioresearcher-plot-making to create a publication-grade composite figure in figures/kras_inhibitors/ following the structural-biology_binder-visualization specification. Generate fig1_kras_landscape (.pdf, .svg, .png), run the bundled QA gates (audit_panel_alignment.py, audit_figure_collisions.py, and audit_pdf_text.py), and provide LEGENDS.md. Ensure all QA gates pass.",
+  "inlineResources": [],
+  "timeoutMs": 1500000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 2
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "contains",
+      "expect": "bioresearcher-python-setup-uv"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "contains",
+      "expect": "bioresearcher-plot-making"
+    },
+    {
+      "type": "group",
+      "anyOf": [
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "tool:*",
+          "expect": "0 [fF][aA][iI][lL]|collisions.*0"
+        },
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "final",
+          "expect": "[cC][oO][lL][lL][iI][sS][iI][oO][nN].*([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE])|([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE]).*[cC][oO][lL][lL][iI][sS][iI][oO][nN]"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "anyOf": [
+        {
+          "type": "text",
+          "op": "contains",
+          "source": "tool:*",
+          "expect": "Panel alignment: PASS"
+        },
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "final",
+          "expect": "[aA][lL][iI][gG][nN][mM][eE][nN][tT].*[pP][aA][sS][sS]|[pP][aA][sS][sS].*[aA][lL][iI][gG][nN][mM][eE][nN][tT]"
+        }
+      ]
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-structural-figure-publication-quality"
+    }
+  ],
+  "expectedOutputs": [
+    "expected/fig1_kras_landscape.pdf",
+    "expected/summary.json"
+  ]
+}

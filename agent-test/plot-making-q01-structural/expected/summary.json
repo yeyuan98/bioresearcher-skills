@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "target": "KRAS G12C/G12D Switch I/II Inhibitors",
+  "panels": [
+    "a",
+    "b",
+    "c",
+    "d"
+  ],
+  "alignment_tolerance_pt": 1.5,
+  "max_measured_deviation_pt": 0.0,
+  "figure_files": [
+    "fig1_kras_landscape.pdf",
+    "fig1_kras_landscape.png",
+    "fig1_kras_landscape.svg"
+  ]
+}

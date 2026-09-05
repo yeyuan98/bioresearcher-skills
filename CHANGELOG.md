@@ -9,6 +9,23 @@ Each skill carries an independent semver tracked in `skills.json` and its
 
 ## [1.1.0] - 2026-09-04
 
+### bioresearcher-python-setup-uv 1.1.0
+- Add explicit Scientific Visualization profile (`pymol-open-source`, `matplotlib`, `pymupdf`, `numpy`, `pillow`, `biopython`, `pandas`).
+- Support headless 3D macromolecular rendering via `pymol-open-source` Python API and standalone `./.venv/bin/pymol` CLI without system GUI/X11 requirements.
+- Add visualization stack verification instructions.
+- Replace the manual mirror question with an autonomous timed mirror race (PyPI, Aliyun, Tsinghua, USTC) exported as `UV_INDEX_URL` for the whole session; document `UV_DOWNLOAD_URL` and `UV_PYTHON_INSTALL_MIRROR` fallbacks for slow networks.
+- Pin all installs and invocations to the project `./.venv` (`VIRTUAL_ENV="$(pwd)/.venv"` / `./.venv/bin/python`); document uv interpreter precedence (`--python` > `VIRTUAL_ENV` > `CONDA_PREFIX` > `./.venv`) so an active host conda environment can never capture or be mutated by installs; steer `uv add` to venv-pinned pip installs.
+
+### bioresearcher-onboard 1.1.0
+- Add explicit onboarding support for four additional AI coding agent harnesses:
+  - ZCode (`.zcode/config.json` with `mcp.servers.biomcp`).
+  - Pi Coding Agent (`.pi/mcp.json`).
+  - CodeBuddy (`.mcp.json` + pre-approval in `.codebuddy/settings.json`).
+  - WorkBuddy (`.workbuddy/mcp.json`).
+- Rescope auto-detection strictly to workspace-local footprints to eliminate global HOME directory pollution.
+- Harden JSONC handling (inline comments and trailing commas) with fail-safe error handling to prevent config loss.
+- Guarantee recursive parent directory creation (`mkdirSync`) across all client config writes.
+
 ### bioresearcher-onboard 1.0.0
 - Initial release. Automated project-local onboarding skill for BioMCP:
   - Two-stage zero-dependency bootstrap (POSIX shell / PowerShell) for hosts without Node.js >= 22.13.
@@ -35,6 +52,16 @@ Each skill carries an independent semver tracked in `skills.json` and its
 - Add machine-readable boundary comments and explicit user consent for `AGENTS.md` environment rules.
 
 ## [1.0.0] - 2026-09-04
+
+### bioresearcher-plot-making 1.0.0
+- Initial release. Routing dispatcher and publication-grade scientific plotting engine:
+  - Central routing document (`SKILL.md`) directing requests via declarative decision matrix.
+  - Structural biology binder visualization specification (`references/structural-biology-binder-visualization.md`): headless PyMOL 3D ray-tracing, contact-fragment pruning, site-normal camera orientation, 2D vector text anchors via probe pass, conformational dynamics, and triple-encoded interface matrices.
+  - Literature search method summary specification (`references/literature-search-method-summary.md`): primary source verification via NCBI E-utilities, Three-Panel Composite architecture (mechanistic concept + case register + detection cascade), and Single-Panel Structured Evidence Table layout with dynamic text measurement.
+  - QA gates and gotchas specification (`references/qa-gates-and-gotchas.md`): comprehensive catalog of 17 hard-earned gotchas and 3-layer QA verification architecture.
+  - Bundled standalone QA auditors in `scripts/`: `audit_panel_alignment.py` (≤1.5 pt tolerance), `audit_figure_collisions.py` (vector PDF overlap detection), and `audit_pdf_text.py` (≥5.0 pt font floor).
+- Keep all reference data-contract examples fully synthetic (conformer dynamics, hotspot matrices, binder summary metrics, render anchors, literature registers, and evidence tables use non-proprietary values and non-assignable sentinel PMIDs).
+- Pin dependency installation and script execution to the project `./.venv` (`VIRTUAL_ENV` pin or `./.venv/bin/python` / `./.venv/bin/pymol`) so host environments are never mutated.
 
 ### bioresearcher-deep-research 1.0.0
 - Initial release. Harness-agnostic deep biomedical research skill: interview →
@@ -72,7 +99,11 @@ Each skill carries an independent semver tracked in `skills.json` and its
 - Release automation: push-to-main version-compare → `gh release create` with
   CHANGELOG-extracted notes (biomcp-ts release pattern).
 - `agent-test/`: empirical, manually-run opencode CLI test suite (unified
-  `run.mjs` runner ported from biomcp-ts `agent-test`; 6 cases: 3 skill
-  discovery, 1 biomcp MCP light research, 1 fixture parse, 1 uv setup).
+  `run.mjs` runner ported from biomcp-ts `agent-test`; 11 cases: 5 skill
+  discovery, 1 biomcp MCP light research, 1 fixture parse, 1 uv setup,
+  1 onboarding bootstrap, 2 plot-making). Child environments are hermetic:
+  conda/mamba/virtualenv/uv-override variables and conda PATH entries are
+  stripped before spawning opencode or resource scripts, so agent
+  `uv pip`/`uv run` can only target the run-local `./.venv`.
 - Docs: biomcp-ts MCP setup, plugin→skills migration map (including openFDA
   semantic downgrades), exposure checklist.

@@ -1,0 +1,7 @@
+assay_name	readout	method_family	screening_stage	pmids
+TR-FRET Binding	Binary target & ligase affinity	biochemical	preclinical	35649987
+SPR Ternary Kinetics	Cooperativity & ternary half-life	biochemical	preclinical	37494883
+HiBiT Ubiquitination	Target ubiquitination rate	flow cytometry	in vitro lead	36474163
+Capillary Western (Wes)	Quantitative POI degradation	biochemical	in vitro lead	33288927
+TMT 18-plex Proteomics	Unbiased proteome neo-substrates	proteomics	orthogonal screen	31792461
+In Vivo PK/PD Modeling	Tumor regression & safety window	in vivo	candidate selection	38101123

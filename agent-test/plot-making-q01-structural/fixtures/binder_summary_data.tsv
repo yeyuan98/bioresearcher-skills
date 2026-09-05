@@ -1,0 +1,6 @@
+binder_id	binder_name	modality	target_site	bsa_primary	bsa_secondary	bsa_total	n_hbonds	n_saltbridges
+PDB_6OIM	Sotorasib	SMALL_MOL	Switch-II	492.8	0.0	492.8	4	0
+PDB_6USZ	Adagrasib	SMALL_MOL	Switch-II	505.3	0.0	505.3	5	0
+PDB_6GJ8	BI-2852	SMALL_MOL	Switch-I	200.5	0.0	200.5	2	0
+PDB_7RPZ	MRTX-1133	SMALL_MOL	Switch-II	413.9	0.0	413.9	3	2
+PDB_5V6V	Monobody_NS1	PROTEIN	Allosteric	680.5	135.2	815.7	7	2

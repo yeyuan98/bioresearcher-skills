@@ -259,11 +259,39 @@ async function verifyEntry(dataRoot, entry) {
   return { ok: true, file };
 }
 
+/* Hermetic child env: host shells often run inside a conda/mamba env. uv
+ * resolves interpreters as --python > VIRTUAL_ENV > CONDA_PREFIX > ./.venv,
+ * so an inherited CONDA_PREFIX (or a conda bin dir on PATH) makes agent-run
+ * `./uv pip install` / `./uv run` mutate the HOST env instead of the run dir.
+ * The opencode bash tool spawns `bash -l -c`; the ~/.bashrc mamba hook only
+ * defines functions (no re-activation once these vars are unset), but conda
+ * bin dirs must ALSO be filtered from PATH or `python3` keeps resolving to
+ * the host env. Mirror/PyPI index vars (UV_INDEX_URL, PIP_INDEX_URL) and
+ * NO_PROXY are deliberately preserved. */
+const HERMETIC_STRIP_ENV = [
+  "CONDA_PREFIX", "CONDA_DEFAULT_ENV", "CONDA_PROMPT_MODIFIER", "CONDA_SHLVL", "CONDA_EXE",
+  "_CE_CONDA", "_CE_M", "MAMBA_EXE", "MAMBA_ROOT_PREFIX",
+  "VIRTUAL_ENV", "UV_PYTHON", "UV_PROJECT_ENVIRONMENT", "PYTHONPATH",
+];
+const CONDA_PATH_RE = /(^|\/)(miniforge3|miniconda3?|anaconda3?|micromamba|conda)(\/|$)/;
+
+function sanitizeChildEnv() {
+  const env = { ...process.env };
+  for (const k of HERMETIC_STRIP_ENV) delete env[k];
+  if (typeof env.PATH === "string") {
+    env.PATH = env.PATH
+      .split(path.delimiter)
+      .filter((seg) => seg && !CONDA_PATH_RE.test(seg))
+      .join(path.delimiter);
+  }
+  return env;
+}
+
 function runScriptToLog(script, dataRoot, logPath) {
   return new Promise((resolve) => {
     const fd = fs.openSync(logPath, "a");
     fs.writeSync(fd, `\n[${new Date().toISOString()}] running: bash ${script} ${dataRoot}\n`);
-    const child = spawn("bash", [script, dataRoot], { cwd: path.dirname(script), env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn("bash", [script, dataRoot], { cwd: path.dirname(script), env: sanitizeChildEnv(), stdio: ["ignore", "pipe", "pipe"] });
     let done = false;
     const finish = (code, signal, timedOut) => {
       if (done) return;
@@ -456,7 +484,7 @@ function runSession(test, rep, args, dataRoot, skillsDir) {
     }
 
     const sessionEnv = {
-      ...process.env,
+      ...sanitizeChildEnv(),
       // DELTA 4: AGENT_TEST_DATA = resolved data root, exported for
       // {env:AGENT_TEST_DATA} substitution (DELTA 2 removed AGENT_TEST_BUNDLE).
       AGENT_TEST_DATA: path.resolve(dataRoot),
@@ -1153,6 +1181,10 @@ function exitCodeFor(rows) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    console.log(usage());
+    return 0;
+  }
   const tests = discoverTests();
   if (args.list) {
     printListTable(tests);

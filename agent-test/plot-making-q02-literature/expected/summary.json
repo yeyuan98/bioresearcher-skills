@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "target": "Targeted Protein Degradation Risk Cascade",
+  "panels": [
+    "a",
+    "b",
+    "c"
+  ],
+  "alignment_tolerance_pt": 1.5,
+  "max_measured_deviation_pt": 0.0,
+  "figure_files": [
+    "fig1_method_summary.pdf",
+    "fig1_method_summary.png",
+    "fig1_method_summary.svg"
+  ]
+}

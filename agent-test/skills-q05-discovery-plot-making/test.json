@@ -1,0 +1,46 @@
+{
+  "id": "skills-q05-discovery-plot-making",
+  "name": "Skill discovery: bioresearcher-plot-making",
+  "level": "L0",
+  "purpose": "L0 hermetic discovery: the agent loads the injected project skill bioresearcher-plot-making and reports its first instruction (no plotting, no commands).",
+  "prompt": "Load the skill named bioresearcher-plot-making, read it fully, then summarize in 2 sentences what it instructs you to do first. Do not run any commands or generate any plots.",
+  "inlineResources": [],
+  "timeoutMs": 180000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1,
+      "max": 5
+    },
+    {
+      "type": "args",
+      "tool": "skill",
+      "path": "name",
+      "op": "equals",
+      "expect": "bioresearcher-plot-making"
+    },
+    {
+      "type": "status",
+      "tool": "skill",
+      "status": "completed"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "contains",
+      "expect": "Base directory for this skill:"
+    },
+    {
+      "type": "text",
+      "source": "tool:skill",
+      "op": "not_contains",
+      "expect": ".config/opencode"
+    },
+    {
+      "type": "no_such_tool",
+      "tool": "bash"
+    }
+  ],
+  "expectedOutputs": []
+}

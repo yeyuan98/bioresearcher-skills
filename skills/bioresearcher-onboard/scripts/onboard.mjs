@@ -141,31 +141,148 @@ if (Object.keys(featuresConfig).length > 0) {
 const normalizedNodePath = IS_WIN ? nodeBin.replace(/\\/g, "/") : nodeBin;
 const normalizedBundlePath = IS_WIN ? bundlePath.replace(/\\/g, "/") : bundlePath;
 
-function stripJsonComments(jsonString) {
-  return jsonString
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+function stripJsonc(content) {
+  let result = "";
+  let inString = false;
+  let inSingleComment = false;
+  let inMultiComment = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+
+    if (inSingleComment) {
+      if (ch === "\n") {
+        inSingleComment = false;
+        result += ch;
+      }
+      continue;
+    }
+
+    if (inMultiComment) {
+      if (ch === "*" && next === "/") {
+        inMultiComment = false;
+        i++;
+      }
+      continue;
+    }
+
+    if (inString) {
+      result += ch;
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (ch === "\\") {
+        isEscaped = true;
+      } else if (ch === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === "\"") {
+      inString = true;
+      isEscaped = false;
+      result += ch;
+      continue;
+    }
+
+    if (ch === "/" && next === "/") {
+      inSingleComment = true;
+      i++;
+      continue;
+    }
+
+    if (ch === "/" && next === "*") {
+      inMultiComment = true;
+      i++;
+      continue;
+    }
+
+    if (ch === ",") {
+      let j = i + 1;
+      let isTrailing = false;
+      let tempInSingle = false;
+      let tempInMulti = false;
+      while (j < content.length) {
+        const cj = content[j];
+        const nj = content[j + 1];
+        if (tempInSingle) {
+          if (cj === "\n") tempInSingle = false;
+          j++;
+          continue;
+        }
+        if (tempInMulti) {
+          if (cj === "*" && nj === "/") {
+            tempInMulti = false;
+            j += 2;
+            continue;
+          }
+          j++;
+          continue;
+        }
+        if (cj === "/" && nj === "/") {
+          tempInSingle = true;
+          j += 2;
+          continue;
+        }
+        if (cj === "/" && nj === "*") {
+          tempInMulti = true;
+          j += 2;
+          continue;
+        }
+        if (/\s/.test(cj)) {
+          j++;
+          continue;
+        }
+        if (cj === "}" || cj === "]") {
+          isTrailing = true;
+        }
+        break;
+      }
+      if (isTrailing) {
+        continue;
+      }
+    }
+
+    result += ch;
+  }
+
+  return result.trim();
 }
 
 function safeMergeJson(filePath, updater) {
   let data = {};
+  let backedUp = false;
   if (fs.existsSync(filePath)) {
-    try {
-      const raw = fs.readFileSync(filePath, "utf8");
-      data = JSON.parse(stripJsonComments(raw));
-      // Backup original
-      fs.copyFileSync(filePath, `${filePath}.bak`);
-    } catch (e) {
-      console.warn(`[bioresearcher-onboard] Warning: Could not parse ${path.basename(filePath)}, writing fresh entry. Backup created.`);
-      fs.copyFileSync(filePath, `${filePath}.bak`);
+    const raw = fs.readFileSync(filePath, "utf8");
+    if (raw.trim().length > 0) {
+      try {
+        data = JSON.parse(stripJsonc(raw));
+      } catch (e) {
+        console.error(`[bioresearcher-onboard] Error: Failed to parse existing JSONC at ${filePath}: ${e.message}`);
+        console.error(`[bioresearcher-onboard] Aborting modification to prevent data loss. Existing file was not modified.`);
+        process.exit(1);
+      }
     }
+    fs.copyFileSync(filePath, `${filePath}.bak`);
+    backedUp = true;
+  }
+
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    data = {};
   }
 
   const updated = updater(data);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tmp = `${filePath}.${Date.now()}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(updated, null, 2));
   fs.renameSync(tmp, filePath);
-  console.log(`[bioresearcher-onboard] Updated ${path.basename(filePath)} (backup saved to ${path.basename(filePath)}.bak)`);
+  if (backedUp) {
+    console.log(`[bioresearcher-onboard] Updated ${path.basename(filePath)} (backup saved to ${path.basename(filePath)}.bak)`);
+  } else {
+    console.log(`[bioresearcher-onboard] Created ${path.basename(filePath)}`);
+  }
 }
 
 // Probe harness configs upfront to avoid generating unintended files
@@ -174,16 +291,55 @@ const claudePath = path.resolve(CWD, ".mcp.json");
 const cursorDir = path.resolve(CWD, ".cursor");
 const cursorPath = path.join(cursorDir, "mcp.json");
 
+const zcodeDir = path.resolve(CWD, ".zcode");
+const zcodePath = path.join(zcodeDir, "config.json");
+
+const piDir = path.resolve(CWD, ".pi");
+const piPath = path.join(piDir, "mcp.json");
+
+const codebuddyDir = path.resolve(CWD, ".codebuddy");
+const codebuddySettingsPath = path.join(codebuddyDir, "settings.json");
+const codebuddyMdPath = path.resolve(CWD, "CODEBUDDY.md");
+
+const workbuddyDir = path.resolve(CWD, ".workbuddy");
+const workbuddyPath = path.join(workbuddyDir, "mcp.json");
+const workbuddyMdPath = path.resolve(CWD, "WORKBUDDY.md");
+
 const opencodeExists = fs.existsSync(opencodePath);
 const claudeExists = fs.existsSync(claudePath);
 const cursorExists = fs.existsSync(cursorDir) || fs.existsSync(cursorPath);
+const zcodeExists = fs.existsSync(zcodeDir) || fs.existsSync(zcodePath) || Boolean(process.env.ZCODE_WORKSPACE);
+const piExists = fs.existsSync(piDir) || fs.existsSync(piPath) || Boolean(process.env.PI_CODING_AGENT_DIR);
+const codebuddyExists = fs.existsSync(codebuddyDir) || fs.existsSync(codebuddyMdPath) || Boolean(process.env.CODEBUDDY_CLI);
+const workbuddyExists = fs.existsSync(workbuddyDir) || fs.existsSync(workbuddyPath) || fs.existsSync(workbuddyMdPath);
 
-let targetOpencode = options.client === "opencode" || (!options.client && opencodeExists);
-let targetClaude = options.client === "claude-code" || (!options.client && claudeExists);
-let targetCursor = options.client === "cursor" || (!options.client && cursorExists);
+// Normalize client argument with aliases
+const clientArg = (options.client || "").toLowerCase().trim();
+const clientAliases = {
+  "claude": "claude-code",
+  "code-buddy": "codebuddy",
+  "work-buddy": "workbuddy",
+  "pi-agent": "pi",
+};
+const resolvedClient = clientAliases[clientArg] || clientArg;
+
+const validClients = ["opencode", "claude-code", "cursor", "zcode", "pi", "codebuddy", "workbuddy"];
+if (resolvedClient && !validClients.includes(resolvedClient)) {
+  console.error(`[bioresearcher-onboard] Error: Unknown client "${options.client}". Valid options: ${validClients.join(", ")}`);
+  process.exit(1);
+}
+
+let targetOpencode  = resolvedClient === "opencode"    || (!resolvedClient && opencodeExists);
+let targetClaude    = resolvedClient === "claude-code" || (!resolvedClient && claudeExists && !codebuddyExists);
+let targetCursor    = resolvedClient === "cursor"     || (!resolvedClient && cursorExists);
+let targetZcode     = resolvedClient === "zcode"      || (!resolvedClient && zcodeExists);
+let targetPi        = resolvedClient === "pi"         || (!resolvedClient && piExists);
+let targetCodebuddy = resolvedClient === "codebuddy"  || (!resolvedClient && codebuddyExists);
+let targetWorkbuddy = resolvedClient === "workbuddy"  || (!resolvedClient && workbuddyExists);
 
 // Default to opencode.json if no client specified and no config file exists yet
-if (!options.client && !opencodeExists && !claudeExists && !cursorExists) {
+const anyDetected = opencodeExists || claudeExists || cursorExists || zcodeExists || piExists || codebuddyExists || workbuddyExists;
+if (!resolvedClient && !anyDetected) {
   targetOpencode = true;
 }
 
@@ -219,10 +375,72 @@ if (targetClaude) {
 
 // Cursor: .cursor/mcp.json
 if (targetCursor) {
-  fs.mkdirSync(cursorDir, { recursive: true });
   safeMergeJson(cursorPath, (data) => {
     data.mcpServers = data.mcpServers || {};
     data.mcpServers.biomcp = {
+      command: normalizedNodePath,
+      args: [normalizedBundlePath],
+      env: data.mcpServers.biomcp?.env || {},
+    };
+    return data;
+  });
+}
+
+// ZCode: .zcode/config.json
+if (targetZcode) {
+  safeMergeJson(zcodePath, (data) => {
+    data.mcp = data.mcp || {};
+    data.mcp.servers = data.mcp.servers || {};
+    data.mcp.servers.biomcp = {
+      command: normalizedNodePath,
+      args: [normalizedBundlePath],
+      env: data.mcp.servers.biomcp?.env || {},
+      enable: true,
+    };
+    return data;
+  });
+}
+
+// Pi Coding Agent: .pi/mcp.json
+if (targetPi) {
+  safeMergeJson(piPath, (data) => {
+    data.mcpServers = data.mcpServers || {};
+    data.mcpServers.biomcp = {
+      command: normalizedNodePath,
+      args: [normalizedBundlePath],
+      env: data.mcpServers.biomcp?.env || {},
+    };
+    return data;
+  });
+}
+
+// CodeBuddy: .mcp.json + pre-approval in .codebuddy/settings.json
+if (targetCodebuddy) {
+  safeMergeJson(claudePath, (data) => {
+    data.mcpServers = data.mcpServers || {};
+    data.mcpServers.biomcp = {
+      type: "stdio",
+      command: normalizedNodePath,
+      args: [normalizedBundlePath],
+      env: data.mcpServers.biomcp?.env || {},
+    };
+    return data;
+  });
+
+  safeMergeJson(codebuddySettingsPath, (data) => {
+    const approved = new Set(data.enabledMcpjsonServers || []);
+    approved.add("biomcp");
+    data.enabledMcpjsonServers = Array.from(approved);
+    return data;
+  });
+}
+
+// WorkBuddy: .workbuddy/mcp.json
+if (targetWorkbuddy) {
+  safeMergeJson(workbuddyPath, (data) => {
+    data.mcpServers = data.mcpServers || {};
+    data.mcpServers.biomcp = {
+      type: "stdio",
       command: normalizedNodePath,
       args: [normalizedBundlePath],
       env: data.mcpServers.biomcp?.env || {},

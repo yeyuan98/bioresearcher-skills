@@ -1,0 +1,7 @@
+entity_name	structural_tag	hazard_description	development_stage	status	pmids
+Bavdegalutamide	AR Degrader (ARV-110)	Hepatic transaminase elevation; CYP3A4 accumulation	phase 2	adverse_signal	35649987
+Vepdegestrant	ER Degrader (ARV-471)	Tolerated benchmark; manageable on-target safety	phase 3	no_signal	37494883
+CFT7455	CRBN Molecular Glue	High-potency neutropenia via IKZF1/3 degradation	phase 1	adverse_signal	36474163
+CC-90009	GSPT1 Molecular Glue	Hyperbilirubinemia and dose-limiting toxicity	phase 1	adverse_signal	33288927
+DT2216	BCL-XL Degrader (VHL)	Tolerated benchmark; platelet-sparing via VHL tropism	phase 1	no_signal	31792461
+MDM2-PROTAC	Stapled Degrader	Proteasome-resistant; persistent	preclinical	under_reported	38101123
