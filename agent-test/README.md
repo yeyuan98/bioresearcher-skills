@@ -208,10 +208,13 @@ server:
 | `skills-q02-discovery-uv` | L0 | Load injected skill `bioresearcher-python-setup-uv` (no installation) | — | manual-run |
 | `skills-q03-discovery-pubmed` | L0 | Load injected skill `bioresearcher-pubmed-weekly` | — | manual-run |
 | `skills-q04-discovery-onboard` | L0 | Load injected skill `bioresearcher-onboard` (no installation) | — | manual-run |
+| `skills-q05-discovery-plot-making` | L0 | Load injected skill `bioresearcher-plot-making` (no plotting) | — | manual-run |
 | `deep-research-q01-light` | L2 | deep-research skill + keyless biomcp MCP: BRCA1 survey citing PMIDs | MCP | manual-run |
 | `pubmed-weekly-q01-parse` | L1 | Parse trimmed updatefiles sample into combined.xlsx via the skill | fixture | manual-run (PASS*, rubric) |
 | `python-setup-uv-q01` | L1 | Create uv-managed `.venv` in the disposable run dir via the skill | — | manual-run (PASS*, rubric; mutates run dir only) |
 | `onboard-q01-bootstrap` | L1 | Bootstrap project-local BioMCP runtime in run dir via skill | — | manual-run (PASS*, rubric; mutates run dir only) |
+| `plot-making-q01-structural` | L2 | Structural binder visualization: KRAS Switch I/II dynamics + multi-inhibitor convergence with 3-layer QA | fixture | manual-run (PASS*, rubric) |
+| `plot-making-q02-literature` | L2 | Literature method summary: PROTAC translational risk cascade + preclinical assay matrix with 3-layer QA | fixture | manual-run (PASS*, rubric) |
 
 "Data": `MCP` = wires the keyless biomcp server (network), `fixture` = shipped
 in `fixtures/` + archived in `resources.tar.bz2`, `—` = none.
