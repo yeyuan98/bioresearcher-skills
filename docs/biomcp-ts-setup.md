@@ -85,12 +85,9 @@ their commands differ; keep one and disable the other via `/mcp`.
 
 ### Permissions
 
-MCP tool calls ask for approval on first use in Manual mode. The
-`bioresearcher-deep-research` skill pre-approves both server rules for its
-invoking turn via its `allowed-tools` frontmatter, and its worker subagent's
-tool pool is limited to the biomcp servers plus file tools. For a permanent
-session-wide grant, add to `.claude/settings.json` (project) or
-`~/.claude/settings.json` (user):
+MCP tool calls ask for approval on first use in Manual mode. For a
+dependable, prompt-free setup add allow rules to `.claude/settings.json`
+(project) or `~/.claude/settings.json` (user):
 
 ```json
 {
@@ -101,7 +98,13 @@ session-wide grant, add to `.claude/settings.json` (project) or
 ```
 
 Auto mode (the default start mode on Pro/Max/Team plans) and `acceptEdits`
-already minimize prompts without any rules.
+already minimize prompts without any rules. The deep-research skill also
+lists both server rules in its `allowed-tools` frontmatter; that turn-scoped
+grant is **best-effort only** — empirically (claude 2.1.261, headless `-p`,
+manual mode) it did not cover MCP server rules, so treat the
+`permissions.allow` snippet above as the reliable mechanism. The plugin's
+`bioresearcher-dr-worker` subagent has its own tool pool (the biomcp servers
+plus file tools) regardless.
 
 ## Timeouts
 

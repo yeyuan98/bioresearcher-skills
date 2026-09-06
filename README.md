@@ -103,7 +103,9 @@ node agent-test/run.mjs            # all cases
 ```
 
 See [agent-test/README.md](./agent-test/README.md) for the case schema and
-the 12 mechanical check types.
+the 12 mechanical check types. The Claude Code plugin additionally has its
+own manual suite — see
+[agent-test/claude-plugin-specific/README.md](./agent-test/claude-plugin-specific/README.md).
 
 ## Docs
 
