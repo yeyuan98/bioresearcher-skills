@@ -1,0 +1,29 @@
+{
+  "id": "plugin-l2-dr-light",
+  "name": "light-research via the plugin deep-research skill with worker dispatch",
+  "level": "L2",
+  "purpose": "Tier A/B worker dispatch fires, cited report written under the rep project dir",
+  "driver": "session",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research plugin skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.",
+  "budgetUsd": 1.5,
+  "timeoutMs": 1200000,
+  "permissionMode": "acceptEdits",
+  "checks": [
+    {
+      "type": "group",
+      "desc": "worker dispatch fired (Tier A preferred, Tier B acceptable)",
+      "anyOf": [
+        { "type": "subagent_by_type", "agent": "bioresearcher-dr-worker", "min": 1, "desc": "Tier A: dedicated worker agent spawned" },
+        { "type": "tool_use", "name": "^Task$", "regex": true, "path": "subagent_type", "op": "regex", "expect": "bioresearcher-dr-worker", "desc": "Tier A via Task(subagent_type) input" },
+        { "type": "subagent_by_type", "agent": "general-purpose", "min": 1, "desc": "Tier B: generic subagent fallback" }
+      ]
+    },
+    { "type": "file_exists", "pattern": "reports/**/*.md", "desc": "at least one aspect report written under the rep project dir" },
+    { "type": "text", "op": "regex", "expect": "PMID", "source": "assistant", "desc": "citations present" },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "dispatch-and-completeness: adjudicate from firedArms which anyOf arm fired (arm 1 = dr-worker subagent_stats, arm 2 = Task(subagent_type) input, arm 3 = generic fallback). If not a dr-worker arm, check whether Tier B inlining was used by design, or whether the worker failed to read its ${CLAUDE_PLUGIN_ROOT} references (PLUGIN_ROOT degradation) and silently fell back. Also record completeness: how many aspect files exist and whether reports/**/final_report.md was synthesized (light-research sessions near the budget cap may legitimately stop after aspect reports — the machine checks only require one aspect file plus citations)."
+    }
+  ]
+}

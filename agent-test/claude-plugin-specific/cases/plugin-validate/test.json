@@ -1,0 +1,12 @@
+{
+  "id": "plugin-validate",
+  "name": "claude plugin validate passes on the repo marketplace",
+  "level": "L0",
+  "purpose": "Official validator accepts the .claude-plugin manifests + bundled components (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["plugin", "validate", "{REPO}"],
+  "timeoutMs": 120000,
+  "checks": [
+    { "type": "cli_output", "op": "regex", "expect": "Validation passed", "desc": "validator reports success" }
+  ]
+}

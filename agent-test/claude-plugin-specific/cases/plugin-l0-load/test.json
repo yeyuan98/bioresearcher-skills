@@ -1,0 +1,18 @@
+{
+  "id": "plugin-l0-load",
+  "name": "--plugin-dir session loads bundled server, skills, and worker agent",
+  "level": "L0",
+  "purpose": "system/init: plugin:bioresearcher:biomcp connected, core tool set, plugin skills, bioresearcher-dr-worker agent",
+  "driver": "session",
+  "prompt": "Do not use any tools. Reply with exactly: OK",
+  "budgetUsd": 0.25,
+  "timeoutMs": 240000,
+  "checks": [
+    { "type": "init_mcp", "name": "plugin:bioresearcher:biomcp", "status": "connected", "desc": "bundled MCP server starts and connects" },
+    { "type": "init_tool", "name": "mcp__plugin_bioresearcher_biomcp__article_search", "desc": "namespaced core tool present" },
+    { "type": "init_tool_count", "pattern": "^mcp__plugin_bioresearcher_biomcp__", "min": 30, "max": 45, "desc": "core-only tool count (41 at biomcp 1.1.1)" },
+    { "type": "init_skill", "name": "bioresearcher:bioresearcher-deep-research", "desc": "plugin skill registered" },
+    { "type": "init_agent", "name": "bioresearcher:bioresearcher-dr-worker", "desc": "plugin worker agent registered" },
+    { "type": "text", "op": "contains", "expect": "OK", "source": "final", "desc": "session completed normally" }
+  ]
+}

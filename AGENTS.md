@@ -82,14 +82,21 @@ repo), never memory.
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,
   PR into main, `ci` check required, conventional commits
   (`feat(skill):`, `fix(skill):`, `feat(connector):`, `fix(connector):`,
-  `feat(plugin):`, `fix(plugin):`, `docs:`, `chore(release):`,
-  `chore(deps):`).
+  `feat(plugin):`, `fix(plugin):`, `test(agent-test):`, `docs:`,
+  `chore(release):`, `chore(deps):`).
 
 ## Testing
 
 - Fast static checks: `node scripts/ci/*.mjs` + shell scripts (see README).
 - Empirical agent tests in `agent-test/` are MANUAL-ONLY (real opencode CLI +
   LLM tokens + network). CI only validates them with `--list` / `--dry-run`.
+- `agent-test/claude-plugin-specific/` is the Claude Code plugin sibling
+  suite (real `claude` CLI; bundled MCP server, plugin skills, dr-worker
+  agent). Also MANUAL-ONLY; CI validates hermetically with `--list` /
+  `--dry-run` (no claude binary, no `~/.claude` reads). Isolation: per-rep
+  `CLAUDE_CONFIG_DIR` seeded from the host's `~/.claude/settings.json`
+  (auth lands only in gitignored `.runs/`), disposable project cwd, and
+  process-group kill. See its README before running.
 - When editing biomcp guidance, re-verify tool names against the pinned
   registry and update `scripts/ci/biomcp-tools.json` when bumping the
   biomcp-ts pin.

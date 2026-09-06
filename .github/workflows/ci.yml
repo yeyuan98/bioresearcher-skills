@@ -106,3 +106,9 @@ jobs:
           for f in agent-test/*/opencode.json; do
             node -e "JSON.parse(require('fs').readFileSync('$f','utf8')); console.log('json ok $f')"
           done
+
+      - name: claude plugin suite validation (hermetic, no LLM spawn)
+        run: |
+          node --check agent-test/claude-plugin-specific/run.mjs
+          node agent-test/claude-plugin-specific/run.mjs --list
+          node agent-test/claude-plugin-specific/run.mjs --dry-run
