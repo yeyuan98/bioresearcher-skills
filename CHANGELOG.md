@@ -6,13 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
-Top-level `## [x.y.z]` headings cover BOTH repository releases and per-skill
-releases; the `###` subsection under a heading names the skill (or
-"Infrastructure") it belongs to.
+Top-level `## [x.y.z]` headings are repository releases ONLY. Per-skill
+changes appear as `### <skill-name> <x.y.z>` subsections under the repo
+release that ships them; a skill bump that lands between repo releases goes
+under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
+when that release PR is cut (the release workflow extracts only the
+`## [<VERSION>]` section for the release notes).
 
-## [1.1.1] - 2026-09-06
+## [1.4.1] - 2026-09-06
 
-Skill-level release; repository VERSION unchanged at 1.4.0.
+### Infrastructure
+- Bump `VERSION`, `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`,
+  `connector/workbuddy/connector-meta.json`, and `CITATION.cff` to 1.4.1 so
+  existing Claude-plugin users receive deep-research 1.1.1 (plugin updates
+  ship only when `plugin.json` `version` changes) and the WorkBuddy
+  connector tarball rebuilds for resubmission (`minWorkbuddyVersion`
+  unchanged - no runtime requirement change).
+- CHANGELOG heading convention fixed: top-level `## [x.y.z]` headings are
+  repo releases only. The short-lived `## [1.1.1]` heading (a skill-level
+  release authored 2026-09-06 in PR #10; skills-CLI installs received
+  1.1.1 immediately) is folded into this section; `check-drift.mjs` now
+  enforces per-skill coverage via `### <skill> <version>` subsection lines
+  (exactly one per version) instead of `## [x.y.z]` substrings, and anchors
+  the repo-VERSION heading check. Skill bumps landing between repo
+  releases now go under `## [Unreleased]`.
+- Patch (not minor) rationale: the plugin-visible payload of this release
+  is a skill patch (deep-research 1.1.0 -> 1.1.1) plus CI/docs hygiene.
+- Refresh `plugin.json` / `marketplace.json` descriptions and keywords to
+  name all five skills (they omitted `bioresearcher-plot-making`, shipped
+  in 1.2.0; they now cover the plotting skill the connector descriptions
+  already advertise).
 
 ### bioresearcher-deep-research 1.1.1
 - Step 1 interview hardened against harness autonomy hints (observed on the
