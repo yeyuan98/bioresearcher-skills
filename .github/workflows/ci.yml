@@ -33,6 +33,9 @@ jobs:
       - name: Frontmatter strict-6 lint
         run: node scripts/ci/lint-frontmatter.mjs
 
+      - name: Plugin agents lint
+        run: node scripts/ci/lint-agents.mjs
+
       - name: Version drift check
         run: node scripts/ci/check-drift.mjs
 

@@ -110,8 +110,12 @@ for (const d of skills) {
     }
   }
   if (fm["allowed-tools"] !== undefined) {
+    // In addition to the harness-generic tool set, Claude Code MCP server
+    // rules (mcp__<server> or mcp__<server>__*) are accepted; other
+    // harnesses treat them as inert strings.
+    const mcpRule = /^mcp__[a-z0-9_-]+(__\*)?$/;
     const tools = String(fm["allowed-tools"]).split(/\s+/).filter(Boolean);
-    for (const t of tools) if (!GENERIC_TOOLS.has(t)) fail(name, `allowed-tools entry not in generic set: ${t}`);
+    for (const t of tools) if (!GENERIC_TOOLS.has(t) && !mcpRule.test(t)) fail(name, `allowed-tools entry not in generic set or mcp__ rule form: ${t}`);
   }
 
   const bodyLines = text.split("\n").length;

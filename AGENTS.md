@@ -12,6 +12,9 @@ repo), never memory.
   compatibility, metadata, allowed-tools. No other keys.
 - name == directory name, ^[a-z0-9]+(-[a-z0-9]+)*$, <=64 chars.
 - description 1-500 chars (repo policy), front-loaded with triggers.
+- `allowed-tools` may additionally contain Claude Code MCP server rules
+  (`mcp__<server>` or `mcp__<server>__*`); harnesses that ignore them treat
+  the entries as inert strings.
 - metadata: string values only (quote versions).
 - SKILL.md <= 500 lines; references/scripts one directory level deep.
 - UTF-8 without BOM; no duplicate headings; <=1000 files / <=10 MiB per skill.
@@ -36,9 +39,24 @@ repo), never memory.
   `skills/` at the root for skills-CLI/hub discovery. Install copies the whole
   repo into the plugin cache; keep the repo lean.
 - Inline version pins (`skills@…` and `opencode-ai@…` in workflows, the
-  uvx commit pin, `scripts/ci/biomcp-tools.json`, and the
-  `connector/workbuddy/mcp.json` pins — `biomcp@x.y.z` + npm registry URL)
-  are NOT covered by dependabot — bump them manually when warranted.
+  `uvx` commit pin, `scripts/ci/biomcp-tools.json`, the
+  `connector/workbuddy/mcp.json` pins — `biomcp@x.y.z` + npm registry URL —
+  and `.claude-plugin/mcp.json` — `biomcp@x.y.z`) are NOT covered by
+  dependabot — bump them manually when warranted.
+
+## Claude plugin components
+
+- ALL Claude Code-specific plugin components live under `.claude-plugin/`,
+  never at the repo root: the bundled MCP server config
+  (`.claude-plugin/mcp.json`, referenced from `plugin.json` `mcpServers`) and
+  plugin subagents (`.claude-plugin/agents/*.md`, referenced from
+  `plugin.json` `agents`). Claude Code only auto-scans plugin-root default
+  locations, so every component there must be manifest-declared.
+- `check-marketplace.mjs` pins the bundled server to the
+  `scripts/ci/biomcp-tools.json` version; `lint-agents.mjs` validates agent
+  frontmatter (no `hooks`/`mcpServers`/`permissionMode` — ignored for plugin
+  agents) and exact `plugin.json` <-> directory agreement; the tool-name and
+  legacy-name gates also scan `.claude-plugin/agents/`.
 
 ## WorkBuddy connector
 
@@ -64,7 +82,8 @@ repo), never memory.
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,
   PR into main, `ci` check required, conventional commits
   (`feat(skill):`, `fix(skill):`, `feat(connector):`, `fix(connector):`,
-  `docs:`, `chore(release):`, `chore(deps):`).
+  `feat(plugin):`, `fix(plugin):`, `docs:`, `chore(release):`,
+  `chore(deps):`).
 
 ## Testing
 
