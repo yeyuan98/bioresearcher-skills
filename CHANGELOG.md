@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
 
+## [1.4.0] - 2026-09-06
+
+### Infrastructure
+- Bundle the pinned core-only biomcp MCP server in the Claude Code plugin
+  (`.claude-plugin/mcp.json`, referenced from `plugin.json` `mcpServers`;
+  tools surface as `mcp__plugin_bioresearcher_biomcp__*`, 120 s tool
+  timeout): marketplace installs auto-start `biomcp@1.1.1` over stdio with
+  no manual `.mcp.json`; a manual registration and the bundled server do
+  not deduplicate, so disable one via `/mcp`.
+- Ship the `bioresearcher-dr-worker` plugin subagent
+  (`.claude-plugin/agents/`, referenced from `plugin.json` `agents`) for the
+  deep-research fan-out: tool pool limited to the biomcp servers plus
+  read/write file tools; self-loads the skill's worker protocol and
+  cheatsheets via `${CLAUDE_PLUGIN_ROOT}`.
+- CI: new `lint-agents.mjs` gate; `check-marketplace.mjs` pins the bundled
+  server args to `scripts/ci/biomcp-tools.json`; `lint-frontmatter.mjs`
+  accepts `mcp__*` server rules in `allowed-tools`; the tool-name and
+  legacy-name gates now also scan `.claude-plugin/agents/`;
+  `check-drift.mjs` gates `CITATION.cff` version (fixing a pre-existing
+  1.2.0-vs-1.3.0 drift).
+- New manual empirical suite `agent-test/claude-plugin-specific/` (6 cases;
+  hermetic `--list`/`--dry-run` in CI). Empirical findings on Claude Code
+  2.1.261: Tier A worker dispatch confirmed (three `bioresearcher-dr-worker`
+  subagents spawned for a light-research run), and the skill `allowed-tools`
+  turn grant does NOT cover MCP server rules in headless manual mode —
+  docs now present the `permissions.allow` snippet as the dependable
+  prompt-free path.
+- WorkBuddy connector: the v1.4.0 tarball (built and attached by the
+  release workflow) carries the deep-research 1.1.0 staged skill.
+- Bump repository VERSION to 1.4.0 and keep `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, `connector/workbuddy/connector-meta.json`,
+  and `CITATION.cff` in lockstep so existing plugin users receive the
+  bundled MCP server and worker agent.
+
+### bioresearcher-deep-research 1.1.0
+- Step 4 worker dispatch is now three-tier and capability-based: dedicated
+  `bioresearcher-dr-worker` subagent when installed (no prompt inlining),
+  generic subagent with the inlined worker cheatsheets otherwise
+  (harness-agnostic path preserved), sequential fallback unchanged; new MCP
+  availability pre-check degrades to sequential with an explicit notice.
+- `allowed-tools` additionally lists the Claude Code biomcp server rules
+  (`mcp__plugin_bioresearcher_biomcp`, `mcp__biomcp`) as a best-effort
+  turn grant; inert strings on other harnesses.
+- Prerequisites document the plugin-bundled core-only server, the
+  all-features divergence (manual `-p webr@0.6 -p mysql2@3` variant), and
+  `/mcp` coexistence.
+
 ## [1.3.0] - 2026-09-06
 
 ### Infrastructure
