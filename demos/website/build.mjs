@@ -31,9 +31,11 @@
  *
  * Post-build self checks (exit 1 on failure unless noted):
  *   link check  — every internal href/src/iframe src resolves inside the
- *                 site; absolute URLs are permitted ONLY in sitemap.xml and
- *                 inside <meta>/<link> tags (og:image, hreflang alternates);
- *                 warns under --no-copy-artifacts instead of failing.
+ *                 site (internal links are relative-only by construction;
+ *                 external http(s)/mailto/data URLs are exempt everywhere,
+ *                 and <meta>/<link> tags are stripped before scanning so
+ *                 og:image / hreflang absolute URLs never trip it); warns
+ *                 under --no-copy-artifacts instead of failing.
  *   tripwire    — warn (never fail) if an embedded artifact HTML contains
  *                 remote src/href references (self-containment regression).
  */
@@ -50,6 +52,14 @@ const SITE_URL = "https://yeyuan98.github.io/bioresearcher-skills";
 const REPO_URL = "https://github.com/yeyuan98/bioresearcher-skills";
 const MAX_ASSET_BYTES = 1.5 * 1024 * 1024;
 const PACK_COMMIT = "2d4ab09d272b87c9dcf04cb55b46ab274892ebc5"; // artifacts permalink commit
+
+// Per-language section anchors into demos/docs/agent.{en,zh}.md. Each anchor
+// is asserted at build time against the doc's heading text (catches
+// renumbering); GitHub slugs drop "&" without a hyphen (常见 Q&A -> 常见-qa).
+const DOC_ANCHORS = {
+  en: { onboarding: ["#5-onboarding", "## 5. Onboarding"], faq: ["#7-faq", "## 7. FAQ"], api: ["#4-api--interface-documentation", "## 4. API / interface documentation"] },
+  zh: { onboarding: ["#5-开通流程", "## 5. 开通流程"], faq: ["#7-常见-qa", "## 7. 常见 Q&A"], api: ["#4-api--接口文档", "## 4. API / 接口文档"] },
+};
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -181,6 +191,8 @@ function loadInputs() {
   const mcpCaptures = need(path.join("demos", "website", "src", "mcp-captures.json"));
   const css = need(path.join("demos", "website", "src", "style.css"));
 
+  const agentDocEn = need(path.join("demos", "docs", "agent.en.md"));
+  const agentDocZh = need(path.join("demos", "docs", "agent.zh.md"));
   const skillsRoot = need("skills");
   const scenariosRoot = need(path.join("demos", "scenarios"));
   const artifactsRoot = need(path.join("demos", "artifacts"));
@@ -229,6 +241,17 @@ function loadInputs() {
     throw new Error("OPTIONAL_GROUPS does not exactly partition the registry optional set");
   }
 
+  // Anchor drift gate: every DOC_ANCHORS heading must exist verbatim in the
+  // matching doc (renumbering fails the build instead of shipping dead links).
+  for (const [lang, anchors] of Object.entries(DOC_ANCHORS)) {
+    const doc = fs.readFileSync(lang === "en" ? agentDocEn : agentDocZh, "utf8");
+    for (const [, [slug, heading]] of Object.entries(anchors)) {
+      if (!doc.includes(heading)) {
+        throw new Error(`DOC_ANCHORS drift: heading ${JSON.stringify(heading)} (anchor ${slug}) not found in agent.${lang}.md`);
+      }
+    }
+  }
+
   return {
     version: fs.readFileSync(version, "utf8").trim(),
     skills,
@@ -257,7 +280,7 @@ function card({ title, body, href, badgeHtml }) {
     `<h3>${title}</h3>`,
     `<p>${body}</p>`,
   ]);
-  const content = `<div class="card">${badgeHtml ? `<div class="card-badges">${badgeHtml}</div>` : ""}${inner}${href ? `<p class="card-link"><a href="${esc(href)}">${href.replace(/\.html$/, "").replace(/^\.\.\//, "").replaceAll("/", " · ")}</a></p>` : ""}</div>`;
+  const content = `<div class="card">${badgeHtml ? `<div class="card-badges">${badgeHtml}</div>` : ""}${inner}${href ? `<p class="card-link"><a href="${esc(href)}">${esc(href.replace(/\.html$/, "").replace(/^\.\.\//, "").replaceAll("/", " · "))}</a></p>` : ""}</div>`;
   return content;
 }
 
@@ -311,10 +334,11 @@ function layout({ S, lang, title, description, body, active, pagePath, headExtra
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="icon" type="image/jpeg" href="${root}assets/icon.jpg">
+<link rel="icon" type="image/jpeg" href="${root}favicon.jpg">
 <link rel="stylesheet" href="${root}assets/style.css">
 ${pagePath ? `<link rel="alternate" hreflang="${lang}" href="${SITE_URL}/${lang}/${pagePath}">` : ""}
 ${pagePath ? `<link rel="alternate" hreflang="${lang === "zh" ? "en" : "zh"}" href="${SITE_URL}/${lang === "zh" ? "en" : "zh"}/${pagePath}">` : ""}
+${pagePath ? `<link rel="alternate" hreflang="x-default" href="${SITE_URL}/en/${pagePath}">` : ""}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:image" content="${SITE_URL}/assets/icon.jpg">
@@ -334,7 +358,7 @@ ${body}
 </main>
 <footer class="site-footer">
   <div class="wrap">
-    <p>${esc(S.footer.built)} <code>${esc(buildStamp)}</code> · ${esc(S.footer.license)} <a href="${REPO_URL}/blob/main/LICENSE">Apache-2.0</a> · <a href="${REPO_URL}">GitHub</a></p>
+    <p>BioResearcher <strong>v${esc(siteVersion)}</strong> · ${esc(S.footer.built)} <code>${esc(buildStamp)}</code> · ${esc(S.footer.license)} <a href="${REPO_URL}/blob/main/LICENSE">Apache-2.0</a> · <a href="${REPO_URL}">GitHub</a></p>
     <p><a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md">${esc(S.footer.agentDoc)}</a> · <a href="${REPO_URL}/blob/main/demos/docs/mcp.${lang}.md">${esc(S.footer.mcpDoc)}</a> · <a href="${REPO_URL}/blob/main/demos/docs/glossary.md">${esc(S.footer.glossary)}</a> · <a href="${REPO_URL}/blob/main/CITATION.cff">${esc(S.footer.citation)}</a></p>
   </div>
 </footer>
@@ -344,6 +368,7 @@ ${body}
 }
 
 let buildStamp = "";
+let siteVersion = "";
 
 /* ------------------------------------------------------------------ pages */
 
@@ -355,15 +380,15 @@ function splashPage(data) {
   <h1>BioResearcher <span class="ver">v${esc(data.version)}</span></h1>
   <div class="splash-cols">
     <div class="splash-col">
-      <p class="pitch">${zh.splash.pitch}</p>
+      <p class="pitch">${esc(zh.splash.pitch)}</p>
       <a class="btn primary" href="zh/index.html">中文 →</a>
     </div>
     <div class="splash-col">
-      <p class="pitch">${en.splash.pitch}</p>
+      <p class="pitch">${esc(en.splash.pitch)}</p>
       <a class="btn primary" href="en/index.html">English →</a>
     </div>
   </div>
-  <p class="splash-foot">${zh.splash.foot} · ${en.splash.foot}</p>
+  <p class="splash-foot">${esc(zh.splash.foot)} · ${esc(en.splash.foot)}</p>
 </div>`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -372,7 +397,7 @@ function splashPage(data) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BioResearcher</title>
 <meta name="description" content="${esc(en.splash.pitch)}">
-<link rel="icon" type="image/jpeg" href="assets/icon.jpg">
+<link rel="icon" type="image/jpeg" href="favicon.jpg">
 <link rel="stylesheet" href="assets/style.css">
 <meta property="og:title" content="BioResearcher">
 <meta property="og:description" content="${esc(en.splash.pitch)}">
@@ -391,14 +416,14 @@ function notFoundPage(data) {
   const zh = data.strings.zh;
   const body = `<div class="notfound">
   <h1>404</h1>
-  <p>${zh.notfound}</p>
-  <p>${en.notfound}</p>
+  <p>${esc(zh.notfound)}</p>
+  <p>${esc(en.notfound)}</p>
   <p><a class="btn" href="index.html">${zh.notfoundHome} / ${en.notfoundHome}</a></p>
 </div>`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 · BioResearcher</title><link rel="icon" type="image/jpeg" href="assets/icon.jpg"><link rel="stylesheet" href="assets/style.css"></head>
+<title>404 · BioResearcher</title><link rel="icon" type="image/jpeg" href="favicon.jpg"><link rel="stylesheet" href="assets/style.css"></head>
 <body class="splash-body">${body}</body></html>
 `;
 }
@@ -438,7 +463,7 @@ function getStartedPage(data, lang) {
 <section><h2>${esc(S.getStarted.channelsTitle)}</h2>${channels}</section>
 <section><h2>${esc(S.getStarted.chinaTitle)}</h2><p>${esc(S.getStarted.chinaBody)}</p></section>
 <section><h2>${esc(S.getStarted.doctorTitle)}</h2><p>${esc(S.getStarted.doctorBody)}</p>${codeBlock(S.getStarted.doctorCode)}</section>
-<section><p class="more">${esc(S.getStarted.more)} <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md#5-开通流程">${esc(S.getStarted.moreLink)}</a></p></section>`;
+<section><p class="more">${esc(S.getStarted.more)} <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md${DOC_ANCHORS[lang].onboarding[0]}">${esc(S.getStarted.moreLink)}</a></p></section>`;
   return layout({ S, lang, title: `${S.getStarted.title} — BioResearcher`, description: S.getStarted.intro.slice(0, 160), body, active: "getStarted", pagePath: "get-started.html" });
 }
 
@@ -449,7 +474,7 @@ function faqPage(data, lang) {
     .join("");
   const body = `<section class="hero"><h1>${esc(S.faq.title)}</h1><p>${esc(S.faq.intro)}</p></section>
 <section>${items}</section>
-<section><p class="more">${esc(S.faq.more)} <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md#7-常见-q-a">${esc(S.faq.moreLink)}</a></p></section>`;
+<section><p class="more">${esc(S.faq.more)} <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md${DOC_ANCHORS[lang].faq[0]}">${esc(S.faq.moreLink)}</a></p></section>`;
   return layout({ S, lang, title: `${S.faq.title} — BioResearcher`, description: S.faq.intro.slice(0, 160), body, active: "faq", pagePath: "faq.html" });
 }
 
@@ -458,7 +483,7 @@ function skillsIndexPage(data, lang) {
   const cards = data.skills
     .map((sk) => {
       const extra = data.skillsExtra[sk.name] ?? {};
-      const zhDesc = data.locales.skills?.[sk.name]?.description_zh;
+      const zhDesc = (data.skillsExtra[sk.name] ?? {}).descZh ?? data.locales.skills?.[sk.name]?.description_zh;
       const desc = lang === "zh" ? (zhDesc ?? sk.description) : sk.description;
       return card({
         title: `<code>${esc(sk.name)}</code> <span class="mini-badge">v${esc(sk.version)}</span>`,
@@ -476,13 +501,13 @@ function skillPage(data, lang, skillName) {
   const S = data.strings[lang];
   const sk = data.skills.find((s) => s.name === skillName);
   const extra = data.skillsExtra[skillName] ?? {};
-  const zhDesc = data.locales.skills?.[skillName]?.description_zh;
+  const zhDesc = extra.descZh ?? data.locales.skills?.[skillName]?.description_zh;
   const desc = lang === "zh" ? (zhDesc ?? sk.description) : sk.description;
   const rows = [];
   rows.push([esc(S.skills.p.version), esc(sk.version)]);
   if (extra.outputs?.[lang]) rows.push([esc(S.skills.p.outputs), esc(extra.outputs[lang])]);
   const demoCase = extra.demo ? data.cases.find((c) => c.id === extra.demo) : null;
-  if (demoCase) rows.push([esc(S.skills.p.demo), `<a href="../demos/${demoCase.id}.html">${esc(demoCase.scenario.title_en)}</a>`]);
+  if (demoCase) rows.push([esc(S.skills.p.demo), `<a href="../demos/${demoCase.id}.html">${esc(lang === "zh" ? demoCase.scenario.title_zh : demoCase.scenario.title_en)}</a>`]);
   const note = extra.note?.[lang];
   const body = `<section class="hero"><h1><code>${esc(skillName)}</code> <span class="mini-badge">v${esc(sk.version)}</span></h1></section>
 <section>${kvTable(rows)}</section>
@@ -490,7 +515,7 @@ ${note ? `<section class="note"><p>${esc(note)}</p></section>` : ""}
 <section><p>${esc(desc)}</p></section>
 <section><p class="more">
   <a href="${REPO_URL}/blob/main/skills/${skillName}/SKILL.md">${esc(S.skills.p.skillMd)}</a>
-  · <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md#4-api--接口文档">${esc(S.skills.p.contract)}</a>
+  · <a href="${REPO_URL}/blob/main/demos/docs/agent.${lang}.md${DOC_ANCHORS[lang].api[0]}">${esc(S.skills.p.contract)}</a>
 </p></section>`;
   return layout({ S, lang, title: `${skillName} — BioResearcher`, description: desc.slice(0, 160), body, active: "skills", pagePath: `skills/${skillName}.html` });
 }
@@ -528,11 +553,16 @@ function outcomeBadges(c, D) {
   return badge(adj ? D.rubricPass : D.pass, adj ? "amber" : "green") + badge(`${c.provenance.durationSec ?? "—"}s`, "") + badge(`${D.promptLang}: ${c.scenario.lang ?? "?"}`, "") + badge(`${D.artifactLang}: ${c.overlay.artifactLang}`, "");
 }
 
-function checksStrip(c, D) {
-  const total = (c.result.checks ?? []).length;
-  const pass = (c.result.checks ?? []).filter((x) => x.status === "pass").length;
+function checksStrip(c, D, lang) {
+  // Manual (rubric) checks are reported via the rubric note, not counted in
+  // the machine-check denominator (otherwise adjudicated cases read 1/2).
+  const machine = (c.result.checks ?? []).filter((x) => x.status !== "manual");
+  const total = machine.length;
+  const pass = machine.filter((x) => x.status === "pass").length;
   const rubric = (c.result.adjudications ?? []).length;
-  return `<p class="checks">${esc(D.checks)}: <strong>${pass}/${total}</strong>${rubric ? ` · ${esc(D.rubricNote)}` : ""}</p>`;
+  const counted = `<strong>${pass}/${total}</strong>`;
+  const label = lang === "zh" ? `${counted} ${esc(D.checks)}` : `${esc(D.checks)}: ${counted}`;
+  return `<p class="checks">${label}${rubric ? ` · ${esc(D.rubricNote)}` : ""}</p>`;
 }
 
 function evidencePanel(c, D, assetsPrefix, lang) {
@@ -542,7 +572,7 @@ function evidencePanel(c, D, assetsPrefix, lang) {
   if (ev.type === "iframe") {
     return `<div class="doc-viewport">
   <div class="doc-bar"><span>${esc(D.embeddedReport)}</span><a href="${assetsPrefix}${id}/final_report.html" target="_blank" rel="noopener">${esc(D.openFull)} ↗</a></div>
-  <iframe src="${assetsPrefix}${id}/final_report.html" loading="lazy" title="${esc(c.scenario.title_en)}"></iframe>
+  <iframe src="${assetsPrefix}${id}/final_report.html" loading="lazy" sandbox="allow-same-origin" title="${esc(c.scenario.title_en)}"></iframe>
 </div>
 <p class="asset-links"><a href="${assetsPrefix}${id}/final_report.md">final_report.md</a> · <a href="${assetsPrefix}${id}/final_report-top.jpg">${D.screenshot}</a></p>`;
   }
@@ -585,7 +615,6 @@ function casePage(data, lang, c) {
   const findings = (c.overlay.findings[lang] ?? c.overlay.findings.en)
     .map((f) => `<li>${esc(f)}</li>`).join("");
   const isProbe = c.scenario.kind === "mcp-probe";
-  const artifactDirUrl = `${REPO_URL}/tree/${c.provenance.gitCommit ?? PACK_COMMIT}/demos/artifacts/${c.id}`;
   const packDirUrl = `${REPO_URL}/tree/${PACK_COMMIT}/demos/artifacts/${c.id}`;
   // Note is chosen by ARTIFACT language and rendered in the PAGE language:
   // the zh string describes an English artifact; the en string a Chinese one.
@@ -598,7 +627,7 @@ function casePage(data, lang, c) {
 </section>
 <section>
   <h2>${esc(D.promptTitle)}</h2>
-  ${promptBlock(c.result.promptText ?? c.scenario.prompt)}
+  ${(c.result.promptText ?? c.scenario.prompt) ? promptBlock(c.result.promptText ?? c.scenario.prompt) : `<p class="replay-note">${esc(D.noPrompt)}</p>`}
 </section>
 <section>
   <h2>${esc(D.findingsTitle)}</h2>
@@ -611,10 +640,14 @@ function casePage(data, lang, c) {
 </section>
 <section>
   <h2>${esc(D.checksTitle)}</h2>
-  ${checksStrip(c, D)}
+  ${checksStrip(c, D, lang)}
   ${kvTable([
     [esc(D.fanout), esc(c.overlay.fanout?.[lang] ?? "—")],
-    [esc(D.provenance), `<code>${esc((c.provenance.gitCommit ?? "").slice(0, 7))}</code> · opencode ${esc(c.provenance.opencodeVersion ?? "—")} · biomcp@${esc(c.provenance.biomcpPin ?? "—")}`],
+    [esc(D.provenance), [
+      `<code>${esc((c.provenance.gitCommit ?? "").slice(0, 7))}</code>`,
+      c.provenance.opencodeVersion ? `opencode ${esc(c.provenance.opencodeVersion)}` : null,
+      c.provenance.biomcpPin ? `biomcp@${esc(c.provenance.biomcpPin)}` : null,
+    ].filter((x) => x).join(" · ")],
   ])}
 </section>
 <section>
@@ -638,7 +671,7 @@ function demosIndexPage(data, lang) {
   const cards = data.cases
     .map((c) => card({
       title: esc(lang === "zh" ? c.scenario.title_zh : c.scenario.title_en),
-      body: esc((lang === "zh" ? c.scenario.summary_zh : c.scenario.summary_en).slice(0, 180) + "…"),
+      body: esc((() => { const t = lang === "zh" ? c.scenario.summary_zh : c.scenario.summary_en; return t.length > 180 ? t.slice(0, 180) + "…" : t; })()),
       href: `${c.id}.html`,
       badgeHtml: outcomeBadges(c, D),
     }))
@@ -658,8 +691,8 @@ function collectAssetFiles(c) {
   for (const sub of ["outputs", "screenshots"]) {
     const dir = path.join(base, sub);
     if (!fs.existsSync(dir)) continue;
-    for (const walk of [dir]) {
-      const stack = [walk];
+    {
+      const stack = [dir];
       while (stack.length) {
         const d = stack.pop();
         for (const de of fs.readdirSync(d, { withFileTypes: true })) {
@@ -681,14 +714,21 @@ function main() {
   }
   const data = loadInputs();
   const outDir = path.resolve(args.out ?? path.join(WEBSITE_DIR, "_site"));
+  // Safety guard: the build rmSync's the output directory recursively —
+  // refuse anything inside the repo except the default _site location.
+  if (outDir !== path.join(WEBSITE_DIR, "_site") && (outDir === REPO || outDir.startsWith(REPO + path.sep))) {
+    console.error(`build: refusing to rmSync inside the repo: ${outDir} (use a path outside, or omit --out)`);
+    return 1;
+  }
   buildStamp = `${data.sha} · ${new Date().toISOString().slice(0, 10)}`;
+  siteVersion = data.version;
   fs.rmSync(outDir, { recursive: true, force: true });
   const W = (rel) => { const p = path.join(outDir, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); return p; };
 
   const warnings = [];
-  const skippedAssets = [];
 
   // 1) assets: icon + css + per-case artifact outputs (flattened).
+  fs.copyFileSync(data.icon, W("favicon.jpg"));
   fs.copyFileSync(data.icon, W("assets/icon.jpg"));
   fs.writeFileSync(W("assets/style.css"), data.css);
   if (!args.noCopyArtifacts) {
@@ -701,7 +741,6 @@ function main() {
         const st = fs.statSync(src);
         if (st.size > MAX_ASSET_BYTES) {
           warnings.push(`asset skipped (> ${(MAX_ASSET_BYTES / 1048576).toFixed(1)} MiB cap): ${c.id}/${name}`);
-          skippedAssets.push(`${c.id}/${name}`);
           continue;
         }
         fs.copyFileSync(src, W(path.join("assets", c.id, name)));
@@ -758,7 +797,7 @@ function main() {
       else if (de.name.endsWith(".html") || de.name.endsWith(".htm")) htmlFiles.push(p);
     }
   }
-  for (const file of htmlFiles) {
+  for (const file of htmlFiles.sort()) {
     let text = fs.readFileSync(file, "utf8");
     text = text.replace(/<meta\b[^>]*>/gi, "").replace(/<link\b[^>]*>/gi, "");
     for (const m of text.matchAll(/(?:href|src)\s*=\s*"([^"]+)"/g)) {

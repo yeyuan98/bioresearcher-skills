@@ -15,7 +15,8 @@
     "note": {
       "en": "Not bundled in the WorkBuddy connector on purpose: its job — installing and registering the biomcp server — is exactly what the connector itself already does (see docs/connector-workbuddy.md).",
       "zh": "WorkBuddy 连接器有意不捆绑本技能：其职责——安装并注册 biomcp 服务器——正是连接器自身已完成的事（见 docs/connector-workbuddy.md）。"
-    }
+    },
+    "descZh": "为项目装配本地 BioMCP 运行时：下载便携 Node.js 22、供应商化 biomcp（自动探测 npmmirror 镜像）、按需启用 R/Biowasm/SQLite，并注册到你的宿主配置。"
   },
   "bioresearcher-plot-making": {
     "demo": "agent-plot-making-en",

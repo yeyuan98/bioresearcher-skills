@@ -18,6 +18,6 @@
   },
   "evidence": {
     "type": "interview",
-    "excerpt": "Before starting this deep research report on CAR-T therapy safety in solid tumors, I need to clarify a few key points to scope the research properly:\n\n1. **Research focus**: Are you primarily interested in... (the clarifying-question batch, verbatim from the session)"
+    "excerpt": "Before starting the deep research run, I need to clarify the scope (Step 1 of the workflow). Please answer the following — one round, then I'll proceed:\n\n1. **Safety outcomes**: Which toxicities matter most — CRS/ICANS only, on-target/off-tumor toxicity, or the full safety spectrum (including neurotoxicity, hematologic toxicity, insertional oncogenesis concerns)?\n2. **Tumor scope**: Pan-solid-tumor overview, or specific indications (e.g., glioblastoma, pancreatic, ovarian, lung)? …\n3. **Time window**: Last 5 years, or all available evidence?\n4. **Evidence scope**: Clinical trials only, or also include reviews/meta-analyses, case reports, and regulatory (FDA) documents?\n5. **Output format**: Default is a full report with numbered citations as Markdown + rendered HTML under `reports/` — is that fine, or Markdown-only (`no-html`)?\n\nI'll wait for your reply before decomposing the topic and launching the research.\n\n(Opening + all five questions verbatim from the session transcript; ellipsis only shortens the question list inside Q2.)"
   }
 }

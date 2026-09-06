@@ -51,11 +51,31 @@
     ],
     "navTitle": "开始探索",
     "navCards": [
-      { "title": "技能", "body": "五个技能各自做什么、版本与产出契约。", "href": "skills/index.html" },
-      { "title": "MCP 服务", "body": "biomcp-ts：41 核心 + 15 可选工具，stdio 传输，免密钥默认可用。", "href": "mcp.html" },
-      { "title": "演示案例", "body": "七个真实运行案例报告，证据可逐项查验。", "href": "demos/index.html" },
-      { "title": "开通指南", "body": "任意宿主一分钟内装好。", "href": "get-started.html" },
-      { "title": "常见问题", "body": "密钥、隐私、大陆网络、成本、许可证。", "href": "faq.html" }
+      {
+        "title": "技能",
+        "body": "五个技能各自做什么、版本与产出契约。",
+        "href": "skills/index.html"
+      },
+      {
+        "title": "MCP 服务",
+        "body": "biomcp-ts：41 核心 + 15 可选工具，stdio 传输，免密钥默认可用。",
+        "href": "mcp.html"
+      },
+      {
+        "title": "演示案例",
+        "body": "七个真实运行案例报告，证据可逐项查验。",
+        "href": "demos/index.html"
+      },
+      {
+        "title": "开通指南",
+        "body": "任意宿主一分钟内装好。",
+        "href": "get-started.html"
+      },
+      {
+        "title": "常见问题",
+        "body": "密钥、隐私、大陆网络、成本、许可证。",
+        "href": "faq.html"
+      }
     ]
   },
   "getStarted": {
@@ -63,9 +83,18 @@
     "intro": "BioResearcher 是一个智能体技能包（Agent Skills）：任何读取 SKILL.md 的宿主都能加载。研究类技能需要 biomcp MCP 服务器——可由引导技能自动装配。任选以下渠道：",
     "reqTitle": "环境要求",
     "requirements": [
-      ["Node.js", "≥ 22.13（PATH 上有 npx；npx --version 检查）"],
-      ["可选", "uv + python3——绘图与周更解析技能会自行引导 Python 依赖"],
-      ["API 密钥", "默认无需任何密钥（见常见问题）"]
+      [
+        "Node.js",
+        "≥ 22.13（PATH 上有 npx；npx --version 检查）"
+      ],
+      [
+        "可选",
+        "uv + python3——绘图与周更解析技能会自行引导 Python 依赖"
+      ],
+      [
+        "API 密钥",
+        "默认无需任何密钥（见常见问题）"
+      ]
     ],
     "channelsTitle": "安装渠道",
     "channels": [
@@ -120,7 +149,7 @@
       },
       {
         "q": "为什么演示报告在这里能直接打开，GitHub 上却不行？",
-        "a": "因为本站直接嵌入仓库里提交的原始 final_report.html——同一个文件，sha256 溯源钉扎。展示环节不做任何重新渲染。",
+        "a": "因为本站直接嵌入仓库里提交的原始 final_report.html——同一个文件，提交号溯源钉扎。展示环节不做任何重新渲染。",
         "link": "demos/index.html",
         "linkText": "演示"
       },
@@ -186,7 +215,7 @@
   },
   "demos": {
     "title": "演示案例",
-    "intro": "由 demos/run-demo.mjs 驱动的七个真实运行场景（opencode v1.18.29；被测技能树按案例在 provenance.json 中钉扎）。每个案例都带客观校验、整理后的会话记录与仓库中提交号钉扎的产物。",
+    "intro": "由 demos/run-demo.mjs 驱动的七个真实运行场景（智能体案例经 opencode v1.18.29 运行；被测技能树按案例在 provenance.json 中钉扎）。每个案例都带客观校验、整理后的会话记录与仓库中提交号钉扎的产物。",
     "htmlNote": "下方嵌入的报告是仓库中提交的原始 HTML 产物——本站渲染原文件，不做任何重新渲染。",
     "replayAll": "复现指南与产物索引：",
     "pass": "PASS",
@@ -215,8 +244,9 @@
     "ms": "耗时 ms",
     "request": "请求",
     "response": "响应（节选）",
-    "artifactLangNoteEn": "The report artifact is in Chinese — a true-run output, untranslated.",
-    "artifactLangNoteZh": "报告原文为中文——真实运行产物，未翻译。"
+    "artifactLangNoteEn": "以下证据原文为中文——真实运行产物，未翻译。",
+    "artifactLangNoteZh": "以下证据原文为英文——真实运行产物，未翻译。",
+    "noPrompt": "不适用——本场景为确定性 stdio JSON-RPC 探针，非提示词驱动的智能体会话。"
   },
   "footer": {
     "built": "由仓库提交构建",

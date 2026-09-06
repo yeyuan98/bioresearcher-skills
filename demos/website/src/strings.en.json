@@ -51,11 +51,31 @@
     ],
     "navTitle": "Explore",
     "navCards": [
-      { "title": "Skills", "body": "What each of the five skills does, its version and outputs.", "href": "skills/index.html" },
-      { "title": "MCP server", "body": "biomcp-ts: 41 core + 15 optional tools over stdio, keyless by default.", "href": "mcp.html" },
-      { "title": "Demo cases", "body": "Seven true-run case reports with evidence you can inspect.", "href": "demos/index.html" },
-      { "title": "Get started", "body": "Install in under a minute on any harness.", "href": "get-started.html" },
-      { "title": "FAQ", "body": "Keys, privacy, mainland-China network, cost, license.", "href": "faq.html" }
+      {
+        "title": "Skills",
+        "body": "What each of the five skills does, its version and outputs.",
+        "href": "skills/index.html"
+      },
+      {
+        "title": "MCP server",
+        "body": "biomcp-ts: 41 core + 15 optional tools over stdio, keyless by default.",
+        "href": "mcp.html"
+      },
+      {
+        "title": "Demo cases",
+        "body": "Seven true-run case reports with evidence you can inspect.",
+        "href": "demos/index.html"
+      },
+      {
+        "title": "Get started",
+        "body": "Install in under a minute on any harness.",
+        "href": "get-started.html"
+      },
+      {
+        "title": "FAQ",
+        "body": "Keys, privacy, mainland-China network, cost, license.",
+        "href": "faq.html"
+      }
     ]
   },
   "getStarted": {
@@ -63,9 +83,18 @@
     "intro": "BioResearcher is an Agent Skills package: any harness that reads SKILL.md can load it. Pick your channel below — the biomedical MCP server (biomcp) is required for the research skills and can be bootstrapped automatically by the onboarding skill.",
     "reqTitle": "Requirements",
     "requirements": [
-      ["Node.js", ">= 22.13 with npx on PATH (npx --version)"],
-      ["Optional", "uv + python3 — the plotting and weekly-parsing skills bootstrap their own Python dependencies"],
-      ["API keys", "None required by default (see FAQ)"]
+      [
+        "Node.js",
+        ">= 22.13 with npx on PATH (npx --version)"
+      ],
+      [
+        "Optional",
+        "uv + python3 — the plotting and weekly-parsing skills bootstrap their own Python dependencies"
+      ],
+      [
+        "API keys",
+        "None required by default (see FAQ)"
+      ]
     ],
     "channelsTitle": "Install channels",
     "channels": [
@@ -120,7 +149,7 @@
       },
       {
         "q": "Why do the demo reports open directly here, when GitHub can't render them?",
-        "a": "Because this site embeds the byte-exact final_report.html committed in the repository — the same file whose provenance is sha256-pinned. Nothing is re-rendered for display.",
+        "a": "Because this site embeds the byte-exact final_report.html committed in the repository — the same file whose provenance is pinned by the repo commit. Nothing is re-rendered for display.",
         "link": "demos/index.html",
         "linkText": "Demos"
       },
@@ -186,7 +215,7 @@
   },
   "demos": {
     "title": "Demo cases",
-    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (opencode v1.18.29; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
+    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.29; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
     "htmlNote": "The embedded reports below are the byte-exact HTML artifacts committed to the repo — the site renders the original files, it does not re-render them.",
     "replayAll": "Replay guide and artifact index:",
     "pass": "PASS",
@@ -215,8 +244,9 @@
     "ms": "ms",
     "request": "Request",
     "response": "Response (excerpt)",
-    "artifactLangNoteEn": "The report artifact is in Chinese — a true-run output, untranslated.",
-    "artifactLangNoteZh": "报告原文为英文——真实运行产物，未翻译。"
+    "artifactLangNoteEn": "The evidence below is in Chinese — a true-run output, untranslated.",
+    "artifactLangNoteZh": "The evidence below is in English — a true-run output, untranslated.",
+    "noPrompt": "n/a — this scenario is a deterministic stdio JSON-RPC probe, not a prompted agent session."
   },
   "footer": {
     "built": "Built from repo commit",

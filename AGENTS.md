@@ -112,4 +112,7 @@ repo), never memory.
   main. Deploying requires the one-time repo setting Settings → Pages →
   Source: GitHub Actions (then re-run the workflow); builds read committed
   repo data only (VERSION, skills.json, SKILL.md frontmatter, connector
-  locales, scenarios/artifacts) — never `agent-test/` paths.
+  locales, scenarios/artifacts, demos/docs anchors — asserted at build time)
+  — never `agent-test/` paths. Internal links are relative-only (subpath
+  safety, enforced by the build link check); absolute site URLs are confined
+  to sitemap.xml and `<meta>`/`<link>` tags (og:image, hreflang alternates).

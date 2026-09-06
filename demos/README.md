@@ -5,6 +5,17 @@ Bilingual partner-publication pack for the BioResearcher skills package:
 / MCP), in Chinese and English. / 面向合作方的双语发布材料包：**真实运行**
 的演示产物 + 两份发布文档（智能体 / MCP），中英双语。
 
+> **Showroom / 展示站** — the same material powers the GitHub Pages site
+> <https://yeyuan98.github.io/bioresearcher-skills/> (bilingual splash,
+> per-case report pages embedding the byte-exact report artifacts). Source:
+> `demos/website/` (static, zero-dep `build.mjs`; built site never committed);
+> deployed by `.github/workflows/pages.yml` — requires the one-time repo
+> setting Settings → Pages → Source: GitHub Actions.
+> / 同一批材料驱动 GitHub Pages 展示站（双语入口页 + 逐案例报告页，直接嵌入
+> 逐字节一致的报告产物）。源码在 `demos/website/`（静态、零依赖构建，构建
+> 产物不入库），由 `pages.yml` 部署——需一次性设置 Settings → Pages →
+> Source: GitHub Actions。
+
 ## Documents / 文档
 
 | Document | 中文 | English |
