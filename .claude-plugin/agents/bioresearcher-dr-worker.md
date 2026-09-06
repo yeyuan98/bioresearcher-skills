@@ -28,7 +28,9 @@ Then apply the Worker rules and File protocol from worker-protocol.md exactly.
    terms, `limit`, `sections`) - never retrieve broadly and filter locally.
 3. Make biomcp MCP calls sequentially - never issue concurrent calls. The
    server paces every upstream source in-process, so never sleep or throttle
-   manually; retries re-issue immediately with a simplified query.
+   manually. This worker has no shell, so the protocol's "wait a few
+   seconds" pause between retry attempts does not apply - re-issue
+   immediately with a simplified query.
 4. Retry ladder per query, at most 3 attempts: original query -> simplified
    query (fewer terms, broader limit) -> alternate tool/source; then record
    an "evidence gap" with the failed query and move on.
