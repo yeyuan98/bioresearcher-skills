@@ -1,0 +1,11 @@
+{
+  "comment": "Opt-in registry of repo-VERSION (Series 1) coupled locations. scripts/ci/check-drift.mjs enforces that every live slot captures exactly the current VERSION (json_path dot-paths support at most one '*' array segment; regex slots must match >= 1 time with capture group 1 and ALL captures equal VERSION). Series 2 (per-skill semver: skills.json, SKILL.md metadata.version, CHANGELOG '### <skill> <x.y.z>' lines) is governed by check-drift's per-skill structural checks and NEVER appears here. Two version series never share a mechanism. There is deliberately NO repository-wide version scan: adding a new Series-1 version mention requires registering a slot here in the same PR (see AGENTS.md + .github/PULL_REQUEST_TEMPLATE.md). Series-1 mentions that are intentionally historical (CHANGELOG sections, README/docs prose) need no registration because nothing scans them.",
+  "live_slots": [
+    { "id": "plugin-json", "file": ".claude-plugin/plugin.json", "json_path": "version" },
+    { "id": "marketplace-plugins", "file": ".claude-plugin/marketplace.json", "json_path": "plugins.*.version", "notes": "every plugins[] entry must carry the current version; a missing version key fails" },
+    { "id": "connector-meta", "file": "connector/workbuddy/connector-meta.json", "json_path": "version" },
+    { "id": "cff-version", "file": "CITATION.cff", "regex": "^version:\\s*(\\S+)", "flags": "m" },
+    { "id": "agent-doc-en", "file": "demos/docs/agent.en.md", "regex": "repo v(\\d+\\.\\d+\\.\\d+)" },
+    { "id": "agent-doc-zh", "file": "demos/docs/agent.zh.md", "regex": "仓库 v(\\d+\\.\\d+\\.\\d+)" }
+  ]
+}

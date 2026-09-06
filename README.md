@@ -76,7 +76,7 @@ bundle for market submission.
 ```bash
 node scripts/ci/lint-frontmatter.mjs   # strict-6 Agent Skills conformance
 node scripts/ci/lint-agents.mjs        # plugin subagent frontmatter + manifest agreement
-node scripts/ci/check-drift.mjs        # skills.json <-> metadata <-> CHANGELOG
+node scripts/ci/check-drift.mjs        # skills.json <-> metadata <-> CHANGELOG + VERSION slots
 node scripts/ci/check-links.mjs        # links + duplicate headings
 bash scripts/ci/check-bundle.sh        # <=1000 files / <=10 MiB per skill
 bash scripts/ci/check-legacy-names.sh  # no retired biomcp-python tool names

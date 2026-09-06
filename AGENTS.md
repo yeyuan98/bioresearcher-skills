@@ -26,16 +26,38 @@ repo), never memory.
 
 ## Versioning & release
 
-- Per-skill independent semver: bump `skills/<name>/SKILL.md`
-  `metadata.version` AND `skills.json` AND add a `### <skill-name> <x.y.z>`
-  CHANGELOG subsection in the same PR. Top-level `## [x.y.z]` CHANGELOG
-  headings are reserved for repo releases only; a skill bump that lands
-  between repo releases goes under `## [Unreleased]` and is folded into
-  the next `## [x.y.z]` section when that release PR is cut.
+Two version series never share a mechanism: **Series 1** is the single repo
+`VERSION` (the agent/connector/plugin product), **Series 2** is each skill's
+independent semver. Series 1 is governed by an opt-in slot registry; Series
+2 by structural checks. Nothing scans the repository for version strings.
+
+- Per-skill independent semver (Series 2, structurally gated, NOT
+  manifest-governed): bump `skills/<name>/SKILL.md` `metadata.version` AND
+  `skills.json` AND add a `### <skill-name> <x.y.z>` CHANGELOG subsection in
+  the same PR. Top-level `## [x.y.z]` CHANGELOG headings are reserved for
+  repo releases only; a skill bump that lands between repo releases goes
+  under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
+  when that release PR is cut.
 - Repo `VERSION` (drives tags/releases) bumps in a `chore(release): vX.Y.Z —
   summary` PR, human-merged; CI cuts the GitHub release on push to main.
-- `.claude-plugin/plugin.json` version must equal repo `VERSION` (users only
-  receive plugin updates when it changes).
+- Every repo-VERSION-coupled location (Series 1) is registered in exactly
+  one place: `scripts/ci/version-coupling.json` (live slots only — the
+  manifest carries no zones or exemptions, and there is deliberately no
+  repository-wide version scan). When you add a new VERSION mention to the
+  repo, register a slot there in the same PR (the PR template surfaces this
+  to the human merger). `check-drift.mjs` enforces slot equality (every live
+  slot must capture the current VERSION) plus the structural checks
+  (CHANGELOG `## [VERSION]` heading, per-skill subsections, CITATION
+  `date-released` ⇄ CHANGELOG date). Tri-state governance:
+
+  | Class | Locations | Governance |
+  |---|---|---|
+  | Manifest-governed | plugin.json, marketplace `plugins.*.version`, connector-meta.json, CITATION.cff `version:`, partner-doc version literals | `scripts/ci/version-coupling.json` + check-drift |
+  | Structurally gated | CHANGELOG `## [VERSION] - date` heading; `### <skill> <x.y.z>` lines; per-skill axis (skills.json ⇄ SKILL.md); date-released ⇄ CHANGELOG date | Hardcoded semantic checks in check-drift.mjs |
+  | Dynamic / automation | VERSION itself; git tag `vX.Y.Z`; release + tarball names; website footer | Derived at release/deploy time (website reads VERSION at build) — nothing to hand-edit |
+
+- `.claude-plugin/plugin.json` version must equal repo `VERSION` (manifest
+  slot; users only receive plugin updates when it changes).
 - Deviation from plan (documented): the Claude Code plugin is rooted at the
   repo root (`source: "./"` + root `.claude-plugin/plugin.json`) instead of a
   `plugins/bioresearcher/` subtree — legal per the marketplace docs and keeps
@@ -44,8 +66,9 @@ repo), never memory.
 - Inline version pins (`skills@…` and `opencode-ai@…` in workflows, the
   `uvx` commit pin, `scripts/ci/biomcp-tools.json`, the
   `connector/workbuddy/mcp.json` pins — `biomcp@x.y.z` + npm registry URL —
-  and `.claude-plugin/mcp.json` — `biomcp@x.y.z`) are NOT covered by
-  dependabot — bump them manually when warranted.
+  and `.claude-plugin/mcp.json` — `biomcp@x.y.z`) are pin management, NOT
+  VERSION coupling (nothing scans them), and are NOT covered by dependabot —
+  bump them manually when warranted.
 
 ## Claude plugin components
 

@@ -6,7 +6,7 @@ authors:
   - family-names: Yuan
     given-names: Ye
 type: software
-version: 1.4.1
+version: 1.5.0
 date-released: "2026-09-06"
 license: Apache-2.0
 repository-code: "https://github.com/yeyuan98/bioresearcher-skills"
@@ -15,7 +15,8 @@ abstract: >-
   server: deep multi-aspect research orchestration with a Claude Code
   plugin that bundles the biomcp MCP server and a deep-research worker
   agent, publication-grade scientific plotting, PubMed weekly update
-  processing, and uv Python environment bootstrap.
+  processing, and uv Python environment bootstrap; ships bilingual partner
+  documentation, true-run demos, and a public GitHub Pages showroom.
 keywords:
   - agent-skills
   - biomedical-research

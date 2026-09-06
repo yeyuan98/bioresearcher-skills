@@ -13,7 +13,7 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
-## [Unreleased]
+## [1.5.0] - 2026-09-06
 
 ### Demos (partner publication pack)
 
@@ -21,7 +21,7 @@ when that release PR is cut (the release workflow extracts only the
   Agent (skills + plugin + connector) and the biomcp MCP server — each
   covering functionality, technical architecture/API docs, core features,
   onboarding, application cases, demo links, and FAQ — backed by **true-run
-  demo artifacts** (7 scenarios, all PASS — two via recorded rubric adjudication; commit +
+  demo artifacts** (7 scenarios, all PASS — two via recorded manual review; commit +
   sha256 provenance per artifact directory).
 - `demos/run-demo.mjs`: self-contained runner + 12-check grader vendored from
   `agent-test/run.mjs` (scenarios under `demos/scenarios/` with an
@@ -41,8 +41,11 @@ when that release PR is cut (the release workflow extracts only the
 - Docs: `demos/docs/{agent,mcp}.{zh,en}.md` + `glossary.md` (terminology
   anchored to the WorkBuddy connector locale assets); root README links the
   pack under Docs.
-- Website: `demos/website/` — zero-dependency static showroom for GitHub
-  Pages (bilingual splash + zh/en mirror trees; homepage highlights,
+
+### Website (GitHub Pages showroom)
+
+- `demos/website/` — zero-dependency static showroom for GitHub Pages
+  (bilingual splash + zh/en mirror trees; homepage highlights,
   get-started, FAQ, per-skill pages, MCP catalog, and per-case report pages
   embedding the byte-exact committed report artifacts via iframe). Built by
   `demos/website/build.mjs` (function templates, esc-by-default; internal
@@ -51,6 +54,42 @@ when that release PR is cut (the release workflow extracts only the
   `.github/workflows/pages.yml` (official Pages actions, GITHUB_TOKEN only;
   requires the one-time Settings → Pages → Source: GitHub Actions). CI gains
   a hermetic `node --check` + temp-dir dry build of the site.
+
+### Tooling (version-coupling registry)
+
+- `scripts/ci/version-coupling.json`: the single opt-in registry of
+  repo-VERSION-coupled locations (plugin/marketplace/connector/CITATION
+  slots plus the partner-doc version literals). `check-drift.mjs` enforces
+  live-slot equality — every registered slot must capture exactly the
+  current VERSION (all marketplace plugin entries; missing keys fail) —
+  plus CITATION `date-released` ⇄ CHANGELOG release-date consistency.
+  Two version series never share a mechanism: the per-skill semver axis
+  (skills.json ⇄ SKILL.md ⇄ CHANGELOG subsections) keeps its own
+  structural checks, untouched; there is deliberately NO repository-wide
+  version scan. New `.github/PULL_REQUEST_TEMPLATE.md` surfaces the
+  register-in-the-same-PR rule to the human merger.
+
+### Release
+
+- Version 1.5.0 (minor, per the 1.3.0 precedent — new user-facing capability
+  on a distributed surface): five coupled files bumped together
+  (`VERSION`, `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`,
+  `connector/workbuddy/connector-meta.json`, `CITATION.cff`); the
+  partner-doc version literals refreshed to v1.5.0.
+- Plugin-visible payload is functionally identical to 1.4.1 (skills,
+  bundled biomcp server, dr-worker agent unchanged) — Claude-plugin users receive a
+  docs/demos cache refresh only; the bump exists to tag the partner
+  publication milestone and keep the coupled registry consistent.
+- WorkBuddy: the connector tarball
+  `bioresearcher-connector_workbuddy-v1.5.0.tar.gz` is attached to this
+  release automatically; market resubmission is intentionally deferred —
+  connector content is identical to 1.4.1 apart from the version field, so
+  it rides the next release that actually changes connector content.
+- Showroom: <https://yeyuan98.github.io/bioresearcher-skills/> goes live
+  with this release (requires the one-time repo setting Settings → Pages →
+  Source: GitHub Actions, then a `pages` workflow re-run; the site footer
+  renders the version dynamically from `VERSION`).
 
 ## [1.4.1] - 2026-09-06
 
