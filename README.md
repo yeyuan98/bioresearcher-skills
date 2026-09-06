@@ -114,7 +114,10 @@ own manual suite — see
 - [Exposure checklist](./docs/exposure.md) — directory submission mechanics
 - [Demos & partner docs](./demos/README.md) — bilingual (zh/en) Agent + MCP
   publication documents with true-run demo artifacts and a self-contained
-  replay runner (`node demos/run-demo.mjs --list`)
+  replay runner (`node demos/run-demo.mjs --list`); the same material powers
+  the [GitHub Pages showroom](https://yeyuan98.github.io/bioresearcher-skills/)
+  (source: `demos/website/`, built by `pages.yml` — enable Pages → Source:
+  GitHub Actions once)
 
 ## License
 

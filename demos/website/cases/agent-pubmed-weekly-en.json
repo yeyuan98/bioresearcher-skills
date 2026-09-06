@@ -1,0 +1,39 @@
+{
+  "artifactLang": "en",
+  "fanout": {
+    "en": "n/a — single procedural parse, no research fan-out",
+    "zh": "不适用——单次过程式解析，无研究扇出"
+  },
+  "findings": {
+    "en": [
+      "Parsed a trimmed weekly updatefiles archive (6 <PubmedArticle> entries + a <DeleteCitation> block) via the skill's pure-Python streaming parser.",
+      "Output verified against the committed expected-summary.json: 6 article rows, deleted PMIDs 99999991/99999992 present.",
+      "Rubric flag verify-combined-xlsx adjudicated SATISFIED post-run (recorded in result.json)."
+    ],
+    "zh": [
+      "用技能自带的纯 Python 流式解析器，解析裁剪版周更档案（6 条 <PubmedArticle> + 1 个 <DeleteCitation> 块）。",
+      "产出与提交在库的 expected-summary.json 逐项核对：6 行文章记录，删除 PMID 99999991/99999992 在列。",
+      "rubric 标记 verify-combined-xlsx 运行后人工裁定 SATISFIED（记录于 result.json）。"
+    ]
+  },
+  "evidence": {
+    "type": "xlsx",
+    "table": [
+      [
+        "Sheet",
+        "Rows",
+        "Content"
+      ],
+      [
+        "PubMed Articles",
+        "6 (+ header)",
+        "PMIDs 12345678, 87654321, 31000001, … (incl. DOI/journal/author columns)"
+      ],
+      [
+        "Deleted PMIDs",
+        "2 (+ header)",
+        "99999991, 99999992"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "artifactLang": "en",
+  "fanout": {
+    "en": "n/a — no research started (the interview turn comes first)",
+    "zh": "不适用——未开始检索（访谈轮次优先）"
+  },
+  "findings": {
+    "en": [
+      "No no-interview prefix: the skill must ask its clarifying questions before researching.",
+      "Even under non-interactive `opencode run --auto`, the agent posted ONE batch of questions and started NO research.",
+      "Objective checks: final answer contains '?'; contains no 'final_report'; none of article_search / trial_search / gene_get was called."
+    ],
+    "zh": [
+      "未加 no-interview 前缀：技能必须先提出澄清问题再开题。",
+      "即便在非交互的 `opencode run --auto` 模式下，智能体也只发出一整批问题、未启动任何检索。",
+      "客观校验：最终回答含「?」；不含「final_report」；article_search / trial_search / gene_get 均未被调用。"
+    ]
+  },
+  "evidence": {
+    "type": "interview",
+    "excerpt": "Before starting this deep research report on CAR-T therapy safety in solid tumors, I need to clarify a few key points to scope the research properly:\n\n1. **Research focus**: Are you primarily interested in... (the clarifying-question batch, verbatim from the session)"
+  }
+}

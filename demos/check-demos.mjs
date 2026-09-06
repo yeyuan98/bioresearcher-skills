@@ -51,7 +51,7 @@ function walk(dir, acc = [], filter = () => true, skip = () => false) {
     return acc;
   }
   for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
-    if (e.name === ".runs" || e.name === "data" || e.name === "node_modules" || e.name === ".git") continue;
+    if (e.name === ".runs" || e.name === "data" || e.name === "node_modules" || e.name === ".git" || e.name === "_site") continue;
     const p = join(dir, e.name);
     if (skip(p)) continue;
     if (e.isDirectory()) walk(p, acc, filter, skip);

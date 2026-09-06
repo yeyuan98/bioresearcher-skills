@@ -1,0 +1,41 @@
+{
+  "bioresearcher-deep-research": {
+    "demo": "agent-deep-research-en",
+    "outputs": {
+      "en": "reports/<TOPIC>/final_report.md + final_report.html (default on) + per-aspect files",
+      "zh": "reports/<TOPIC>/final_report.md + final_report.html（默认开启）+ 各研究方面文件"
+    }
+  },
+  "bioresearcher-onboard": {
+    "demo": null,
+    "outputs": {
+      "en": ".bioresearcher-runtime/ (portable Node 22 + vendored biomcp) + harness config registration",
+      "zh": ".bioresearcher-runtime/（便携 Node 22 + 供应商化 biomcp）+ 宿主配置注册"
+    },
+    "note": {
+      "en": "Not bundled in the WorkBuddy connector on purpose: its job — installing and registering the biomcp server — is exactly what the connector itself already does (see docs/connector-workbuddy.md).",
+      "zh": "WorkBuddy 连接器有意不捆绑本技能：其职责——安装并注册 biomcp 服务器——正是连接器自身已完成的事（见 docs/connector-workbuddy.md）。"
+    }
+  },
+  "bioresearcher-plot-making": {
+    "demo": "agent-plot-making-en",
+    "outputs": {
+      "en": "figures/<topic>/figN.*.pdf/.svg/.png + LEGENDS.md + QA audit JSON",
+      "zh": "figures/<主题>/figN.*.pdf/.svg/.png + LEGENDS.md + QA 审计 JSON"
+    }
+  },
+  "bioresearcher-pubmed-weekly": {
+    "demo": "agent-pubmed-weekly-en",
+    "outputs": {
+      "en": "combined.xlsx (sheets PubMed Articles + Deleted PMIDs)",
+      "zh": "combined.xlsx（PubMed Articles 与 Deleted PMIDs 两个 sheet）"
+    }
+  },
+  "bioresearcher-python-setup-uv": {
+    "demo": null,
+    "outputs": {
+      "en": "project-local .venv/ (uv-managed, official or China mirror)",
+      "zh": "项目本地 .venv/（uv 管理，官方源或国内镜像）"
+    }
+  }
+}

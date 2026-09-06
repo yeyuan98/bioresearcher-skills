@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "home": "首页",
+    "getStarted": "开通",
+    "skills": "技能",
+    "mcp": "MCP 服务",
+    "demos": "演示",
+    "faq": "常见问题"
+  },
+  "splash": {
+    "pitch": "面向 AI 智能体的生物医学研究技能：引用可核查的深度研究、免密钥生物数据工具、发表级科研绘图。",
+    "foot": "Apache-2.0 · opencode / Claude Code / WorkBuddy"
+  },
+  "notfound": "页面不存在。",
+  "notfoundHome": "返回首页",
+  "home": {
+    "heroTitle": "BioResearcher 生物医学研究智能体",
+    "heroSub": "5 个技能 · 41 + 15 个 MCP 工具 · 支持 opencode、Claude Code、WorkBuddy 及一切读取 SKILL.md 的宿主。",
+    "cta": "立即开通",
+    "ctaDemos": "查看演示",
+    "cardsTitle": "核心亮点",
+    "cards": [
+      {
+        "title": "引用可核查的深度研究",
+        "body": "每条论断带编号引用（PMID / DOI / NCT / 专利号）；证据缺失明确说明，绝不编造文献。"
+      },
+      {
+        "title": "免密钥生物医学数据 · 41+15 工具",
+        "body": "文献、试验、基因、变异、药物、疾病、专利、组学——零配置、零凭证，默认即可用。"
+      },
+      {
+        "title": "7/7 真实演示全过",
+        "body": "5 次智能体运行 + 2 次 MCP 探针，逐项客观校验，附提交号溯源（2 项经 rubric 人工裁定）。",
+        "href": "demos/index.html"
+      },
+      {
+        "title": "中英双语报告",
+        "body": "中文提问，得到中文报告——有真实运行演示为证。",
+        "href": "demos/agent-deep-research-zh.html"
+      },
+      {
+        "title": "发表级绘图 + 确定性 QA",
+        "body": "对齐 / 碰撞 / 字号三项门禁全部由脚本判定——KRAS 演示在真实会话中迭代至全绿。",
+        "href": "demos/agent-plot-making-en.html"
+      },
+      {
+        "title": "中国大陆可用 · 多形态分发",
+        "body": "npmmirror 自动探测；一条命令接入 opencode、Claude Code、WorkBuddy 或任意 SKILL.md 宿主。",
+        "href": "get-started.html"
+      }
+    ],
+    "navTitle": "开始探索",
+    "navCards": [
+      { "title": "技能", "body": "五个技能各自做什么、版本与产出契约。", "href": "skills/index.html" },
+      { "title": "MCP 服务", "body": "biomcp-ts：41 核心 + 15 可选工具，stdio 传输，免密钥默认可用。", "href": "mcp.html" },
+      { "title": "演示案例", "body": "七个真实运行案例报告，证据可逐项查验。", "href": "demos/index.html" },
+      { "title": "开通指南", "body": "任意宿主一分钟内装好。", "href": "get-started.html" },
+      { "title": "常见问题", "body": "密钥、隐私、大陆网络、成本、许可证。", "href": "faq.html" }
+    ]
+  },
+  "getStarted": {
+    "title": "开通指南",
+    "intro": "BioResearcher 是一个智能体技能包（Agent Skills）：任何读取 SKILL.md 的宿主都能加载。研究类技能需要 biomcp MCP 服务器——可由引导技能自动装配。任选以下渠道：",
+    "reqTitle": "环境要求",
+    "requirements": [
+      ["Node.js", "≥ 22.13（PATH 上有 npx；npx --version 检查）"],
+      ["可选", "uv + python3——绘图与周更解析技能会自行引导 Python 依赖"],
+      ["API 密钥", "默认无需任何密钥（见常见问题）"]
+    ],
+    "channelsTitle": "安装渠道",
+    "channels": [
+      {
+        "name": "A · skills CLI（任意宿主）",
+        "desc": "适用于 opencode、Claude Code、Codex、Cursor、Gemini CLI 等一切 SKILL.md 读取方。只装引导技能即可自动装配 MCP 运行时。",
+        "code": "npx skills add yeyuan98/bioresearcher-skills\n# 立即引导本地运行时：\nnpx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard"
+      },
+      {
+        "name": "B · Claude Code 插件市场",
+        "desc": "捆绑钉扎版 biomcp MCP 服务器（自动启动，无需手动 .mcp.json）与深度研究 worker 子代理。",
+        "code": "/plugin marketplace add yeyuan98/bioresearcher-skills\n/plugin install bioresearcher@bioresearcher-skills"
+      },
+      {
+        "name": "C · WorkBuddy 连接器市场",
+        "desc": "一次市场安装：MCP 服务（npmmirror 源、托管 Node 22）+ 四个技能（附中文/英文描述）。搜索「BioResearcher 生物医学研究」。",
+        "code": "# WorkBuddy -> 连接器市场 -> BioResearcher 生物医学研究 -> 安装"
+      },
+      {
+        "name": "D · git clone",
+        "desc": "克隆到你的宿主读取的技能目录（.opencode/skills/、.claude/skills/、.agents/skills/、.codex/skills/、.gemini/skills/）。",
+        "code": "git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bioresearcher-skills"
+      }
+    ],
+    "chinaTitle": "中国大陆网络环境",
+    "chinaBody": "引导技能自动探测网络，需要时切换 npmmirror 镜像下载 Node 与 biomcp；uv 技能支持国内 PyPI 镜像；WorkBuddy 连接器默认 npmmirror。上游生物医学 API（NCBI、ClinicalTrials.gov、MyGene 等）为海外公网接口——受限网络请配置 HTTP(S)_PROXY 代理。",
+    "doctorTitle": "验证服务器",
+    "doctorBody": "仅诊断，不启动服务器；退出码 0 即健康。",
+    "doctorCode": "npx -y biomcp@1.1.1 doctor --client opencode",
+    "more": "完整开通章节（手动接线、权限、超时）：",
+    "moreLink": "智能体文档 §5"
+  },
+  "faq": {
+    "title": "常见问题",
+    "intro": "合作方与用户最常问的问题，每条答案附完整文档链接。",
+    "items": [
+      {
+        "q": "支持中文吗？",
+        "a": "技能指令以英文编写（生态惯例，保证跨宿主触发稳定），智能体回答语言跟随提问语言——中文提问得到中文报告，有真实运行演示为证。WorkBuddy 连接器另附官方中文描述与示例语料。",
+        "link": "demos/agent-deep-research-zh.html",
+        "linkText": "查看中文演示"
+      },
+      {
+        "q": "需要 API 密钥吗？",
+        "a": "不需要——本站全部演示均在零密钥环境运行。仅两个例外：OncoKB 注释需要 Token；DisGeNET 缺密钥时自动回退 OpenTargets。配置密钥可提升限额（如 NCBI 3→10 请求/秒）。",
+        "link": "https://github.com/yeyuan98/bioresearcher-skills/blob/main/demos/docs/mcp.zh.md",
+        "linkText": "MCP 文档 5.3"
+      },
+      {
+        "q": "中国大陆网络环境能否使用？",
+        "a": "可以——引导/uv 技能与 WorkBuddy 连接器自动使用 npmmirror/国内镜像；上游生物医学 API 可能需要代理（服务器尊重 HTTP(S)_PROXY）。"
+      },
+      {
+        "q": "为什么演示报告在这里能直接打开，GitHub 上却不行？",
+        "a": "因为本站直接嵌入仓库里提交的原始 final_report.html——同一个文件，sha256 溯源钉扎。展示环节不做任何重新渲染。",
+        "link": "demos/index.html",
+        "linkText": "演示"
+      },
+      {
+        "q": "智能体会编造文献吗？",
+        "a": "深度研究契约禁止回退内部知识：每条论断需带编号引用（PMID/DOI/NCT/专利号），证据缺失必须显式说明，查询失败记录为「证据缺口」。"
+      },
+      {
+        "q": "运行要花多少 token / 时间？",
+        "a": "实测（opencode 1.18.29）：访谈 23 秒；PubMed 解析 56 秒；深度研究英文 515 秒 / 中文 814 秒；结构绘图（含装依赖）1064 秒。MCP 探针不耗 token。"
+      },
+      {
+        "q": "数据隐私如何？",
+        "a": "所有查询只访问公开生物医学 API；报告与图表全部落在你的项目本地；仓库无任何遥测；演示产物不含凭证。"
+      },
+      {
+        "q": "许可证与商用？",
+        "a": "Apache-2.0（仓库 LICENSE 与上游 biomcp-ts 项目）。允许商用与二次开发，需保留许可声明；引用信息见 CITATION.cff。"
+      },
+      {
+        "q": "能用在 Cursor / Codex / WorkBuddy 吗？",
+        "a": "可以——任何读取 SKILL.md 且能跑 MCP 服务器的宿主都行。兼容矩阵见智能体文档 4.5 节。"
+      },
+      {
+        "q": "如何复现这些演示？",
+        "a": "克隆仓库后运行 node demos/run-demo.mjs --list 查看全部场景；--only <id> --publish 复现任意案例。智能体案例消耗 LLM token（仅限手动运行）；MCP 探针不耗 token。",
+        "link": "https://github.com/yeyuan98/bioresearcher-skills/blob/main/demos/README.md",
+        "linkText": "demos/README.md"
+      }
+    ],
+    "more": "全部十四条问答：",
+    "moreLink": "智能体文档 §7"
+  },
+  "skills": {
+    "title": "技能",
+    "intro": "五个独立版本管理的技能。每页附 SKILL.md 完整契约链接；深度文档在仓库中。",
+    "p": {
+      "version": "版本",
+      "outputs": "产出契约",
+      "demo": "演示案例",
+      "skillMd": "GitHub 上的 SKILL.md",
+      "contract": "完整接口契约（智能体文档 §4）"
+    }
+  },
+  "mcp": {
+    "title": "MCP 服务器：biomcp-ts",
+    "intro": "biomcp-ts（npm 包 biomcp，钉扎 1.1.1）是生物医学数据 MCP 服务器：41 个核心 + 15 个可选工具，stdio JSON-RPC 传输，覆盖文献、临床试验、基因、变异、药物、疾病、专利、组学数据库、GTEx 与 Ensembl/PDB——默认免密钥，服务内建限流。",
+    "catalogTitle": "工具目录",
+    "coreTitle": "核心工具",
+    "optionalTitle": "可选工具",
+    "optionalNote": "环境变量门控，随服务器启动注册",
+    "wiringTitle": "接线示例（opencode）",
+    "wiringBody": "服务器命名 biomcp 时，工具显示为 biomcp_article_search、biomcp_gene_get 等。必须用 -p 精确钉扎版本（裸 npx biomcp 无法解析 peer 依赖）。",
+    "wiringCode": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": { \"biomcp\": { \"type\": \"local\",\n    \"command\": [\"npx\", \"-y\", \"-p\", \"biomcp@1.1.1\", \"biomcp\"] } }\n}",
+    "wiringMore": "完整接线矩阵（Claude Code、Codex、Cursor 等）",
+    "capturesTitle": "真实调用样本",
+    "capturesIntro": "由确定性 stdio 探针捕获的真实请求/响应对——非手写示例。",
+    "request": "请求",
+    "response": "响应（节选，捕获原文）",
+    "tours": "完整巡览：",
+    "more": "完整服务器文档：",
+    "moreLink": "MCP 文档"
+  },
+  "demos": {
+    "title": "演示案例",
+    "intro": "由 demos/run-demo.mjs 驱动的七个真实运行场景（opencode v1.18.29；被测技能树按案例在 provenance.json 中钉扎）。每个案例都带客观校验、整理后的会话记录与仓库中提交号钉扎的产物。",
+    "htmlNote": "下方嵌入的报告是仓库中提交的原始 HTML 产物——本站渲染原文件，不做任何重新渲染。",
+    "replayAll": "复现指南与产物索引：",
+    "pass": "PASS",
+    "rubricPass": "PASS · rubric 已裁定 SATISFIED",
+    "promptLang": "提问语言",
+    "artifactLang": "产物语言",
+    "promptTitle": "提示词（原文）",
+    "findingsTitle": "发生了什么",
+    "evidenceTitle": "证据",
+    "checksTitle": "客观校验",
+    "checks": "项检查通过",
+    "rubricNote": "一项 rubric 标记在运行后人工裁定 SATISFIED（记录于 result.json）",
+    "fanout": "扇出模式",
+    "provenance": "溯源",
+    "replayTitle": "复现",
+    "replayWarn": "仅限手动运行——此复现消耗 LLM token（真实 opencode CLI + 网络）。",
+    "replayFree": "免 token 复现——确定性 stdio JSON-RPC 探针（仅需网络与 npx，无 LLM）。",
+    "more": "在仓库中",
+    "dir": "产物目录（固定链接）",
+    "embeddedReport": "嵌入的报告产物",
+    "openFull": "打开完整报告",
+    "screenshot": "截图（chromium 捕获）",
+    "questionsLabel": "澄清问题批次（原文）",
+    "tool": "工具",
+    "assert": "断言",
+    "ms": "耗时 ms",
+    "request": "请求",
+    "response": "响应（节选）",
+    "artifactLangNoteEn": "The report artifact is in Chinese — a true-run output, untranslated.",
+    "artifactLangNoteZh": "报告原文为中文——真实运行产物，未翻译。"
+  },
+  "footer": {
+    "built": "由仓库提交构建",
+    "license": "许可证",
+    "agentDoc": "智能体文档（中文）",
+    "mcpDoc": "MCP 文档（中文）",
+    "glossary": "术语表",
+    "citation": "引用"
+  }
+}

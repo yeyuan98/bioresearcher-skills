@@ -11,6 +11,9 @@ agent-test/data/
 demos/.runs/
 demos/data/
 
+# Website build output (demos/website/build.mjs; deployed by pages.yml)
+demos/website/_site/
+
 # Python
 __pycache__/
 *.pyc

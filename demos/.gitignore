@@ -1,3 +1,6 @@
 # Demo replay workspace (never committed; mirrors agent-test/.runs policy)
 .runs/
 data/
+
+# Website build output (demos/website/build.mjs; deployed by pages.yml)
+website/_site/

@@ -119,6 +119,8 @@ jobs:
           node --check demos/lib/mcp-probe.mjs
           node --check demos/lib/publish.mjs
           node --check demos/check-demos.mjs
+          node --check demos/website/build.mjs
           node demos/run-demo.mjs --list
           node demos/run-demo.mjs --dry-run
           node demos/check-demos.mjs
+          node demos/website/build.mjs --out "$(mktemp -d)"

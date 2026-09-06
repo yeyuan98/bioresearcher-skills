@@ -41,6 +41,16 @@ when that release PR is cut (the release workflow extracts only the
 - Docs: `demos/docs/{agent,mcp}.{zh,en}.md` + `glossary.md` (terminology
   anchored to the WorkBuddy connector locale assets); root README links the
   pack under Docs.
+- Website: `demos/website/` — zero-dependency static showroom for GitHub
+  Pages (bilingual splash + zh/en mirror trees; homepage highlights,
+  get-started, FAQ, per-skill pages, MCP catalog, and per-case report pages
+  embedding the byte-exact committed report artifacts via iframe). Built by
+  `demos/website/build.mjs` (function templates, esc-by-default; internal
+  link check + artifact self-containment tripwire; `_site/` never committed
+  and skipped by `check-demos.mjs`); deployed by
+  `.github/workflows/pages.yml` (official Pages actions, GITHUB_TOKEN only;
+  requires the one-time Settings → Pages → Source: GitHub Actions). CI gains
+  a hermetic `node --check` + temp-dir dry build of the site.
 
 ## [1.4.1] - 2026-09-06
 

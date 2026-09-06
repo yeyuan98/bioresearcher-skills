@@ -103,3 +103,13 @@ repo), never memory.
 - When editing biomcp guidance, re-verify tool names against the pinned
   registry and update `scripts/ci/biomcp-tools.json` when bumping the
   biomcp-ts pin.
+
+## Website (GitHub Pages showroom)
+
+- `demos/website/` is a zero-dep static site (build.mjs; no SSG, no client
+  JS). The built `_site/` output is NEVER committed (gitignored + skipped by
+  check-demos) and is deployed by `.github/workflows/pages.yml` on push to
+  main. Deploying requires the one-time repo setting Settings → Pages →
+  Source: GitHub Actions (then re-run the workflow); builds read committed
+  repo data only (VERSION, skills.json, SKILL.md frontmatter, connector
+  locales, scenarios/artifacts) — never `agent-test/` paths.
