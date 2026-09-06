@@ -37,10 +37,12 @@ else ok(`skills.json <-> skills/ (${dirNames.length} skills)`);
 
 const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8");
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-// Line-anchored, mirroring the release-workflow awk extractor.
-if (!new RegExp(`^## \\[${escapeRe(version)}\\]`, "m").test(changelog)) {
-  fail(`CHANGELOG.md missing "## [${version}]" heading`);
-}
+// Line-anchored, mirroring the release-workflow awk extractor (which emits
+// only the FIRST matching section — a duplicate would be silently dropped
+// from the release notes, so require exactly one).
+const headingLines = changelog.split("\n").filter((l) => new RegExp(`^## \\[${escapeRe(version)}\\]`).test(l));
+if (headingLines.length === 0) fail(`CHANGELOG.md missing "## [${version}]" heading`);
+else if (headingLines.length > 1) fail(`CHANGELOG.md has ${headingLines.length} "## [${version}]" headings (expected exactly 1)`);
 for (const s of registry.skills) {
   if (!semver(s.version)) { fail(`skills.json ${s.name} version not semver`); continue; }
   const skillMd = readFileSync(join(ROOT, "skills", s.name, "SKILL.md"), "utf8");
@@ -51,11 +53,11 @@ for (const s of registry.skills) {
   if (!m) fail(`${s.name}: metadata.version missing`);
   else if (m[1] !== s.version) fail(`${s.name}: metadata.version ${m[1]} != skills.json ${s.version}`);
   const subLine = `### ${s.name} ${s.version}`;
-  const occurrences = changelog.split("\n").filter((l) => l.replace(/[ \t]+$/, "") === subLine).length;
+  const occurrences = changelog.split("\n").filter((l) => l.replace(/[ \t\r]+$/, "") === subLine).length;
   if (occurrences === 0) fail(`CHANGELOG.md missing "${subLine}" subsection line`);
   else if (occurrences > 1) fail(`CHANGELOG.md has ${occurrences} "${subLine}" subsection lines (expected exactly 1 - fold ## [Unreleased] into the release section)`);
 }
-ok(`CHANGELOG covers repo ${version} + all skill versions`);
+if (failures === 0) ok(`CHANGELOG covers repo ${version} + all skill versions`);
 
 /* ============================ version-coupling registry ============================ */
 
@@ -143,7 +145,7 @@ for (const slot of manifest.live_slots ?? []) {
     }
     const bad = r.values.filter((v) => v !== version);
     if (bad.length > 0) {
-      fail(`[${slot.id}] ${slot.file}: json_path "${slot.json_path}" carries ${JSON.stringify(bad)} != VERSION ${version} — bump it in this release PR${slot.notes ? ` (${slot.notes})` : ""}`);
+      fail(`[${slot.id}] ${slot.file}: json_path "${slot.json_path}" carries ${JSON.stringify(bad.slice(0, 10))}${bad.length > 10 ? ` (+${bad.length - 10} more)` : ""} != VERSION ${version} — bump it in this release PR${slot.notes ? ` (${slot.notes})` : ""}`);
     } else {
       ok(`[${slot.id}] ${slot.file} ${slot.json_path} == VERSION ${version} (${r.values.length} value(s))`);
     }
@@ -167,7 +169,7 @@ for (const slot of manifest.live_slots ?? []) {
     }
     const bad = matches.filter((m) => m[1] !== version);
     if (bad.length > 0) {
-      fail(`[${slot.id}] ${slot.file}: captured ${JSON.stringify(bad.map((m) => m[1]))} != VERSION ${version} — bump it in this release PR`);
+      fail(`[${slot.id}] ${slot.file}: captured ${JSON.stringify(bad.slice(0, 10).map((m) => m[1]))}${bad.length > 10 ? ` (+${bad.length - 10} more)` : ""} != VERSION ${version} — bump it in this release PR`);
     } else {
       ok(`[${slot.id}] ${slot.file} captures VERSION ${version} (${matches.length} match(es))`);
     }
@@ -180,8 +182,9 @@ const cffText = readFileSync(join(ROOT, "CITATION.cff"), "utf8");
 const dateReleased = cffText.match(/^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?/m)?.[1] ?? null;
 const headingDate = changelog.match(new RegExp(`^## \\[${escapeRe(version)}\\] - (\\d{4}-\\d{2}-\\d{2})`, "m"))?.[1] ?? null;
 if (headingDate === null) {
-  // The missing-heading case is already reported above; date check rides along.
-  if (dateReleased !== null) fail(`CITATION.cff date-released ${dateReleased} but CHANGELOG has no "## [${version}] - <date>" heading (missing or missing its date)`);
+  // Missing (or dateless) heading: the plain missing-heading case is already
+  // reported above, but never let BOTH sides be absent pass vacuously.
+  fail(`CHANGELOG has no "## [${version}] - <date>" heading (missing or missing its date) — CITATION date-released is ${dateReleased ?? "(missing)"}`);
 } else if (dateReleased !== headingDate) {
   fail(`CITATION.cff date-released ${dateReleased ?? "(missing)"} != CHANGELOG "## [${version}] - ${headingDate}" — both flip in the release PR`);
 } else {
