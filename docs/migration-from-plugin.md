@@ -44,5 +44,6 @@ pure-Python parser in `bioresearcher-pubmed-weekly` (which also handles
   `docs/biomcp-ts-setup.md`). HPA sections and GEO downloads are the paced
   exceptions.
 - Reports now land in `reports/<topic>/` (was `reports_biomcp/<topic>/`).
-- HTML rendering: use the skill's `markdown-to-html.py` fallback or pandoc
-  (was the plugin's `markdownToHtml` tool).
+- HTML rendering: `final_report.html` renders by default (`no-html` prefix to
+  skip) via the skill's `markdown-to-html.py` or pandoc (was the plugin's
+  `markdownToHtml` tool).

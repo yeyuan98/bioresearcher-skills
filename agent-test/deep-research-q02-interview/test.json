@@ -1,0 +1,31 @@
+{
+  "id": "deep-research-q02-interview",
+  "name": "Interview precedence: clarifying questions fire in non-interactive auto mode",
+  "level": "L2",
+  "purpose": "Regression for the ZCode autonomy-hint failure (skill 1.1.1): without the no-interview prefix, the deep-research skill must ask its clarifying questions as one batch and NOT start researching, even under non-interactive `opencode run --auto` (no autonomy hint may waive Step 1).",
+  "prompt": "Using the bioresearcher-deep-research skill, run a deep research report on CAR-T therapy safety in solid tumors.",
+  "inlineResources": [],
+  "timeoutMs": 300000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "\\?",
+      "desc": "the final assistant message must be (or contain) the clarifying-question batch"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "not_contains",
+      "expect": "final_report",
+      "desc": "research must not have run yet - the interview turn comes first (skip only via the no-interview prefix)"
+    }
+  ],
+  "expectedOutputs": []
+}
