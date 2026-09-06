@@ -1,0 +1,22 @@
+{
+  "comment": "Single registry of repo-VERSION-coupled locations. scripts/ci/check-drift.mjs enforces: (1) every live slot carries the current VERSION (json_path dot-paths support one '*' array segment; regex slots must match >= 1 time with capture group 1 and ALL captures equal VERSION); (2) a stale-literal tripwire — any past-version literal (past versions derived hermetically from CHANGELOG '## [x.y.z]' headings; tags may disagree, e.g. the changelog-only 1.0.1) in a tracked file with a scan extension, outside the historical zones and the exemptions below, fails the gate naming file:line. Exemptions are rules, not zones: tokens equal to any skills.json version (the per-skill semver axis), '@'-pinned tokens (foreign package pins like biomcp@1.1.1), this manifest itself, and the per-file exempt list. NOT governed here: the per-skill axis (skills.json <-> SKILL.md metadata.version — structurally gated), inline dependency pins, git tags/release/tarball names and the website footer (dynamic, derived from VERSION at automation time). When you add a new VERSION mention to the repo, register it here in the same PR.",
+  "scan_extensions": [".md", ".json", ".cff", ".yml", ".txt", ".mjs", ".html"],
+  "live_slots": [
+    { "id": "plugin-json", "file": ".claude-plugin/plugin.json", "json_path": "version" },
+    { "id": "marketplace-plugins", "file": ".claude-plugin/marketplace.json", "json_path": "plugins.*.version", "notes": "every plugins[] entry must carry the current version; a missing version key fails (coupled registry)" },
+    { "id": "connector-meta", "file": "connector/workbuddy/connector-meta.json", "json_path": "version" },
+    { "id": "cff-version", "file": "CITATION.cff", "regex": "^version:\\s*(\\S+)", "flags": "m" },
+    { "id": "agent-doc-en", "file": "demos/docs/agent.en.md", "regex": "repo v(\\d+\\.\\d+\\.\\d+)" },
+    { "id": "agent-doc-zh", "file": "demos/docs/agent.zh.md", "regex": "仓库 v(\\d+\\.\\d+\\.\\d+)" }
+  ],
+  "exempt_files": [
+    { "file": "demos/lib/mcp-probe.mjs", "reason": "probe clientInfo semver constant — foreign namespace" },
+    { "file": "scripts/ci/biomcp-tools.json", "reason": "biomcp pin registry — foreign namespace" },
+    { "file": "demos/lib/biomcp-tools@1.1.1.json", "reason": "vendored biomcp pin registry — foreign namespace" }
+  ],
+  "historical_zones": [
+    "CHANGELOG.md",
+    "README.md",
+    "docs/"
+  ]
+}
