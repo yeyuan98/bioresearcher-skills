@@ -15,7 +15,7 @@ biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.1.1**）是一个生物医学
 
 - 传输：**仅 stdio**（本地子进程），不提供远程/SSE 形态
 - 上游：NCBI E-utilities（PubMed/GEO/SRA/GenBank）、ClinicalTrials.gov、
-  MyGene/MyVariant、OpenTargets、GTEx、Ensembl、PDB/ RCSB、Google Patents
+  MyGene/MyVariant、OpenTargets、GTEx、Ensembl、PDB/RCSB、Google Patents
   （及凭证可选启用的 EPO OPS / USPTO）、Semantic Scholar 等
 - 实证：本页 Demo 的 `tools/list` 探针确认服务器暴露 **41 个核心工具**
   （与钉扎注册表 `scripts/ci/biomcp-tools.json` 一致）
@@ -54,7 +54,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 注意：`tools/call` 的载荷在 `content[0].text`（内层通常是 JSON 字符串）；
 `isError: true` 表示工具级失败。完整可复现实现见
-`demos/lib/mcp-probe.mjs`（约 150 行，零依赖）。
+`demos/lib/mcp-probe.mjs`（单文件、零依赖）。
 
 ### 3.2 版本与安装钉扎
 
@@ -101,7 +101,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 | 领域 | 工具 | 说明 |
 |---|---|---|
 | 文献 | `article_search`、`article_get` | PubMed 联邦检索（Europe PMC/Semantic Scholar/PubTator/LitSense）、文献详情（可含引文网络） |
-| 基因 | `gene_search`、`gene_get`、`gene_diseases`、`gene_drugs`、`gene_trials`、`gene_articles`、`gene_enrich` | MyGene/OpenTargets 等；`gene_get` 支持 16 个 section 裁剪与 `smart` 别名解析（HER2→ERBB2） |
+| 基因 | `gene_search`、`gene_get`、`gene_diseases`、`gene_drugs`、`gene_trials`、`gene_articles`、`gene_enrich` | MyGene/OpenTargets 等；`gene_get` 支持 16 个 section 可选值（含 `all`）与 `smart` 别名解析（HER2→ERBB2） |
 | 变异 | `variant_search`、`variant_get`、`variant_oncokb`、`variant_trials` | MyVariant；**结构化查询**（`gene`+`hgvsp`，勿用复合自由文本）；OncoKB 需凭证 |
 | 药物 | `drug_search`、`drug_get`、`drug_trials` | 药物与试验关联 |
 | 疾病 | `disease_search`、`disease_get`、`disease_drugs`、`disease_trials` | DOID/MONDO 本体 |
@@ -139,7 +139,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 ```json
 [{"id": "rs113488022", "gene": "BRAF", "hgvs_p": "V600E",
   "hgvs_c": "c.1799T>A", "significance": "Pathogenic",
-  "gnomad_af": 3.97994e-06}]
+  "gnomad_af": 0.00000397994}]
 ```
 
 **临床试验** `trial_search` `{query:"BRAF melanoma", limit:3}` →
@@ -170,7 +170,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 ```json
 {"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.18",
  "dataset": "gtex_v10", "unit": "TPM",
- "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4841, …}, …]}
+ "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4845, …}, …]}
 ```
 
 **PDB 结构** `pdb` `{query:"KRAS", sections:["experiment"]}` →
@@ -194,14 +194,14 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 `领域_动作` 短名（如 `article_search` / `gene_get`）；完整逐条映射表见仓库
 `docs/migration-from-plugin.md`。能力差异（降级）：openFDA 的批准/标签/
 不良事件三检索在 1.1.1 中未提供（不良事件能力部分并入药物工具链）；
-临床试验详情的分节能力有调整（`protocol` 分节并入核心返回）。其余领域
+旧 `protocol` 分节由 `core`+`eligibility` 分节承担。其余领域
 （文献/基因/变异/药物/疾病/试验/专利/组学）为超集。
 
 ## 5. 开通流程
 
 ### 5.1 服务端命令
 
-见 3.2 三种变体。建议零依赖本意安装：直接对智能体说「帮我开通
+见 3.2 三种变体。若想零依赖完成安装：直接对智能体说「帮我开通
 BioResearcher 运行时」（`bioresearcher-onboard` 技能自动落地
 `.bioresearcher-runtime/` 并注册宿主，自动探测 npmmirror）。
 
@@ -272,8 +272,8 @@ npx -y biomcp@1.1.1 doctor --client opencode   # 也支持 claude-code/codex/…
 
 | 场景 | 调用 | 结果 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|
-| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（43 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/mcp-tool-tour-en) |
-| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（9 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/mcp-tool-tour-zh) |
+| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（43 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-en) |
+| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（9 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-zh) |
 
 英文巡览验证 `tools/list` 暴露全部 41 个钉扎核心工具；每个调用的完整
 请求/响应（含断言）在 `outputs/capture.jsonl` 与 `transcript.md`。

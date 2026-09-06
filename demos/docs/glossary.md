@@ -1,8 +1,8 @@
 # 术语表 / Glossary
 
-BioResearcher 双语文档共享术语锚点。中文译名与 WorkBuddy 连接器市场文案
-（`connector/workbuddy/connector-meta.json`、`skill-locales.json`）保持一致，
-避免文档与市场页面出现两套叫法。工具名一律保留英文原名。
+BioResearcher 双语文档共享术语锚点。中文译名以 WorkBuddy 连接器市场文案
+（`connector/workbuddy/connector-meta.json`、`skill-locales.json`）为锚点；
+个别用词文档采用更通行的说法，与市场文案的对应关系在行内标注。工具名一律保留英文原名。
 
 | English | 中文 | Notes |
 |---|---|---|
@@ -12,17 +12,17 @@ BioResearcher 双语文档共享术语锚点。中文译名与 WorkBuddy 连接�
 | MCP (Model Context Protocol) | MCP（模型上下文协议） | 本项目使用 stdio JSON-RPC 传输 |
 | biomcp-ts / biomcp | biomcp-ts MCP 服务 / biomcp 包 | npm 包名 `biomcp`，本仓库钉扎 `1.1.1` |
 | deep research | 深度研究 | `bioresearcher-deep-research` 技能：访谈→分解→并行调研→引用报告 |
-| aspect (research aspect) | 研究侧面 | 深度研究把主题拆成 2–5 个独立侧面，每侧面一个 worker |
+| aspect (research aspect) | 研究侧面（连接器文案作「研究方面」） | 深度研究把主题拆成 2–5 个独立侧面，每侧面一个 worker |
 | fan-out / sequential fallback | 并行扇出 / 顺序回退 | 有子代理（Task）工具时并行；否则顺序执行 |
 | interview (Step 1) | 访谈（第一步） | 深度研究强制先集中提问澄清，除非 `no-interview` 前缀 |
 | request prefix | 请求前缀 | `no-interview` / `light-research` / `no-html`，置于提问开头 |
 | cited report | 引用报告 | `reports/<topic>/final_report.md` + `.html`，编号引用 + 文献表 |
-| publication-grade figure | 发表级科研绘图 | `bioresearcher-plot-making` 技能，三层 QA 门禁 |
+| publication-grade figure | 发表级科研绘图（连接器文案作「发表级科研图表」） | `bioresearcher-plot-making` 技能，三层 QA 门禁 |
 | QA gates | QA 门禁 | 对齐 / 碰撞 / PDF 字号三项确定性审计 |
 | PubMed weekly updatefiles | PubMed 周更档案 | NCBI updatefiles 流水档案；技能解析为 `combined.xlsx` |
 | DeleteCitation | 删除引文块 | 周更档案中被撤稿/删除记录的 PMID 块 |
 | onboarding | 开通 / 引导 | `bioresearcher-onboard` 技能自动装配项目本地运行时 |
-| project-local runtime | 项目本地运行时 | `.bioresearcher-runtime/`：便携 Node 22 + 供应商化 biomcp |
+| vendored / project-local runtime | 供应商化 / 项目本地运行时（vendored，本地内置） | `.bioresearcher-runtime/`：便携 Node 22 + 供应商化 biomcp |
 | uv | uv（Python 环境管理器） | `bioresearcher-python-setup-uv` 技能 |
 | keyless | 免密钥 | 默认无任何 API Key 即可用（个别工具除外，见 MCP 文档 5.3） |
 | rate limiter | 限流器 | 服务内建按源限速，无需手动 sleep |

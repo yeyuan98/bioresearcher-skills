@@ -37,6 +37,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_COMMAND = ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"];
 const DEFAULT_INIT_TIMEOUT_MS = 180000;
@@ -59,10 +60,10 @@ function parseArgs(argv) {
   const a = { manifest: null, outDir: null, check: false, help: false, command: null };
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
-      case "--manifest": a.manifest = argv[++i]; break;
-      case "--out-dir": a.outDir = argv[++i]; break;
+      case "--manifest": if (argv[i + 1] === undefined) throw new Error("--manifest requires a value"); a.manifest = argv[++i]; break;
+      case "--out-dir": if (argv[i + 1] === undefined) throw new Error("--out-dir requires a value"); a.outDir = argv[++i]; break;
       case "--check": a.check = true; break;
-      case "--command": a.command = argv[++i].split(","); break;
+      case "--command": if (argv[i + 1] === undefined) throw new Error("--command requires a value"); a.command = argv[++i].split(","); break;
       case "--help": case "-h": a.help = true; break;
       default: throw new Error(`unknown argument: ${argv[i]}`);
     }
@@ -123,6 +124,9 @@ class McpStdioClient {
         continue; // non-JSON noise on stdout is ignored
       }
       if (msg && (msg.id === undefined || msg.id === null)) continue; // notification/request from server
+      // Only responses carry result/error; a server-initiated *request* with
+      // a colliding id must not resolve a pending call.
+      if (!("result" in msg) && !("error" in msg)) continue;
       const p = this.pending.get(msg.id);
       if (!p) continue;
       this.pending.delete(msg.id);
@@ -248,7 +252,7 @@ function assertCall(entry, call) {
 async function loadRegistry() {
   // Vendored copy of scripts/ci/biomcp-tools.json at the pinned version; CI
   // (demos/check-demos.mjs) diffs the two so drift is impossible.
-  const regPath = path.join(path.dirname(new URL(import.meta.url).pathname), "biomcp-tools@1.1.1.json");
+  const regPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "biomcp-tools@1.1.1.json");
   return JSON.parse(fs.readFileSync(regPath, "utf8"));
 }
 
@@ -262,7 +266,7 @@ async function runCheckMode(args) {
     const names = await client.listTools();
     const known = new Set(registry.core);
     const missing = registry.core.filter((n) => !names.includes(n));
-    const optionalPresent = registry.optional.filter((n) => !names.includes(n)).length === registry.optional.length ? 0 : registry.optional.filter((n) => names.includes(n)).length;
+    const optionalPresent = registry.optional.filter((n) => names.includes(n)).length;
     if (missing.length > 0) {
       console.error(`FAIL tools/list is missing ${missing.length} pinned core tool(s): ${missing.join(", ")}`);
       console.error(`      server exposed ${names.length} tool(s)${optionalPresent ? ` (incl. ${optionalPresent} optional-group tool(s))` : ""}`);

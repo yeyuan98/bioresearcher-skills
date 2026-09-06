@@ -1,7 +1,7 @@
 # Transcript — Publication-grade structural figure — KRAS Switch I/II with 3-layer QA / 发表级结构生物学图——KRAS Switch I/II 与三层 QA 门禁
 
 - Scenario: `agent-plot-making-en` (kind: agent, lang: en)
-- Outcome: **PASS***
+- Outcome: **PASS** (rubric adjudicated SATISFIED post-run — see result.json `adjudications`)
 - Session: 2026-09-06T06:24:34.524Z → 2026-09-06T06:42:18.443Z
 - Replay: `node demos/run-demo.mjs --only agent-plot-making-en --publish` (spends LLM tokens; manual-run only)
 

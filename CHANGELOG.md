@@ -21,8 +21,8 @@ when that release PR is cut (the release workflow extracts only the
   Agent (skills + plugin + connector) and the biomcp MCP server — each
   covering functionality, technical architecture/API docs, core features,
   onboarding, application cases, demo links, and FAQ — backed by **true-run
-  demo artifacts** (7 scenarios, all PASS; commit + sha256 provenance per
-  artifact directory).
+  demo artifacts** (7 scenarios, all PASS — two via recorded rubric adjudication; commit +
+  sha256 provenance per artifact directory).
 - `demos/run-demo.mjs`: self-contained runner + 12-check grader vendored from
   `agent-test/run.mjs` (scenarios under `demos/scenarios/` with an
   `agent`/`mcp-probe` kind discriminator; `--publish` curates graded reps

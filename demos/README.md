@@ -33,6 +33,16 @@ All artifacts are **true runs** with commit + sha256 provenance per directory
 运行**结果，每个目录带提交号与 sha256 溯源、双语 README、会话记录、客观
 校验与产出文件。
 
+> **Provenance note / 溯源说明** — the `gitCommit` recorded in each
+> `provenance.json` is the repo HEAD **at run time** (`3380cc6`): it pins the
+> exact `skills/` tree under test (per-skill sha256) and the scenario manifest
+> (`scenarioSha256`). The `demos/` pack itself landed in the follow-up commit
+> `2d4ab09`; the GitHub permalinks in the docs point at that pack commit.
+> / 各 `provenance.json` 记录的 `gitCommit` 是**运行时刻**的仓库 HEAD
+> （`3380cc6`），钉扎被测 `skills/` 树（逐技能 sha256）与场景清单
+> （`scenarioSha256`）；`demos/` 目录本身由后续提交 `2d4ab09` 引入，文档中的
+> GitHub 固定链接指向该打包提交。
+
 | Scenario | Kind | Lang | Outcome | Wall time |
 |---|---|---|---|---|
 | [agent-deep-research-en](./artifacts/agent-deep-research-en/README.md) | agent (opencode + skills + MCP) | EN | PASS | 515 s |
@@ -60,6 +70,14 @@ validates this pack hermetically via `--list`, `--dry-run`, and
 `check-demos.mjs`. / 智能体场景**仅限手动运行**（真实 opencode CLI、LLM
 token 与网络），与移植来源 `agent-test/` 套件一致；CI 仅以 `--list`、
 `--dry-run` 与 `check-demos.mjs` 做封闭校验。
+
+Replaying a rubric scenario (`agent-pubmed-weekly-en`,
+`agent-plot-making-en`) overwrites its `result.json` and **drops the manual
+adjudications** recorded there — re-verify the output against
+`expected-summary.json` / the QA gates and re-record the adjudication entry
+after replay. / 重放带 rubric 的两个场景会覆盖 `result.json` 并**丢失人工
+裁定记录**——重放后请对照 `expected-summary.json` / QA 门禁重新核验并补录
+裁定条目。
 
 ## Layout / 目录
 

@@ -30,10 +30,11 @@
  *                   transcript.md, result.json, provenance.json.
  */
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join, dirname, relative, resolve } from "node:path";
 import path from "node:path";
 
-const DEMOS = dirname(new URL(import.meta.url).pathname);
+const DEMOS = dirname(fileURLToPath(import.meta.url));
 const REPO = dirname(DEMOS);
 const MAX_BYTES = 3 * 1024 * 1024;
 const MAX_FILES = 150;
@@ -85,12 +86,17 @@ function headingsOf(text) {
 let linkCount = 0;
 for (const file of mdFiles) {
   const rel = relative(REPO, file);
+  // Curated transcripts embed LLM-authored markdown verbatim: they are
+  // generated evidence, not authored docs, so heading/link linting skips them.
+  const isGeneratedTranscript = file.endsWith("transcript.md") && rel.includes(`${path.sep}artifacts${path.sep}`);
   const text = readFileSync(file, "utf8");
   const seen = new Set();
-  for (const h of headingsOf(text)) {
-    const key = h.toLowerCase();
-    if (seen.has(key)) fail("links", `${rel}: duplicate heading "${h}"`);
-    seen.add(key);
+  if (!isGeneratedTranscript) {
+    for (const h of headingsOf(text)) {
+      const key = h.toLowerCase();
+      if (seen.has(key)) fail("links", `${rel}: duplicate heading "${h}"`);
+      seen.add(key);
+    }
   }
   // Relative links resolve (skip fenced code blocks).
   let fence = 0;
@@ -102,11 +108,29 @@ for (const file of mdFiles) {
       continue;
     }
     if (fence) continue;
-    for (const m of line.matchAll(/\[[^\]]*\]\(([^)\s]+)[^)]*\)/g)) {
+    // Allow one level of balanced parens inside the href (CommonMark style).
+    for (const m of line.matchAll(/\[[^\]]*\]\((((?:\([^)\s]*\)|[^)\s]))+)[^)]*\)/g)) {
       const href = m[1];
-      if (/^[a-z]+:\/\//i.test(href) || href.startsWith("#") || href.startsWith("mailto:")) continue;
+      if (/^[a-z]+:\/\//i.test(href) || href.startsWith("#") || href.startsWith("mailto:")) {
+        // Same-repo absolute links: at least the path portion must exist in
+        // the current tree (catches stale-tree permalinks 404ing by path).
+        const gm = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/[^/]+\/(.+?)(?:\/?#|$)/);
+        if (gm) {
+          linkCount++;
+          const target = join(REPO, decodeURIComponent(gm[1].split("#")[0]));
+          if (!existsSync(target)) fail("links", `${rel}: same-repo permalink path does not exist in this tree: ${href}`);
+        }
+        continue;
+      }
       linkCount++;
-      const target = resolve(dirname(file), decodeURIComponent(href.split("#")[0]));
+      let clean;
+      try {
+        clean = decodeURIComponent(href.split("#")[0]);
+      } catch {
+        fail("links", `${rel}: malformed percent escape in link ${href}`);
+        continue;
+      }
+      const target = resolve(dirname(file), clean);
       if (!existsSync(target)) fail("links", `${rel}: broken relative link ${href}`);
     }
   }
@@ -226,10 +250,24 @@ for (const name of scenarioDirs) {
       for (const [i, c] of spec.probe.entries()) {
         if (!c || typeof c.tool !== "string" || !known.has(c.tool)) problems.push(`probe[${i}] tool "${c?.tool}" not in registry`);
         if (c.args === undefined) problems.push(`probe[${i}] missing args`);
+        for (const rx of ["expect_regex", "expect_not_regex"]) {
+          if (c[rx] !== undefined) {
+            try { new RegExp(c[rx]); } catch (e) { problems.push(`probe[${i}].${rx} does not compile`); }
+          }
+        }
       }
+    }
+    if (spec.server !== undefined && spec.server.command !== undefined) {
+      const cmd = spec.server.command;
+      if (!Array.isArray(cmd) || cmd.length === 0 || cmd.some((c) => typeof c !== "string")) problems.push("server.command must be a non-empty string array");
     }
   } else {
     problems.push(`unsupported kind "${kind}"`);
+  }
+  if (kind === "agent" && Array.isArray(spec.publish?.outputs)) {
+    for (const g of spec.publish.outputs) {
+      if (typeof g !== "string" || g.length === 0 || g.startsWith("/")) problems.push(`bad outputs glob "${g}"`);
+    }
   }
   if (typeof spec.title_en !== "string" || !spec.title_en) problems.push("missing title_en");
   if (typeof spec.title_zh !== "string" || !spec.title_zh) problems.push("missing title_zh");
@@ -280,6 +318,10 @@ for (const name of artifactDirs) {
   else artifactsOk++;
 }
 if (artifactsChecked) ok("artifacts", `${artifactsOk}/${artifactsChecked} artifact dir(s) complete`);
+
+// Stale artifact dirs for scenarios that no longer exist fail loudly.
+const orphanArtifacts = artifactDirs.filter((d) => !scenarioDirs.includes(d));
+for (const d of orphanArtifacts) fail("artifacts", `demos/artifacts/${d}/ has no matching scenario under demos/scenarios/`);
 
 if (failures) {
   console.error(`\ncheck-demos: ${failures} failure(s)`);

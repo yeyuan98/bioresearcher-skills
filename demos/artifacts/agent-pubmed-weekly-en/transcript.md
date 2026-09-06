@@ -1,7 +1,7 @@
 # Transcript — PubMed weekly — updatefiles sample parsed into an Excel workbook / PubMed 周更——将 updatefiles 样例解析为 Excel 工作簿
 
 - Scenario: `agent-pubmed-weekly-en` (kind: agent, lang: en)
-- Outcome: **PASS***
+- Outcome: **PASS** (rubric adjudicated SATISFIED post-run — see result.json `adjudications`)
 - Session: 2026-09-06T05:34:10.785Z → 2026-09-06T05:35:06.691Z
 - Replay: `node demos/run-demo.mjs --only agent-pubmed-weekly-en --publish` (spends LLM tokens; manual-run only)
 

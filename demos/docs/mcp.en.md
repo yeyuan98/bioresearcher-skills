@@ -61,7 +61,7 @@ line). Handshake sequence:
 
 Note: `tools/call` payloads live in `content[0].text` (usually JSON-in-text);
 `isError: true` marks a tool-level failure. A complete runnable
-implementation ships in `demos/lib/mcp-probe.mjs` (~150 lines, zero deps).
+implementation ships in `demos/lib/mcp-probe.mjs` (single-file, zero deps).
 
 ### 3.2 Version and install pinning
 
@@ -109,7 +109,7 @@ the [biomcp-ts source](https://github.com/yeyuan98/biomcp-ts)):
 | Domain | Tools | Notes |
 |---|---|---|
 | Articles | `article_search`, `article_get` | federated PubMed (Europe PMC/Semantic Scholar/PubTator/LitSense); detail incl. citation networks |
-| Genes | `gene_search`, `gene_get`, `gene_diseases`, `gene_drugs`, `gene_trials`, `gene_articles`, `gene_enrich` | MyGene/OpenTargets; `gene_get` has 16 sections + `smart` alias resolution (HER2→ERBB2) |
+| Genes | `gene_search`, `gene_get`, `gene_diseases`, `gene_drugs`, `gene_trials`, `gene_articles`, `gene_enrich` | MyGene/OpenTargets; `gene_get` takes 16 section values (incl. `all`) + `smart` alias resolution (HER2→ERBB2) |
 | Variants | `variant_search`, `variant_get`, `variant_oncokb`, `variant_trials` | MyVariant; **structured queries** (`gene`+`hgvsp`, never compound free text); OncoKB needs a token |
 | Drugs | `drug_search`, `drug_get`, `drug_trials` | drug–trial linkage |
 | Diseases | `disease_search`, `disease_get`, `disease_drugs`, `disease_trials` | DOID/MONDO ontology |
@@ -147,7 +147,7 @@ excerpted; full samples in each `outputs/capture.jsonl`):
 ```json
 [{"id": "rs113488022", "gene": "BRAF", "hgvs_p": "V600E",
   "hgvs_c": "c.1799T>A", "significance": "Pathogenic",
-  "gnomad_af": 3.97994e-06}]
+  "gnomad_af": 0.00000397994}]
 ```
 
 **Trials** `trial_search` `{query:"BRAF melanoma", limit:3}` →
@@ -178,7 +178,7 @@ excerpted; full samples in each `outputs/capture.jsonl`):
 ```json
 {"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.18",
  "dataset": "gtex_v10", "unit": "TPM",
- "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4841, …}, …]}
+ "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4845, …}, …]}
 ```
 
 **PDB** `pdb` `{query:"KRAS", sections:["experiment"]}` →
@@ -203,8 +203,8 @@ suffixed names; this package uses short `domain_action` names (e.g.
 `article_search`, `gene_get`). The full per-tool mapping table lives in the
 repo's `docs/migration-from-plugin.md`. Capability deltas: the openFDA
 approval/label/adverse-event searches are not provided in 1.1.1 (adverse
-event capability is partly folded into the drug tools); trial detail
-sectioning was adjusted (the `protocol` section folded into core output).
+event capability is partly folded into the drug tools); the old `protocol`
+section is now covered by the `core` + `eligibility` sections.
 All other domains are a superset.
 
 ## 5. Onboarding
@@ -286,8 +286,8 @@ Two probe scenarios (token-free, pure direct network calls):
 
 | Scenario | Calls | Outcome | Demo link (GitHub permalink) |
 |---|---|---|---|
-| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (43 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/mcp-tool-tour-en) |
-| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (9 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/mcp-tool-tour-zh) |
+| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (43 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-en) |
+| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (9 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-zh) |
 
 The EN tour verifies `tools/list` exposes all 41 pinned core tools; every
 call's full request/response (with assertions) is in `outputs/capture.jsonl`

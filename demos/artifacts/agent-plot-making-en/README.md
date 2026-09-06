@@ -20,6 +20,7 @@ Using the input data in /home/administrator/git/bioresearcher-agent/bioresearche
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.alignment.json`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.alignment.json)
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.pdf`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.pdf)
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.png`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.png)
+- [`outputs/figures/kras_inhibitors/fig1_kras_landscape.svg`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.svg)
 
 **Replay:** `node demos/run-demo.mjs --only agent-plot-making-en --publish` (manual-run only — spends LLM tokens).
 
@@ -48,6 +49,7 @@ Using the input data in /home/administrator/git/bioresearcher-agent/bioresearche
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.alignment.json`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.alignment.json)
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.pdf`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.pdf)
 - [`outputs/figures/kras_inhibitors/fig1_kras_landscape.png`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.png)
+- [`outputs/figures/kras_inhibitors/fig1_kras_landscape.svg`](./outputs/figures/kras_inhibitors/fig1_kras_landscape.svg)
 
 **复现：** `node demos/run-demo.mjs --only agent-plot-making-en --publish`（仅限手动运行——会消耗 LLM token）。
 

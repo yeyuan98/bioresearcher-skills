@@ -41,7 +41,7 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
   （真实并行证据见 [案例 6.2](#62-案例深度研究英文并行扇出)）。
 - **发表级绘图与确定性 QA**：面板对齐（≤1.5 pt）、PDF 矢量碰撞审计、
   字号下限（≥5 pt）三项门禁全部由脚本判定，不靠肉眼。
-- **周更流水处理**：PubMed updatefiles 增量解析（含撤稿删除记录），
+- **周更流水线处理**：PubMed updatefiles 增量解析（含撤稿删除记录），
   一步产出 `combined.xlsx`。
 - **零密钥默认可用**：所有演示（含 MCP 直连探针）均在**无任何 API Key**
   的环境完成；需要更高限额或特定数据源时再按需配置（见 MCP 文档 5.3）。
@@ -142,7 +142,7 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 Claude Code 插件内置 `bioresearcher-dr-worker`（`.claude-plugin/agents/`）：
 只执行编排器分配的**单个**研究侧面；工具池为 biomcp 服务器 + 文件读写；
 按 `worker-protocol.md` 执行——顺序调用（服务端已限速，绝不手动 sleep）、
-每查询最多三次重试（原查询 → 简化 → 换源）、失败记录「证据缺口」后继续、
+每查询至多 3 次尝试（原查询 → 简化 → 换源）、失败记录「证据缺口」后继续、
 禁止重委派与内部知识。非插件宿主用宿主自带 Task 工具或顺序回退达到同等
 效果。
 
@@ -182,7 +182,7 @@ npx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard
 
 插件自动捆绑核心版 biomcp 服务器（工具名前缀
 `mcp__plugin_bioresearcher_biomcp__*`）与 dr-worker 子代理；首次工具调用
-承担 npx 下载。权限提示的免打扰配置见仓库
+会触发一次性 npx 下载。权限提示的免打扰配置见仓库
 `docs/biomcp-ts-setup.md`（`permissions.allow` 片段）。
 
 ### 5.4 渠道 C：WorkBuddy 连接器
@@ -210,19 +210,19 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 ## 6. 应用案例与 Demo
 
-所有案例为 `demos/run-demo.mjs` 驱动的**真实运行**（opencode v1.18.29，
-仓库提交 `3380cc6`），非手写示例。每个目录含：双语 README、会话记录
+所有案例为 `demos/run-demo.mjs` 驱动的**真实运行**（opencode v1.18.29；
+被测 skills 树钉扎于提交 `3380cc6`，见各 `provenance.json`），非手写示例。每个目录含：双语 README、会话记录
 `transcript.md`、客观校验 `result.json`、溯源 `provenance.json` 与产出文件。
 
 ### 6.1 案例总览表
 
 | 案例 | 语言 | 结果 | 耗时 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|---|
-| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-deep-research-en) |
-| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-deep-research-zh) |
-| 6.4 访谈优先 | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-interview-en) |
-| 6.5 PubMed 周更解析 | EN | PASS（rubric 裁定 SATISFIED） | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-plot-making-en) |
+| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-en) |
+| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-zh) |
+| 6.4 访谈优先 | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-interview-en) |
+| 6.5 PubMed 周更解析 | EN | PASS（rubric 裁定 SATISFIED） | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
+| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-plot-making-en) |
 | 6.7 文档化案例（WorkBuddy / onboard） | ZH/EN | —（非运行） | — | 见 6.7 小节 |
 
 （仓库内浏览请用相对路径 `../artifacts/<案例名>/`。）
@@ -231,7 +231,7 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 **提示词**：`no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.`
 
-智能体加载技能 → 烟雾测试 MCP 连接（`biomcp_gene_search`）→ **两个 Task
+智能体加载技能 → 冒烟测试 MCP 连接（`biomcp_gene_search`）→ **两个 Task
 子代理并行**分别调研「HR 机制前沿」与「PARPi 临床转化」→ 汇总渲染
 `final_report.html`。客观校验：技能加载 ≥1、PMID 出现在最终回答、
 HTML 产出在工具输出中出现、（直接或经 worker 的）文献检索发生。
@@ -242,7 +242,8 @@ HTML 产出在工具输出中出现、（直接或经 worker 的）文献检索�
 ### 6.3 案例：深度研究（中文提问，中文报告）
 
 **提示词**：`no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的多方面文献综述并附引用。请用中文撰写报告，引用使用 PMID。`
-（即 WorkBuddy 连接器的中文示例语料。）
+（基于 WorkBuddy 连接器的中文示例语料扩展：显式指定技能、中文撰写与
+PMID 引用。）
 
 智能体检索英文数据源，以中文产出《肿瘤免疫治疗多方面文献综述》（执行摘要、
 检查点抑制剂与细胞治疗两个侧面、统一文献表，PMID 编号引用）。
@@ -341,7 +342,7 @@ Apache-2.0（仓库 LICENSE）；引用信息见仓库 `CITATION.cff`。允许�
 开发，需保留许可声明。
 
 **Q12：Windows 支持吗？**
-onboard 技能兼容 PowerShell/cmd；Demo 在 Linux 实证。核心依赖是 Node ≥22.13
+onboard 技能兼容 PowerShell/cmd；Demo 在 Linux 上实测通过。核心依赖是 Node ≥22.13
 与 npx，跨平台设计。
 
 **Q13：离线可用吗？**
@@ -355,8 +356,9 @@ LLM token，仅限手动运行）。详见 [demos/README.md](../README.md)。
 
 ## 8. 参考与许可
 
-- 技能原文：仓库 `skills/<技能名>/SKILL.md`（各技能附 `references/` 领域
-  指南，共 18 篇，含工具选择、引用格式、限流认证等）
+- 技能原文：仓库 `skills/<技能名>/SKILL.md`（各技能附 `references/`
+  领域指南——deep-research 18 篇 + plot-making 3 篇，共 21 篇，含工具选择、
+  引用格式、限流认证等）
 - MCP 服务器文档：[MCP 文档（中文）](./mcp.zh.md) / [MCP doc (EN)](./mcp.en.md)
 - 接线与认证细节：仓库 `docs/biomcp-ts-setup.md`
 - 旧插件迁移（工具名映射与能力降级）：仓库 `docs/migration-from-plugin.md`

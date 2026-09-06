@@ -15,6 +15,7 @@
     "outputs": [
       "figures/**/fig1_kras_landscape.png",
       "figures/**/fig1_kras_landscape.pdf",
+      "figures/**/fig1_kras_landscape.svg",
       "figures/**/LEGENDS.md",
       "figures/**/fig1_kras_landscape.alignment.json"
     ]

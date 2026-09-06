@@ -13,7 +13,7 @@ no-interview light-research: Using the bioresearcher-deep-research skill, survey
 
 **How it was run:** real `opencode run --auto` session driven by `demos/run-demo.mjs` with the repo skills injected.
 
-**Provenance:** commit 3380cc6083c10a4f21d10f1f7988f985adbcb65a ([permalink](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a)), opencode 1.18.29, node v22.23.1, biomcp@1.1.1; raw rep: `20260906-134601-r1` (gitignored raw log; not committed). See [provenance.json](./provenance.json) for per-skill sha256.
+**Provenance:** commit 3380cc6083c10a4f21d10f1f7988f985adbcb65a ([permalink](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a)), opencode 1.18.29, node v22.23.1, biomcp@1.1.1; raw rep: `20260906-134601-r1` (gitignored raw log; not committed). See [provenance.json](./provenance.json) for per-skill sha256. (`reused: true` — the session log was re-graded from disk after the scenario's checks were widened to accept worker-mediated evidence; the session itself is the single 515 s run.)
 
 **Contents:** [transcript.md](./transcript.md) · [result.json](./result.json) · [provenance.json](./provenance.json) · outputs:
 - [`outputs/reports/brca1_dna_repair/final_report.html`](./outputs/reports/brca1_dna_repair/final_report.html)

@@ -21,6 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 const REPO_URL = "https://github.com/yeyuan98/bioresearcher-skills";
 const MAX_OUTPUT_BYTES = 1.5 * 1024 * 1024;
@@ -75,9 +76,12 @@ function listFilesRecursive(root) {
 function collectOutputs(runDir, globs) {
   const picked = [];
   const skipped = [];
+  // Raw session logs/prompts are never published, whatever a glob matches.
+  const NEVER = new Set(["log.jsonl", "prompt.txt", "result.json", "probe-result.json", "summary.json"]);
   if (!Array.isArray(globs) || globs.length === 0) return { picked, skipped };
   const res = globs.map((g) => ({ g, re: globToRegExp(g) }));
   for (const file of listFilesRecursive(runDir)) {
+    if (NEVER.has(path.basename(file))) continue;
     const rel = path.relative(runDir, file).split(path.sep).join("/");
     for (const { g, re } of res) {
       if (!re.test(rel)) continue;
@@ -97,8 +101,12 @@ function collectOutputs(runDir, globs) {
 function trimCallOutput(v) {
   const text = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
   if (!text) return "*(no output)*";
-  const lines = text.split(/\r?\n/);
   let out = text;
+  // Neutralize fenced-block openers inside excerpts so an embedded ``` line
+  // cannot break out of (or flip) the transcript's own fences (and with them
+  // the committed-markdown gates).
+  out = out.replace(/^(`{3,}|~{3,})/gm, (m) => m[0] + "\\" + m.slice(1));
+  const lines = out.split(/\r?\n/);
   if (lines.length > CALL_OUTPUT_LINES) out = lines.slice(0, CALL_OUTPUT_LINES).join("\n") + `\n… [trimmed ${lines.length - CALL_OUTPUT_LINES} more line(s)]`;
   if (out.length > CALL_OUTPUT_CHARS) out = out.slice(0, CALL_OUTPUT_CHARS) + `… [trimmed ${out.length - CALL_OUTPUT_CHARS} more char(s)]`;
   return out;
@@ -120,6 +128,15 @@ function extractBiomcpPin(scenario, runDir) {
     if (v) return v;
   }
   if (scenario.kind === "mcp-probe") {
+    // Probe runs record their actual server command in probe-result.json
+    // (covers manifests that rely on the pinned default command).
+    const pr = path.join(runDir, "probe-result.json");
+    if (statFile(pr)) {
+      try {
+        const v = tryText((JSON.parse(fs.readFileSync(pr, "utf8")).serverCommand ?? []).join(" "));
+        if (v) return v;
+      } catch {}
+    }
     const v = tryText((scenario.spec.server?.command ?? []).join(" "));
     if (v) return v;
   }
@@ -174,6 +191,13 @@ function agentTranscript(scenario, parsed, resultDoc, meta) {
 /* ---------------------------------------------------------- transcript: probe */
 
 function probeTranscript(scenario, runDir, resultDoc) {
+  // Probe serverInfo/serverCommand live in probe-result.json (the runner's
+  // canonical result.json carries only the graded checks).
+  let probeMeta = null;
+  const prPath = path.join(runDir, "probe-result.json");
+  if (statFile(prPath)) {
+    try { probeMeta = JSON.parse(fs.readFileSync(prPath, "utf8")); } catch {}
+  }
   const captures = [];
   const capPath = path.join(runDir, "capture.jsonl");
   if (statFile(capPath)) {
@@ -188,12 +212,15 @@ function probeTranscript(scenario, runDir, resultDoc) {
   if (statFile(tlPath)) {
     try { toolCount = JSON.parse(fs.readFileSync(tlPath, "utf8")).count ?? null; } catch {}
   }
+  const serverInfo = probeMeta?.serverInfo ?? resultDoc.serverInfo ?? null;
+  const serverCommand = probeMeta?.serverCommand ?? null;
   const L = [];
   L.push(`# Probe transcript — ${scenario.spec.title_en ?? scenario.id} / ${scenario.spec.title_zh ?? scenario.id}`);
   L.push("");
   L.push(`- Scenario: \`${scenario.id}\` (kind: mcp-probe, lang: ${scenario.lang ?? "en"}) — deterministic stdio JSON-RPC calls, no LLM involved`);
   L.push(`- Outcome: **${resultDoc.outcome}**${resultDoc.reason ? ` — ${resultDoc.reason}` : ""}`);
-  if (resultDoc.serverInfo) L.push(`- Server: ${resultDoc.serverInfo.name ?? "?"} ${resultDoc.serverInfo.version ?? ""}`.trim());
+  if (serverInfo) L.push(`- Server: ${serverInfo.name ?? "?"} ${serverInfo.version ?? ""}`.trim());
+  if (serverCommand) L.push(`- Server command: \`${serverCommand.join(" ")}\``);
   if (toolCount !== null) L.push(`- tools/list exposed ${toolCount} tool(s)`);
   L.push(`- Replay: \`node demos/run-demo.mjs --only ${scenario.id} --publish\` (network via npx; token-free)`);
   L.push("");
@@ -299,7 +326,7 @@ function readmeBody(scenario, resultDoc, prov, outputs, skippedOutputs, costStr,
 /* ------------------------------------------------------------------ publish */
 
 export async function publishScenario({ scenario, runDir, args, provenance, skillsDir, sessionMeta, parsed }) {
-  const artifactsDir = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "artifacts");
+  const artifactsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts");
   const target = path.join(artifactsDir, scenario.id);
   fs.mkdirSync(target, { recursive: true });
   fs.mkdirSync(path.join(target, "outputs"), { recursive: true });

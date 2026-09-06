@@ -154,8 +154,8 @@ Case-sensitive, leading tokens (trailing `:` tolerated):
 The Claude Code plugin ships `bioresearcher-dr-worker`
 (`.claude-plugin/agents/`): it executes exactly ONE assigned aspect; its tool
 pool is the biomcp servers plus file tools; per `worker-protocol.md` it makes
-sequential calls (the server already paces — never sleep manually), retries
-each query at most 3 times (original → simplified → alternate source), records
+sequential calls (the server already paces — never sleep manually), makes
+at most 3 attempts per query (original → simplified → alternate source), records
 "evidence gaps" on failure, and never re-delegates or fabricates. Non-plugin
 harnesses reach the same effect via their own Task tool or the sequential
 fallback.
@@ -224,8 +224,9 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 ## 6. Application cases and demos
 
-All cases are **true runs** driven by `demos/run-demo.mjs` (opencode v1.18.29,
-repo commit `3380cc6`) — not hand-written examples. Each artifact dir carries:
+All cases are **true runs** driven by `demos/run-demo.mjs` (opencode v1.18.29; the
+skills tree under test is pinned at commit `3380cc6` — see each
+`provenance.json`) — not hand-written examples. Each artifact dir carries:
 a bilingual README, the session `transcript.md`, objective `result.json`,
 `provenance.json`, and the produced outputs.
 
@@ -233,11 +234,11 @@ a bilingual README, the session `transcript.md`, objective `result.json`,
 
 | Case | Lang | Outcome | Duration | Demo link (GitHub permalink) |
 |---|---|---|---|---|
-| 6.2 deep research (BRCA1 DNA repair) | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-deep-research-en) |
-| 6.3 deep research (tumor immunotherapy) | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-deep-research-zh) |
-| 6.4 interview-first | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-interview-en) |
-| 6.5 PubMed weekly parse | EN | PASS (rubric SATISFIED) | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/3380cc6083c10a4f21d10f1f7988f985adbcb65a/demos/artifacts/agent-plot-making-en) |
+| 6.2 deep research (BRCA1 DNA repair) | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-en) |
+| 6.3 deep research (tumor immunotherapy) | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-zh) |
+| 6.4 interview-first | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-interview-en) |
+| 6.5 PubMed weekly parse | EN | PASS (rubric SATISFIED) | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
+| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-plot-making-en) |
 | 6.7 documented cases (WorkBuddy / onboard) | ZH/EN | — (non-run) | — | see §6.7 |
 
 (When browsing the repo, use relative paths `../artifacts/<case>/`.)
@@ -259,7 +260,8 @@ answer; `final_report.html` surfaced in tool output; article searches ran
 ### 6.3 Case: deep research (Chinese prompt, Chinese report)
 
 **Prompt**: `no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的多方面文献综述并附引用。请用中文撰写报告，引用使用 PMID。`
-(the WorkBuddy connector's canonical zh example).
+(extends the WorkBuddy connector's canonical zh example with explicit skill,
+language, and PMID instructions).
 
 The agent queries English sources and writes the report in Chinese (executive
 summary; checkpoint-inhibitor and cell-therapy aspects; unified bibliography
@@ -383,8 +385,9 @@ LLM tokens; manual-run only). Details: [demos/README.md](../README.md).
 
 ## 8. References and license
 
-- Skill sources: repo `skills/<name>/SKILL.md` (18 domain reference guides
-  under `references/`, incl. tool selection, citation formats, rate limiting)
+- Skill sources: repo `skills/<name>/SKILL.md` (21 domain reference guides
+  under `references/` — 18 for deep-research, 3 for plot-making — incl. tool
+  selection, citation formats, rate limiting)
 - MCP server: [MCP doc (EN)](./mcp.en.md) / [MCP 文档（中文）](./mcp.zh.md)
 - Wiring and auth details: repo `docs/biomcp-ts-setup.md`
 - Migration from the older plugin (tool-name map, capability downgrades):

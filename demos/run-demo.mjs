@@ -163,6 +163,19 @@ function loadScenarioEntry(name) {
       if (!call || typeof call.tool !== "string" || !call.tool) {
         return { id, dirName: name, dir, kind, error: `probe[${i}] missing string field: tool` };
       }
+      for (const rx of ["expect_regex", "expect_not_regex"]) {
+        if (call[rx] !== undefined) {
+          try { new RegExp(call[rx]); } catch (e) {
+            return { id, dirName: name, dir, kind, error: `probe[${i}].${rx} does not compile: ${e.message}` };
+          }
+        }
+      }
+    }
+    if (spec.server !== undefined) {
+      const cmd = spec.server.command;
+      if (cmd !== undefined && (!Array.isArray(cmd) || cmd.length === 0 || cmd.some((c) => typeof c !== "string"))) {
+        return { id, dirName: name, dir, kind, error: "server.command must be a non-empty array of strings" };
+      }
     }
   }
   const timeoutMs = spec.timeoutMs ?? spec.timeout ?? null;
@@ -326,6 +339,13 @@ function findResumeDir(scenario, rep) {
     const log = path.join(dir, "log.jsonl");
     const result = path.join(dir, "result.json");
     if (!fs.existsSync(log) || !fs.existsSync(result)) continue;
+    if (scenario.kind === "mcp-probe") {
+      // Probe log.jsonl is the probe's plain-text stdout, never opencode
+      // NDJSON: a probe rep is complete iff BOTH result files exist.
+      if (!fs.existsSync(path.join(dir, "probe-result.json"))) continue;
+      complete.push(dir);
+      continue;
+    }
     const parsed = readLogFile(log);
     if (parsed && parsed.endsWithStop) complete.push(dir);
   }
@@ -346,11 +366,13 @@ function dropIncompleteRepDirs(scenario, rep) {
     const dir = path.join(scenarioRunsDir, name);
     const log = path.join(dir, "log.jsonl");
     const result = path.join(dir, "result.json");
-    const logOk = (() => {
+    const repComplete = (() => {
+      if (!fs.existsSync(log) || !fs.existsSync(result)) return false;
+      if (scenario.kind === "mcp-probe") return fs.existsSync(path.join(dir, "probe-result.json"));
       const p = readLogFile(log);
       return !!(p && p.endsWithStop);
     })();
-    if (!(logOk && fs.existsSync(result))) fs.rmSync(dir, { recursive: true, force: true });
+    if (!repComplete) fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -458,19 +480,28 @@ function runProbeSession(scenario, rep, args, prepared) {
     const startedAt = new Date().toISOString();
 
     const argv = [probeScript, "--manifest", manifest, "--out-dir", runDir];
+    // detached: own process group — the kill ladder below signals the whole
+    // group so a SIGTERMed probe cannot orphan its detached npx/biomcp child
+    // (node's default SIGTERM handler exits without running finally blocks).
     const child = spawn(process.execPath, argv, {
       cwd: AGENT_ROOT,
       env: sanitizeChildEnv(),
       stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
     });
 
     let timedOut = false;
     let settled = false;
     let killTimer;
+    const stopGroup = (sig) => {
+      try { process.kill(-child.pid, sig); } catch {
+        try { child.kill(sig); } catch {}
+      }
+    };
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGTERM");
-      killTimer = setTimeout(() => child.kill("SIGKILL"), TERM_GRACE_MS);
+      stopGroup("SIGTERM");
+      killTimer = setTimeout(() => stopGroup("SIGKILL"), TERM_GRACE_MS);
     }, timeoutMs);
 
     const finish = (spawnError) => {
