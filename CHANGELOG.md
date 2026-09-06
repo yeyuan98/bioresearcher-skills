@@ -21,7 +21,7 @@ when that release PR is cut (the release workflow extracts only the
   Agent (skills + plugin + connector) and the biomcp MCP server — each
   covering functionality, technical architecture/API docs, core features,
   onboarding, application cases, demo links, and FAQ — backed by **true-run
-  demo artifacts** (7 scenarios, all PASS — two via recorded rubric adjudication; commit +
+  demo artifacts** (7 scenarios, all PASS — two via recorded manual review; commit +
   sha256 provenance per artifact directory).
 - `demos/run-demo.mjs`: self-contained runner + 12-check grader vendored from
   `agent-test/run.mjs` (scenarios under `demos/scenarios/` with an
@@ -57,17 +57,17 @@ when that release PR is cut (the release workflow extracts only the
 
 ### Tooling (version-coupling registry)
 
-- `scripts/ci/version-coupling.json`: the single declarative registry of
-  every repo-VERSION-coupled location (plugin/marketplace/connector/CITATION
-  slots plus the partner-doc version literals). `check-drift.mjs` now
-  enforces it: live-slot equality (all marketplace plugin entries; a missing
-  version key fails), a stale-literal tripwire over tracked files (past
-  versions derived hermetically from CHANGELOG headings; per-skill-axis
-  tokens, `@`-pinned foreign pins, historical zones and per-file exemptions
-  excluded), and CITATION `date-released` ⇄ CHANGELOG release-date
-  consistency. The per-skill semver axis and inline dependency pins stay
-  structurally gated, not manifest-governed; AGENTS.md documents the
-  tri-state split.
+- `scripts/ci/version-coupling.json`: the single opt-in registry of
+  repo-VERSION-coupled locations (plugin/marketplace/connector/CITATION
+  slots plus the partner-doc version literals). `check-drift.mjs` enforces
+  live-slot equality — every registered slot must capture exactly the
+  current VERSION (all marketplace plugin entries; missing keys fail) —
+  plus CITATION `date-released` ⇄ CHANGELOG release-date consistency.
+  Two version series never share a mechanism: the per-skill semver axis
+  (skills.json ⇄ SKILL.md ⇄ CHANGELOG subsections) keeps its own
+  structural checks, untouched; there is deliberately NO repository-wide
+  version scan. New `.github/PULL_REQUEST_TEMPLATE.md` surfaces the
+  register-in-the-same-PR rule to the human merger.
 
 ### Release
 
@@ -77,8 +77,8 @@ when that release PR is cut (the release workflow extracts only the
   `.claude-plugin/marketplace.json`,
   `connector/workbuddy/connector-meta.json`, `CITATION.cff`); the
   partner-doc version literals refreshed to v1.5.0.
-- Plugin-visible payload is byte-identical to 1.4.1 (skills, bundled biomcp
-  server, dr-worker agent unchanged) — Claude-plugin users receive a
+- Plugin-visible payload is functionally identical to 1.4.1 (skills,
+  bundled biomcp server, dr-worker agent unchanged) — Claude-plugin users receive a
   docs/demos cache refresh only; the bump exists to tag the partner
   publication milestone and keep the coupled registry consistent.
 - WorkBuddy: the connector tarball
@@ -90,7 +90,6 @@ when that release PR is cut (the release workflow extracts only the
   with this release (requires the one-time repo setting Settings → Pages →
   Source: GitHub Actions, then a `pages` workflow re-run; the site footer
   renders the version dynamically from `VERSION`).
-
 
 ## [1.4.1] - 2026-09-06
 

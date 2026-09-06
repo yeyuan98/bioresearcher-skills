@@ -1,21 +1,23 @@
 #!/usr/bin/env node
-// Version drift check. Zero deps.
-// Enforces: VERSION semver; skills.json names == skills/ dirs; per-skill
-// skills.json version == SKILL.md metadata.version; CHANGELOG has a
-// line-anchored heading for VERSION and exactly one "### <skill> <version>"
-// subsection line per skills.json version (top-level ## [x.y.z] headings
-// are repo releases only; inter-release skill bumps live under
-// ## [Unreleased]); VERSION-coupled locations per the SINGLE REGISTRY
-// scripts/ci/version-coupling.json (live-slot equality incl. marketplace
-// plugin entries, connector-meta, CITATION.cff, partner-doc literals), a
-// stale-literal tripwire over tracked files (past versions derived from
-// CHANGELOG headings; per-skill-axis tokens, '@'-pinned tokens, zones and
-// exempt files excluded), and CITATION date-released == CHANGELOG
-// ## [VERSION] date.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+// Version drift check. Zero deps, pure filesystem (no git subprocess, no
+// repository-wide scanning).
+//
+// Two version series, two mechanisms, zero shared code paths:
+// - Series 1 (repo VERSION = agent/connector/plugin product): opt-in live
+//   slots declared in scripts/ci/version-coupling.json — every slot must
+//   capture exactly the current VERSION (regex slots: >= 1 match, capture
+//   group 1 defined, ALL captures equal; json_path slots: dot-path with at
+//   most one '*' array segment, every resolved value equal, missing keys
+//   fail). Nothing is scanned "just in case".
+// - Series 2 (per-skill semver): structural checks — skills.json names ==
+//   skills/ dirs; per-skill skills.json version == SKILL.md
+//   metadata.version; CHANGELOG has a line-anchored heading for VERSION and
+//   exactly one "### <skill> <version>" subsection line per skills.json
+//   version (top-level ## [x.y.z] headings are repo releases only;
+//   inter-release skill bumps live under ## [Unreleased]).
+// Plus: CITATION.cff date-released == CHANGELOG "## [VERSION] - <date>".
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { spawnSync } from "node:child_process";
-import path from "node:path";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..", "..");
 let failures = 0;
@@ -61,24 +63,28 @@ const MANIFEST_PATH = join(ROOT, "scripts", "ci", "version-coupling.json");
 const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
 const manifestRel = "scripts/ci/version-coupling.json";
 
+// Manifest paths must be repo-relative and point at regular files.
+const safeRel = (rel) => typeof rel === "string" && rel.length > 0 && !rel.includes("..") && !rel.startsWith("/") && !/^[A-Za-z]:/.test(rel);
+const slotFileOk = (rel) => safeRel(rel) && statSync(join(ROOT, rel), { throwIfNoEntry: false })?.isFile() === true;
+
 // ---- manifest self-validation: a broken manifest is a hard failure.
 if (!Array.isArray(manifest.live_slots) || manifest.live_slots.length === 0) fail(`${manifestRel}: live_slots must be a non-empty array`);
-if (!Array.isArray(manifest.historical_zones)) fail(`${manifestRel}: historical_zones must be an array`);
-if (!Array.isArray(manifest.scan_extensions) || manifest.scan_extensions.length === 0) fail(`${manifestRel}: scan_extensions must be a non-empty array`);
-else if (manifest.scan_extensions.some((e) => !String(e).startsWith("."))) fail(`${manifestRel}: scan_extensions entries must start with "."`);
-const exemptFiles = Array.isArray(manifest.exempt_files) ? manifest.exempt_files : [];
 const seenIds = new Set();
 for (const slot of manifest.live_slots ?? []) {
   if (!slot || typeof slot.id !== "string" || !slot.id) { fail(`${manifestRel}: slot missing string id`); continue; }
   if (seenIds.has(slot.id)) fail(`${manifestRel}: duplicate slot id "${slot.id}"`);
   seenIds.add(slot.id);
   if (typeof slot.file !== "string" || !slot.file) { fail(`${manifestRel}: slot "${slot.id}" missing file`); continue; }
-  if (!existsSync(join(ROOT, slot.file))) fail(`${manifestRel}: slot "${slot.id}" file does not exist: ${slot.file}`);
+  if (!safeRel(slot.file)) { fail(`${manifestRel}: slot "${slot.id}" file must be a repo-relative path without "..": ${slot.file}`); continue; }
+  if (!slotFileOk(slot.file)) fail(`${manifestRel}: slot "${slot.id}" file is missing or not a regular file: ${slot.file}`);
   const hasJp = typeof slot.json_path === "string" && !!slot.json_path;
   const hasRx = typeof slot.regex === "string" && !!slot.regex;
   if (hasJp === hasRx) { fail(`${manifestRel}: slot "${slot.id}" needs exactly one of json_path|regex`); continue; }
   if (hasJp && (slot.json_path.startsWith(".") || slot.json_path.endsWith(".") || slot.json_path.includes(".."))) {
     fail(`${manifestRel}: slot "${slot.id}" malformed json_path "${slot.json_path}"`);
+  }
+  if (hasJp && (slot.json_path.match(/\*/g) ?? []).length > 1) {
+    fail(`${manifestRel}: slot "${slot.id}" json_path supports at most one "*" segment: ${slot.json_path}`);
   }
   if (hasRx) {
     const flags = slot.flags ?? "";
@@ -86,13 +92,7 @@ for (const slot of manifest.live_slots ?? []) {
     try { new RegExp(slot.regex, flags); } catch (e) { fail(`${manifestRel}: slot "${slot.id}" regex does not compile: ${e.message}`); }
   }
 }
-for (const zone of manifest.historical_zones ?? []) {
-  if (!existsSync(join(ROOT, zone))) fail(`${manifestRel}: historical zone does not exist in tree: ${zone}`);
-}
-for (const ex of exemptFiles) {
-  if (!ex || typeof ex.file !== "string" || !existsSync(join(ROOT, ex.file))) fail(`${manifestRel}: exempt_files entry missing or nonexistent: ${ex?.file}`);
-}
-if (failures === 0) ok(`${manifestRel} self-validates (${manifest.live_slots.length} slot(s), ${manifest.historical_zones.length} zone(s), ${exemptFiles.length} exempt file(s))`);
+if (failures === 0) ok(`${manifestRel} self-validates (${manifest.live_slots.length} slot(s))`);
 
 // ---- live-slot enforcement: every slot must carry the CURRENT version.
 function resolveJsonPath(obj, jp) {
@@ -120,8 +120,14 @@ function resolveJsonPath(obj, jp) {
 }
 
 for (const slot of manifest.live_slots ?? []) {
-  if (typeof slot.file !== "string" || !slot.file || !existsSync(join(ROOT, slot.file))) continue; // already failed validation
-  const text = readFileSync(join(ROOT, slot.file), "utf8");
+  if (typeof slot.file !== "string" || !slot.file || !slotFileOk(slot.file)) continue; // already failed validation
+  let text;
+  try {
+    text = readFileSync(join(ROOT, slot.file), "utf8");
+  } catch (e) {
+    fail(`[${slot.id}] ${slot.file}: unreadable: ${e.message}`);
+    continue;
+  }
   if (slot.json_path) {
     let obj;
     try {
@@ -144,7 +150,13 @@ for (const slot of manifest.live_slots ?? []) {
   } else {
     const flags = slot.flags ?? "";
     const re = new RegExp(slot.regex, flags.includes("g") ? flags : flags + "g");
-    const matches = [...text.matchAll(re)];
+    let matches;
+    try {
+      matches = [...text.matchAll(re)];
+    } catch (e) {
+      fail(`[${slot.id}] ${slot.file}: regex execution failed: ${e.message}`);
+      continue;
+    }
     if (matches.length === 0) {
       fail(`[${slot.id}] ${slot.file}: regex matches nothing — slot rotted; fix it in ${manifestRel}`);
       continue;
@@ -162,69 +174,6 @@ for (const slot of manifest.live_slots ?? []) {
   }
 }
 
-/* ============================ stale-literal tripwire ============================ */
-
-// Past versions derive hermetically from CHANGELOG release headings (tags
-// may disagree, e.g. a changelog-only release).
-const pastVersions = new Set(
-  [...changelog.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)].map((m) => m[1]).filter((v) => v !== version)
-);
-// Per-skill axis: tokens equal to a skills.json version are governed by the
-// per-skill gate, never by the repo-version tripwire.
-const skillVersions = new Set(registry.skills.map((s) => s.version));
-
-function gitTrackedFiles() {
-  const r = spawnSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8", timeout: 30000 });
-  if (r.status !== 0) throw new Error(`git ls-files failed: ${r.stderr}`);
-  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
-}
-
-function inZone(rel, zones) {
-  return zones.some((z) => rel === z || rel.startsWith(z.endsWith("/") ? z : z + "/"));
-}
-
-let tracked = [];
-try {
-  tracked = gitTrackedFiles();
-} catch (e) {
-  fail(`tripwire: ${e.message}`);
-}
-
-const zones = manifest.historical_zones ?? [];
-const exemptSet = new Set(exemptFiles.map((e) => e.file));
-const skipFiles = new Set([manifestRel, "VERSION", ...exemptSet]);
-const tokenRe = /\bv?\d+\.\d+\.\d+\b/g;
-const extOk = (f) => manifest.scan_extensions.some((e) => f.endsWith(e));
-
-let scanned = 0;
-for (const rel of tracked.sort()) {
-  if (skipFiles.has(rel) || inZone(rel, zones) || !extOk(rel)) continue;
-  const abs = join(ROOT, rel);
-  let text;
-  try {
-    text = readFileSync(abs, "utf8");
-  } catch {
-    continue;
-  }
-  scanned++;
-  const lines = text.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // cff-version is a schema constant (CITATION.cff line 1), not a repo version.
-    if (/^\s*cff-version:/.test(line)) continue;
-    tokenRe.lastIndex = 0;
-    let m;
-    while ((m = tokenRe.exec(line)) !== null) {
-      const lit = m[0].replace(/^v/, "");
-      if (!pastVersions.has(lit)) continue;
-      if (skillVersions.has(lit)) continue; // per-skill axis
-      if (m.index > 0 && line[m.index - 1] === "@") continue; // foreign @-pin
-      fail(`tripwire: stale version literal "v${lit}" in ${rel}:${i + 1} — bump it, register a slot, or add a zone in ${manifestRel}`);
-    }
-  }
-}
-if (failures === 0) ok(`tripwire: no stale past-version literals (${pastVersions.size} past version(s), ${scanned} file(s) scanned)`);
-
 /* ============================ date consistency ============================ */
 
 const cffText = readFileSync(join(ROOT, "CITATION.cff"), "utf8");
@@ -232,7 +181,7 @@ const dateReleased = cffText.match(/^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?/m)
 const headingDate = changelog.match(new RegExp(`^## \\[${escapeRe(version)}\\] - (\\d{4}-\\d{2}-\\d{2})`, "m"))?.[1] ?? null;
 if (headingDate === null) {
   // The missing-heading case is already reported above; date check rides along.
-  if (dateReleased !== null) fail(`CITATION.cff date-released ${dateReleased} but CHANGELOG has no "## [${version}] - <date>" heading`);
+  if (dateReleased !== null) fail(`CITATION.cff date-released ${dateReleased} but CHANGELOG has no "## [${version}] - <date>" heading (missing or missing its date)`);
 } else if (dateReleased !== headingDate) {
   fail(`CITATION.cff date-released ${dateReleased ?? "(missing)"} != CHANGELOG "## [${version}] - ${headingDate}" — both flip in the release PR`);
 } else {
