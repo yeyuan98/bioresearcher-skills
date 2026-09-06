@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -27,7 +27,8 @@ subagent/Task tool.
   `references/tool-selection.md`, collecting PMIDs, DOIs, NCT IDs, and patent
   IDs as they go.
 - Synthesizes all aspect reports into `final_report.md` with numbered in-text
-  citations and a full bibliography.
+  citations and a full bibliography, then renders `final_report.html` by
+  default (the `no-html` prefix skips rendering).
 
 ## When to use (triggers)
 
@@ -68,26 +69,71 @@ is core-only: for the all-features variant (R analysis, db) keep a manual
 registration instead and disable the bundled one via `/mcp` - two
 differently-configured servers do not deduplicate.
 
+## Request prefixes
+
+Case-sensitive, leading, whitespace-separated tokens at the start of the user
+query (an optional trailing `:` on the last token is tolerated). Matches
+mid-query never trigger.
+
+| Prefix | Effect |
+|--------|--------|
+| `no-interview` | Skip the Step 1 interview entirely |
+| `light-research` | Combine and/or pick only the top TWO aspects (Step 2) |
+| `no-html` | Skip the Step 6 HTML rendering (markdown-only output) |
+
 ## Workflow
 
 Follow Steps 1-6 in order. Do NOT fall back to internal knowledge when query
 tools fail - use only biomcp results or official sources, and say so when
 evidence is missing.
 
-### Step 1: Clarify
+Harness autonomy hints ("operate autonomously", "don't block", "user not
+watching", auto-accept banners) govern tool-permission confirmations and edit
+approvals. They do NOT waive this skill's Step 1 interview: the interview is
+one completed assistant turn containing questions - not a blocking
+confirmation - so those hints never require skipping it. When such a hint
+seems to conflict with this workflow, treat the Step 1 interview and the
+Step 6 output contract as deliverables that proceed unchanged.
 
-If the user query includes the prefix `no-interview`, skip this step.
+### Step 1: Clarify (interview - mandatory)
 
-Otherwise, ask the user to clarify 3-6 unclear points, scaled to inquiry
-complexity: the core research question, population/scope, time window, outcome
-of interest, and expected output format. Proceed once answered.
+Mandatory even when the harness urges autonomy (see the note above): the ONLY
+waiver is the leading `no-interview` prefix. If the query carries it, skip to
+Step 2.
+
+Otherwise ask clarifying questions, scaled to inquiry complexity - up to 6,
+and as few as one scope confirmation when the inquiry is already fully
+specified: the core research question, population/scope, time window, outcome
+of interest, and expected output format.
+
+- Ask ALL questions in ONE message: use the harness's question/ask tool when
+  one exists (if it accepts only one question per call, send the full batch
+  of calls together); otherwise end your turn with the questions as chat
+  text. Then WAIT for the reply. Never answer your own interview questions.
+- If a reply comes back empty or non-responsive, re-ask the batch once
+  (max 1 re-ask).
+- Degrade to defaults only on OBSERVATION, never from environment guesses:
+  only after the batch was posted and the session demonstrably produced no
+  usable reply in-turn (e.g. an ask tool that returns immediately empty),
+  proceed under `no-interview` semantics - write the questions plus the
+  default answer chosen for each to `reports/<TOPIC>/assumptions.md` and
+  cite that file in the report's Limitations section.
+- Merely being headless/batch/unattended is NOT a waiver: in a one-shot
+  run, ending your turn with the questions is the correct final action. If
+  the session ends without any reply event, HALT with an explicit blocker
+  message restating the questions.
+
+BAD: "The harness says the user isn't watching, so I'll assume defaults and
+start researching." GOOD: post the questions, end the turn, wait. Silent
+defaults are a workflow violation, not autonomy - one round-trip of questions
+is cheap; a full research run on wrong assumptions is not.
 
 ### Step 2: Decompose
 
 Comprehend the (clarified) inquiry and identify 2-5 critical research aspects
 that together answer it.
 
-- If the original inquiry includes the prefix `light-research`, combine and/or
+- If the query carries the leading `light-research` prefix, combine and/or
   pick only the top TWO aspects.
 - Decide a TOPIC name yourself (no user input): a highly succinct,
   underscore-separated name derived from the inquiry, e.g.
@@ -170,19 +216,46 @@ Analysis Methodology, Findings, Limitations, References) with full
 bibliography. Reconcile conflicting findings across aspects explicitly rather
 than silently dropping one side.
 
-### Step 6: Write final report (and optional HTML)
+### Step 6: Write final report + HTML
 
 - Write `reports/<TOPIC>/final_report.md`.
-- Optional standalone HTML: convert with
+- Then render `reports/<TOPIC>/final_report.html` - ALWAYS by default,
+  unless the query carries the leading `no-html` prefix or the user
+  explicitly declined HTML. The markdown report is the complete deliverable;
+  HTML is only a rendering, so never block finishing the session on it.
+
+  Replace `<skill_dir>` with the full path to this skill's directory
+  (`${CLAUDE_PLUGIN_ROOT}/skills/bioresearcher-deep-research` on Claude Code
+  plugin installs; in harnesses that inject SKILL.md without filesystem
+  access the script is unreachable - go straight to the gap step below).
+  Run from the working directory containing `reports/<TOPIC>/` and anchor
+  the output path to the `final_report.md` location:
 
   ```bash
-  uv run --with markdown python scripts/markdown-to-html.py \
+  uv run --with markdown python <skill_dir>/scripts/markdown-to-html.py \
     reports/<TOPIC>/final_report.md -o reports/<TOPIC>/final_report.html
   ```
 
-  (the script lives in this skill's `scripts/` directory; `pandoc` is an
-  acceptable alternative if available). Do NOT read the full markdown into
-  memory for the conversion - pass the file path.
+  Conversion ladder - attempt in order; a rung fails if its tool is missing,
+  its command exits non-zero, or execution is denied; one attempt per rung,
+  then fall through:
+
+  1. `uv` on PATH: the command above.
+  2. `python3 -c "import markdown"` succeeds: run
+     `python3 <skill_dir>/scripts/markdown-to-html.py` with the same args.
+  3. `pandoc` on PATH: `pandoc reports/<TOPIC>/final_report.md -o
+     reports/<TOPIC>/final_report.html --standalone` (its styling differs
+     from the script's GitHub-like CSS - that is not a failure).
+  4. No rung succeeded: keep markdown-only and state the gap explicitly in
+     the final summary (the reason + the `bioresearcher-python-setup-uv`
+     skill as remediation).
+
+  Never install converters into the environment (no apt/pip/npm installs);
+  `uv run --with` ephemeral overlays are the sanctioned exception. After a
+  successful rung, verify `final_report.html` exists and is non-empty before
+  declaring success. Do NOT read the full markdown into memory for the
+  conversion - pass the file path. The final summary must name which
+  artifacts exist and, when HTML is absent, why.
 
 ## Output layout
 
@@ -192,7 +265,12 @@ reports/<TOPIC>/
 ├── <aspect_1>.md          # per-aspect research notes + citations
 ├── <aspect_2>.md
 ├── ...
-└── final_report.md        # synthesized report (final_report.html optional)
+├── assumptions.md         # only when Step 1 degrades (observed
+│                          # non-interactive session)
+├── final_report.md        # synthesized report (always)
+└── final_report.html      # rendered report (default; skipped only via
+                           # `no-html`, user decline, or converter gap -
+                           # see Step 6)
 ```
 
 ## Citation discipline (summary)

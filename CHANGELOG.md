@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each skill carries an independent semver tracked in `skills.json` and its
 `metadata.version`; the repository-level `VERSION` drives release tagging.
+Top-level `## [x.y.z]` headings cover BOTH repository releases and per-skill
+releases; the `###` subsection under a heading names the skill (or
+"Infrastructure") it belongs to.
+
+## [1.1.1] - 2026-09-06
+
+Skill-level release; repository VERSION unchanged at 1.4.0.
+
+### bioresearcher-deep-research 1.1.1
+- Step 1 interview hardened against harness autonomy hints (observed on the
+  ZCode desktop harness, whose auto-accept mode injects "operate
+  autonomously / user not watching" guidance that made agents skip the
+  interview and proceed on silent defaults): the Workflow preamble now
+  reconciles such hints (they govern permission confirmations, not the
+  interview turn), Step 1 is explicitly mandatory with a single-batch ask,
+  a one-re-ask cap, an explicit BAD/GOOD example, and an
+  observation-triggered non-interactive degradation path that writes loud
+  defaults to `reports/<TOPIC>/assumptions.md` instead of silent ones
+  (merely being headless is explicitly NOT a waiver; one-shot runs correctly
+  end their turn with the questions).
+- Step 6 HTML rendering is now deterministic: `final_report.html` is
+  produced by default (was "optional" - the primary cause of markdown-only
+  runs), with a new leading `no-html` prefix opt-out, the `<skill_dir>`
+  absolute-path convention for the conversion script (was a relative path
+  that only worked with cwd == skill dir), a fixed
+  uv → python3 → pandoc → explicit-gap conversion ladder with anti-spin
+  rules (no installs, one attempt per rung, verify output non-empty), and a
+  final-summary contract naming the artifacts produced.
+- New "Request prefixes" section defining `no-interview`, `light-research`,
+  and `no-html` as case-sensitive leading tokens (mid-query matches never
+  trigger).
+- Worker protocol: workers never interview the user - clarification is
+  exclusively the orchestrator's Step 1.
+- Agent tests: `deep-research-q01-light` now asserts the HTML artifact; new
+  manual case `deep-research-q02-interview` verifies the interview fires in
+  non-interactive `opencode run --auto` mode (suite grows 11 → 12).
+- Docs: README skill row and `docs/migration-from-plugin.md` note the
+  Markdown + HTML default output.
 
 ## [1.4.0] - 2026-09-06
 
