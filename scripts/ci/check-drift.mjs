@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // Version drift check. Zero deps.
 // Enforces: VERSION semver; skills.json names == skills/ dirs; per-skill
-// skills.json version == SKILL.md metadata.version; CHANGELOG has a heading
-// for every skills.json version AND for VERSION; plugin.json version and
-// marketplace entry version == VERSION; workbuddy connector-meta.json
-// version == VERSION.
+// skills.json version == SKILL.md metadata.version; CHANGELOG has a
+// line-anchored heading for VERSION and exactly one "### <skill> <version>"
+// subsection line per skills.json version (top-level ## [x.y.z] headings
+// are repo releases only; inter-release skill bumps live under
+// ## [Unreleased]); plugin.json version and marketplace entry
+// version == VERSION; workbuddy connector-meta.json version == VERSION.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 
@@ -25,9 +27,12 @@ if (JSON.stringify(dirNames) !== JSON.stringify(regNames)) fail(`skills.json nam
 else ok(`skills.json <-> skills/ (${dirNames.length} skills)`);
 
 const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8");
-const needed = new Set([version]);
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Line-anchored, mirroring the release-workflow awk extractor.
+if (!new RegExp(`^## \\[${escapeRe(version)}\\]`, "m").test(changelog)) {
+  fail(`CHANGELOG.md missing "## [${version}]" heading`);
+}
 for (const s of registry.skills) {
-  needed.add(s.version);
   if (!semver(s.version)) { fail(`skills.json ${s.name} version not semver`); continue; }
   const skillMd = readFileSync(join(ROOT, "skills", s.name, "SKILL.md"), "utf8");
   // Anchor to the metadata block (indented lines only) so a `version:` in the
@@ -36,9 +41,10 @@ for (const s of registry.skills) {
   const m = metaBlock?.[1].match(/[ \t]+version:[ \t]*"?(\d+\.\d+\.\d+)"?/);
   if (!m) fail(`${s.name}: metadata.version missing`);
   else if (m[1] !== s.version) fail(`${s.name}: metadata.version ${m[1]} != skills.json ${s.version}`);
-}
-for (const v of needed) {
-  if (!changelog.includes(`## [${v}]`)) fail(`CHANGELOG.md missing "## [${v}]" heading`);
+  const subLine = `### ${s.name} ${s.version}`;
+  const occurrences = changelog.split("\n").filter((l) => l.replace(/[ \t]+$/, "") === subLine).length;
+  if (occurrences === 0) fail(`CHANGELOG.md missing "${subLine}" subsection line`);
+  else if (occurrences > 1) fail(`CHANGELOG.md has ${occurrences} "${subLine}" subsection lines (expected exactly 1 - fold ## [Unreleased] into the release section)`);
 }
 ok(`CHANGELOG covers repo ${version} + all skill versions`);
 

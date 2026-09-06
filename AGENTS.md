@@ -27,8 +27,11 @@ repo), never memory.
 ## Versioning & release
 
 - Per-skill independent semver: bump `skills/<name>/SKILL.md`
-  `metadata.version` AND `skills.json` AND add a CHANGELOG `## [x.y.z]`
-  heading in the same PR.
+  `metadata.version` AND `skills.json` AND add a `### <skill-name> <x.y.z>`
+  CHANGELOG subsection in the same PR. Top-level `## [x.y.z]` CHANGELOG
+  headings are reserved for repo releases only; a skill bump that lands
+  between repo releases goes under `## [Unreleased]` and is folded into
+  the next `## [x.y.z]` section when that release PR is cut.
 - Repo `VERSION` (drives tags/releases) bumps in a `chore(release): vX.Y.Z —
   summary` PR, human-merged; CI cuts the GitHub release on push to main.
 - `.claude-plugin/plugin.json` version must equal repo `VERSION` (users only

@@ -58,9 +58,10 @@ to every GitHub release that contains `connector/workbuddy/`.
 ## Version policy
 
 `connector-meta.json` `version` must equal the repo `VERSION` (enforced by
-`scripts/ci/check-drift.mjs`). Release PRs therefore bump three files
-together: `VERSION`, `.claude-plugin/plugin.json`, and
-`connector/workbuddy/connector-meta.json`. Consequence: **every WorkBuddy
+`scripts/ci/check-drift.mjs`). Release PRs therefore bump five files
+together: `VERSION`, `.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json`, `connector/workbuddy/connector-meta.json`,
+and `CITATION.cff`. Consequence: **every WorkBuddy
 resubmission rides a repo release** — even a one-line locale fix needs a
 `chore(release): vX.Y.Z` PR. WorkBuddy's docs recommend incrementing the
 version on each update (建议), which this coupling guarantees.
