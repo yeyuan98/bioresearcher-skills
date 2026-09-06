@@ -1,0 +1,24 @@
+{
+  "id": "plugin-l2-manual-mode-grants",
+  "name": "manual-mode canary: skill invocation + MCP grant observation",
+  "level": "L2",
+  "purpose": "manual mode + --permission-prompts none with Skill pre-allowed: skill turn starts, single-fact lookup completes; mcp__plugin denials are a rubric observation (on claude 2.1.261 headless the allowed-tools turn grant does NOT cover MCP server rules)",
+  "driver": "session",
+  "prompt": "Using the bioresearcher-deep-research plugin skill's guidance for single-fact lookups, use the biomcp server to find the HGNC gene symbol for HER2. Reply with just the symbol. Do not create any files.",
+  "budgetUsd": 0.5,
+  "timeoutMs": 420000,
+  "permissionMode": "manual",
+  "extraArgs": ["--permission-prompts", "none", "--allowedTools", "Skill"],
+  "checks": [
+    { "type": "init_mcp", "name": "plugin:bioresearcher:biomcp", "status": "connected", "desc": "server connected under manual mode" },
+    { "type": "tool_use", "name": "^Skill$", "regex": true, "desc": "plugin skill actually invoked (pre-allowed via --allowedTools)" },
+    { "type": "permission_denials", "op": "not_containing", "pattern": "\"Skill\"", "desc": "the Skill pre-allow held (skill turn started)" },
+    { "type": "tool_use", "name": "^mcp__plugin_bioresearcher_biomcp__gene_(search|get)$", "regex": true, "desc": "gene tool attempted through the plugin server" },
+    { "type": "text", "op": "regex", "expect": "ERBB2", "source": "assistant", "desc": "HGNC symbol for HER2 in the answer" },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "grant-observation: count permission_denials entries whose tool_name starts with mcp__plugin_bioresearcher_biomcp. On claude 2.1.261 (headless -p, manual + --permission-prompts none, Skill pre-allowed) the gene call(s) were DENIED (gene_get; earlier reps also denied gene_search): the skill's allowed-tools turn grant does not cover MCP server rules. If a future claude version honors the grant (zero mcp__plugin denials), update docs/biomcp-ts-setup.md to re-claim it; meanwhile the permissions.allow snippet is the dependable zero-prompt path."
+    }
+  ]
+}

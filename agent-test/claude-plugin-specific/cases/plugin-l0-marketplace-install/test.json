@@ -1,0 +1,16 @@
+{
+  "id": "plugin-l0-marketplace-install",
+  "name": "local marketplace add + install provides the plugin without --plugin-dir",
+  "level": "L0",
+  "purpose": "true user install path: validate -> marketplace add -> install -> plugin list -> session init shows installed components",
+  "driver": "install",
+  "prompt": "Do not use any tools. Reply with exactly: OK",
+  "budgetUsd": 0.25,
+  "timeoutMs": 600000,
+  "checks": [
+    { "type": "init_mcp", "name": "plugin:bioresearcher:biomcp", "status": "connected", "desc": "installed plugin's server auto-starts" },
+    { "type": "init_tool", "name": "mcp__plugin_bioresearcher_biomcp__article_search", "desc": "namespaced tool from installed plugin" },
+    { "type": "init_skill", "name": "bioresearcher:bioresearcher-deep-research", "desc": "skill from installed plugin" },
+    { "type": "init_agent", "name": "bioresearcher:bioresearcher-dr-worker", "desc": "worker agent from installed plugin" }
+  ]
+}

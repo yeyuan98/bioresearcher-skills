@@ -16,5 +16,7 @@
     "./skills/bioresearcher-plot-making",
     "./skills/bioresearcher-python-setup-uv",
     "./skills/bioresearcher-pubmed-weekly"
-  ]
+  ],
+  "mcpServers": "./.claude-plugin/mcp.json",
+  "agents": ["./.claude-plugin/agents/bioresearcher-dr-worker.md"]
 }

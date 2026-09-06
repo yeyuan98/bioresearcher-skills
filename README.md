@@ -45,6 +45,17 @@ npx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard
 /plugin install bioresearcher@bioresearcher-skills
 ```
 
+Installing the plugin also bundles the pinned **core-only** biomcp MCP server
+(`.claude-plugin/mcp.json`): it auto-starts with the plugin — no manual
+`.mcp.json` — and its tools surface as `mcp__plugin_bioresearcher_biomcp__*`.
+Requires Node.js >= 22.13 with `npx` on PATH (the first tool call pays the
+npx download). The plugin also ships the `bioresearcher-dr-worker` subagent
+used by the deep-research skill's parallel fan-out. Manual wiring is only
+needed for other harnesses or the all-features server variant — and a manual
+registration does not deduplicate against the bundled one (commands differ),
+so disable one of them via `/mcp`. See
+[docs/biomcp-ts-setup.md](./docs/biomcp-ts-setup.md) for the permission model.
+
 **Plain git clone** (pick the directory your harness reads):
 `.opencode/skills/`, `.claude/skills/`, `.agents/skills/`, `.codex/skills/`,
 or `.gemini/skills/`:
@@ -64,6 +75,7 @@ bundle for market submission.
 
 ```bash
 node scripts/ci/lint-frontmatter.mjs   # strict-6 Agent Skills conformance
+node scripts/ci/lint-agents.mjs        # plugin subagent frontmatter + manifest agreement
 node scripts/ci/check-drift.mjs        # skills.json <-> metadata <-> CHANGELOG
 node scripts/ci/check-links.mjs        # links + duplicate headings
 bash scripts/ci/check-bundle.sh        # <=1000 files / <=10 MiB per skill
@@ -91,7 +103,9 @@ node agent-test/run.mjs            # all cases
 ```
 
 See [agent-test/README.md](./agent-test/README.md) for the case schema and
-the 12 mechanical check types.
+the 12 mechanical check types. The Claude Code plugin additionally has its
+own manual suite — see
+[agent-test/claude-plugin-specific/README.md](./agent-test/claude-plugin-specific/README.md).
 
 ## Docs
 

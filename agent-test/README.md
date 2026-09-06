@@ -7,6 +7,11 @@ the host `opencode` CLI (with per-case MCP wiring, e.g. the keyless `biomcp`
 server), and grades the recorded session log mechanically — no human in the
 grading loop except for explicit `rubric` flags.
 
+A sibling suite for the **Claude Code plugin** (bundled MCP server, plugin
+skills, `bioresearcher-dr-worker` agent) lives in
+[`claude-plugin-specific/`](./claude-plugin-specific/README.md) — same
+philosophy, driven against the real `claude` CLI; also manual-run only.
+
 Ported from `biomcp-ts/agent-test/` (runner + 12-check grader); see
 *Deltas vs the source harness* below.
 
@@ -41,6 +46,7 @@ node agent-test/run.mjs --dry-run  # discovery + schema validation + provisionin
 agent-test/
 ├── README.md                  this file
 ├── run.mjs                    runner + objective grader (plain ESM, node:stdlib only)
+├── claude-plugin-specific/    sibling suite: Claude Code plugin (own runner, cases/, README)
 ├── <TEST-NAME>/
 │   ├── test.json              spec: prompt, externalData pins, checks, timeout
 │   ├── opencode.json          per-run config (credential-free, {env:}-substituted)

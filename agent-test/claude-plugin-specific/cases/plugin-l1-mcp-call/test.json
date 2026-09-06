@@ -1,0 +1,17 @@
+{
+  "id": "plugin-l1-mcp-call",
+  "name": "keyless article_search through the bundled plugin server",
+  "level": "L1",
+  "purpose": "E2E tool call via mcp__plugin_bioresearcher_biomcp__article_search returns PMIDs with zero permission denials",
+  "driver": "session",
+  "prompt": "Use the article_search tool on the plugin biomcp server to search PubMed for 'BRCA1 DNA repair' with limit 3. Reply with one PMID from the results, nothing else.",
+  "budgetUsd": 0.5,
+  "timeoutMs": 300000,
+  "permissionMode": "bypassPermissions",
+  "checks": [
+    { "type": "tool_use", "name": "mcp__plugin_bioresearcher_biomcp__article_search", "op": "contains", "expect": "BRCA1", "desc": "exact namespaced tool called with the query (whole-input match: models vary the param name)" },
+    { "type": "tool_result_ok", "name": "mcp__plugin_bioresearcher_biomcp__article_search", "desc": "call completed without error" },
+    { "type": "text", "op": "regex", "expect": "\\d{7,9}", "source": "final", "desc": "final answer is a PMID" },
+    { "type": "permission_denials", "op": "empty", "desc": "no permission denials under bypassPermissions" }
+  ]
+}

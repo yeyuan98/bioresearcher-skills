@@ -54,8 +54,57 @@ With the server named `biomcp`, tools surface as `biomcp_article_search`,
 `biomcp_gene_get`, etc. The skills' reference docs use the bare canonical
 names (`article_search`, `gene_get`).
 
-Claude Code / other clients: add an equivalent stdio MCP server entry with
-the same command array (Claude Code: `.mcp.json` `"mcpServers"` block).
+## Claude Code
+
+**Plugin install (recommended):** `/plugin marketplace add
+yeyuan98/bioresearcher-skills` then `/plugin install
+bioresearcher@bioresearcher-skills`. The plugin bundles the pinned core-only
+server (`.claude-plugin/mcp.json`): it starts automatically with the plugin
+and its tools surface as `mcp__plugin_bioresearcher_biomcp__*`. Requires
+Node.js >= 22.13 with `npx` on PATH. The plugin also ships the
+`bioresearcher-dr-worker` subagent used by the deep-research skill.
+
+**Manual `.mcp.json`** (non-plugin installs, or the all-features variant) —
+add to the project root (or `~/.claude.json` for user scope):
+
+```json
+{
+  "mcpServers": {
+    "biomcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "timeout": 120000
+    }
+  }
+}
+```
+
+A manual registration and the plugin-bundled server do not deduplicate when
+their commands differ; keep one and disable the other via `/mcp`.
+
+### Permissions
+
+MCP tool calls ask for approval on first use in Manual mode. For a
+dependable, prompt-free setup add allow rules to `.claude/settings.json`
+(project) or `~/.claude/settings.json` (user):
+
+```json
+{
+  "permissions": {
+    "allow": ["mcp__plugin_bioresearcher_biomcp", "mcp__biomcp"]
+  }
+}
+```
+
+Auto mode (the default start mode on Pro/Max/Team plans) and `acceptEdits`
+already minimize prompts without any rules. The deep-research skill also
+lists both server rules in its `allowed-tools` frontmatter; that turn-scoped
+grant is **best-effort only** — empirically (claude 2.1.261, headless `-p`,
+manual mode) it did not cover MCP server rules, so treat the
+`permissions.allow` snippet above as the reliable mechanism. The plugin's
+`bioresearcher-dr-worker` subagent has its own tool pool (the biomcp servers
+plus file tools) regardless.
 
 ## Timeouts
 

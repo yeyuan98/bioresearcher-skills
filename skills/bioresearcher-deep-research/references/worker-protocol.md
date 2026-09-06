@@ -20,10 +20,16 @@ DESCRIPTION: <ABSTRACT>
 
 - ABSTRACT: <200 words describing the exact focus of the aspect and a list of
   detailed research items to investigate.
-- The orchestrator should ALSO inline into the prompt: the Worker Rules below,
-  the per-domain tool cheatsheet from `references/tool-selection.md`, and the
-  citation format summary from `references/citations.md` - subagents may not
-  have access to this skill's files.
+- Tier B (generic subagent): the orchestrator should ALSO inline into the
+  prompt the Worker Rules below, the per-domain tool cheatsheet from
+  `references/tool-selection.md`, and the citation format summary from
+  `references/citations.md` - generic subagents may not have access to this
+  skill's files.
+- Tier A (dedicated `bioresearcher-dr-worker` plugin subagent): the worker
+  reads this file plus `references/tool-selection.md` and
+  `references/citations.md` itself at startup (via
+  `${CLAUDE_PLUGIN_ROOT}`); the orchestrator sends ONLY the filled-in
+  template below.
 
 ## File protocol
 
@@ -69,6 +75,9 @@ attempt 3: alternate tool/source (see references/tool-selection.md routing)
 
 ## Parallel execution (orchestrator with subagent/Task tool)
 
+- Pick the tier by capability: dedicated `bioresearcher-dr-worker` subagent
+  (Tier A) when the harness offers it; otherwise generic subagents with the
+  inlined cheatsheet (Tier B). Do not mix tiers within one topic.
 - Launch workers in parallel in batches of up to 5.
 - Track each aspect in the todo list; mark complete when its output file
   exists and ends with a bibliography.

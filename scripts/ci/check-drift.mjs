@@ -60,4 +60,9 @@ for (const p of market.plugins ?? []) {
 }
 ok("marketplace versions consistent");
 
+const cff = readFileSync(join(ROOT, "CITATION.cff"), "utf8");
+const cffVersion = cff.match(/^version:\s*(\S+)/m)?.[1];
+if (cffVersion !== version) fail(`CITATION.cff version ${cffVersion} != VERSION ${version}`);
+else ok("CITATION.cff version == VERSION");
+
 process.exit(failures ? 1 : 0);

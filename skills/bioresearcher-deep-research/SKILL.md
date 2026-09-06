@@ -2,11 +2,11 @@
 name: bioresearcher-deep-research
 description: "Deep biomedical research orchestrator powered by the biomcp MCP server: clarifies the question, decomposes the topic into 2-5 research aspects, researches each aspect via parallel subagents (sequential fallback), and synthesizes a fully cited report under reports/<topic>/. Use for deep research, literature review, clinical trials, drugs, genes, variants, diseases, patents, PubMed, functional genomics, biomcp."
 license: Apache-2.0
-compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; a subagent/Task tool is optional - a sequential fallback is provided"
+compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
-allowed-tools: Read Write Bash Task
+allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
 
 # Bioresearcher Deep Research
@@ -60,6 +60,14 @@ Requires Node.js >= 22.13. Verify with `npx -y biomcp@1.1.1 doctor` (exit 0 =
 healthy). API keys are optional except where noted in
 `references/rate-limiting-auth.md`.
 
+On Claude Code, installing the bioresearcher plugin
+(`/plugin install bioresearcher@bioresearcher-skills`) bundles a core-only
+biomcp server automatically (no manual wiring; requires Node.js >= 22.13 with
+`npx` on PATH; the first tool call pays the npx download). The bundled server
+is core-only: for the all-features variant (R analysis, db) keep a manual
+registration instead and disable the bundled one via `/mcp` - two
+differently-configured servers do not deduplicate.
+
 ## Workflow
 
 Follow Steps 1-6 in order. Do NOT fall back to internal knowledge when query
@@ -94,11 +102,30 @@ auto-creates parent directories - do NOT use bash mkdir for this.
 
 ### Step 4: Research each aspect
 
-**Parallel branch (subagent/Task tool available):**
+**Pre-check (server availability):** before spawning workers, confirm the
+biomcp MCP server is connected (one cheap tool call or the harness's MCP
+status view). If no biomcp server is reachable, tell the user explicitly and
+run the sequential tier below without fabrication - evidence gathering is
+unavailable until the server is wired (run the `bioresearcher-onboard`
+skill or see Prerequisites).
 
-Assign each research aspect to one worker subagent, launched in parallel in
-batches of up to 5. Build each worker prompt from the template in
-`references/worker-protocol.md`:
+**Tier A - dedicated worker subagent (preferred when available):** if the
+harness offers the `bioresearcher-dr-worker` subagent type (installed with
+the bioresearcher Claude Code plugin; scoped name
+`bioresearcher:bioresearcher-dr-worker`), assign each research aspect to one
+worker, launched in parallel in batches of up to 5, using the prompt template
+below. Do NOT inline the worker rules or cheatsheets into the prompt - this
+worker reads `references/worker-protocol.md`, `references/tool-selection.md`,
+and `references/citations.md` itself at startup.
+
+**Tier B - generic subagent/Task tool:** assign each research aspect to one
+worker subagent, launched in parallel in batches of up to 5. Build each worker
+prompt from the template below. Inline into the prompt (workers may lack
+skill access): the worker rules, the per-domain tool cheatsheet from
+`references/tool-selection.md`, and the citation format summary from
+`references/citations.md`.
+
+Prompt template (Tiers A and B):
 
 ```md
 TOPIC: <TOPIC>
@@ -107,17 +134,14 @@ DESCRIPTION: <ABSTRACT>
 ```
 
 ABSTRACT is <200 words describing the exact focus and a list of detailed
-research items. Inline into the prompt (workers may lack skill access): the
-worker rules, the per-domain tool cheatsheet from
-`references/tool-selection.md`, and the citation format summary from
-`references/citations.md`.
+research items.
 
 Record finished workers via the todo list. If subagents are stuck without
 progress for too long, prompt the user: "If subagents are stuck without
 progress for too long, interrupt and ask me to resume work." Restart failed
 workers as needed (retry <= 3 per worker).
 
-**Sequential branch (no subagent tool):**
+**Tier C - sequential (no subagent tool):**
 
 Process aspects one at a time in the main conversation. For each aspect, apply
 the same worker rules from `references/worker-protocol.md` (tool selection per
@@ -126,7 +150,7 @@ the same worker rules from `references/worker-protocol.md` (tool selection per
 per-aspect file. State which aspect is being worked on before starting each
 one.
 
-**Either branch, per aspect:**
+**All tiers, per aspect:**
 
 - Query biomcp tools per `references/tool-selection.md`; filter at the source
   (specific terms, `limit`, `sections`) rather than retrieving broadly.

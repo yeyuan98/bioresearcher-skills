@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "biomcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "timeout": 120000
+    }
+  }
+}
