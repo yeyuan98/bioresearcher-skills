@@ -13,6 +13,35 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [Unreleased]
+
+### Demos (partner publication pack)
+
+- New `demos/` directory: bilingual (zh/en) partner-facing documents for the
+  Agent (skills + plugin + connector) and the biomcp MCP server — each
+  covering functionality, technical architecture/API docs, core features,
+  onboarding, application cases, demo links, and FAQ — backed by **true-run
+  demo artifacts** (7 scenarios, all PASS; commit + sha256 provenance per
+  artifact directory).
+- `demos/run-demo.mjs`: self-contained runner + 12-check grader vendored from
+  `agent-test/run.mjs` (scenarios under `demos/scenarios/` with an
+  `agent`/`mcp-probe` kind discriminator; `--publish` curates graded reps
+  into `demos/artifacts/`; CI-safe `--list`/`--dry-run`).
+- `demos/lib/mcp-probe.mjs`: zero-dependency stdio JSON-RPC MCP client
+  (initialize -> notifications/initialized -> paginated tools/list ->
+  scripted tools/call) capturing true request/response pairs for the MCP API
+  tables; `--check` asserts the 41 pinned core tools against the vendored
+  registry copy `demos/lib/biomcp-tools@1.1.1.json` (CI-diffed against
+  `scripts/ci/biomcp-tools.json`).
+- `demos/check-demos.mjs`: hermetic gate for the pack — relative links,
+  zh/en section-numbering parity, canonical + retired biomcp tool-name scan
+  (no other gate covers `demos/`), vendored-registry identity, scenario
+  schema, self-containment lint, size caps (<= 3 MiB / <= 150 files), and
+  artifact completeness; wired into CI.
+- Docs: `demos/docs/{agent,mcp}.{zh,en}.md` + `glossary.md` (terminology
+  anchored to the WorkBuddy connector locale assets); root README links the
+  pack under Docs.
+
 ## [1.4.1] - 2026-09-06
 
 ### Infrastructure

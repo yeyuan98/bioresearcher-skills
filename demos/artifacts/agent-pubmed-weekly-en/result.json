@@ -1,0 +1,37 @@
+{
+  "test": "agent-pubmed-weekly-en",
+  "rep": 1,
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-pubmed-weekly-en/20260906-133410-r1",
+  "reused": false,
+  "outcome": "PASS",
+  "reason": null,
+  "rubricPending": true,
+  "rubricFlags": [
+    "verify-combined-xlsx"
+  ],
+  "checks": [
+    {
+      "type": "tool_count",
+      "desc": null,
+      "status": "pass",
+      "detail": "count=1 of \"skill\"; bounds [1, inf]"
+    },
+    {
+      "type": "rubric",
+      "desc": null,
+      "status": "manual",
+      "detail": "unadjudicated rubric flag: verify-combined-xlsx",
+      "flag": "verify-combined-xlsx"
+    }
+  ],
+  "gradedAt": "2026-09-06T05:35:06.692Z",
+  "adjudications": [
+    {
+      "flag": "verify-combined-xlsx",
+      "verdict": "SATISFIED",
+      "note": "combined.xlsx verified against expected-summary.json: sheets [PubMed Articles, Deleted PMIDs]; 6 article rows + header; deleted PMIDs 99999991/99999992 present",
+      "by": "demos author",
+      "at": "2026-09-06T05:35:23.115872+00:00"
+    }
+  ]
+}

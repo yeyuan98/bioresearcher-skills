@@ -1,0 +1,76 @@
+{
+  "id": "mcp-tool-tour-en",
+  "kind": "mcp-probe",
+  "name": "MCP tool tour: 8 keyless core tools, true request/response pairs",
+  "title_en": "MCP tool tour — true request/response pairs from 8 core tools",
+  "title_zh": "MCP 工具巡览——8 个核心工具的真实请求/响应样本",
+  "summary_en": "Deterministic stdio JSON-RPC probe against the keyless biomcp@1.1.1 server: initialize handshake, paginated tools/list (all 41 pinned core tools present), then 8 scripted tools/call requests whose real responses back the MCP documentation's API tables.",
+  "summary_zh": "对免密钥 biomcp@1.1.1 服务的确定性 stdio JSON-RPC 探针：initialize 握手、分页 tools/list（41 个受-pin 核心工具全部在列），随后 8 次脚本化 tools/call，其真实响应即 MCP 文档 API 表格的数据来源。",
+  "level": "L1",
+  "lang": "en",
+  "purpose": "Token-free TRUE API examples for the partner MCP doc; no LLM involved.",
+  "server": {
+    "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"],
+    "initTimeoutMs": 180000,
+    "callTimeoutMs": 150000
+  },
+  "require_core_list": true,
+  "probe": [
+    {
+      "tool": "article_search",
+      "args": { "query": "BRCA1 DNA repair", "limit": 3 },
+      "expect_regex": "PMID|pmid",
+      "note_en": "PubMed (federated with Europe PMC / Semantic Scholar / PubTator / LitSense) article search; returns PMIDs + titles.",
+      "note_zh": "PubMed 文献检索（联合 Europe PMC / Semantic Scholar / PubTator / LitSense），返回 PMID 与标题。"
+    },
+    {
+      "tool": "gene_get",
+      "args": { "symbol": "BRCA1", "sections": ["core"] },
+      "expect_regex": "BRCA1",
+      "note_en": "Gene detail by HGNC symbol with section filtering (core summary here); 16 sections available.",
+      "note_zh": "按 HGNC 符号查询基因详情，可按 section 裁剪（此处 core 摘要）；共支持 16 个 section。"
+    },
+    {
+      "tool": "variant_search",
+      "args": { "gene": "BRAF", "hgvsp": "V600E", "limit": 3 },
+      "expect_regex": "BRAF",
+      "note_en": "Structured variant query: gene + protein change (NEVER compound free text like \"BRAF V600E\").",
+      "note_zh": "结构化变异检索：gene + 蛋白变化（切勿使用 “BRAF V600E” 这类复合自由文本）。"
+    },
+    {
+      "tool": "trial_search",
+      "args": { "query": "melanoma", "phase": "Phase 3", "limit": 3 },
+      "expect_regex": "NCT\\d",
+      "note_en": "ClinicalTrials.gov search returning NCT IDs.",
+      "note_zh": "ClinicalTrials.gov 检索，返回 NCT 编号。"
+    },
+    {
+      "tool": "disease_search",
+      "args": { "query": "melanoma", "limit": 3 },
+      "expect_regex": "[Mm]elanoma|DOID|MONDO",
+      "note_en": "Disease ontology search (DOID/MONDO identifiers).",
+      "note_zh": "疾病本体检索（DOID/MONDO 标识符）。"
+    },
+    {
+      "tool": "patent_search",
+      "args": { "query": "\"mRNA display\"", "limit": 3 },
+      "expect_regex": "[A-Z]{2}\\d",
+      "note_en": "Patent search (Google Patents backend keyless; EPO OPS / USPTO backends activate with credentials), publication numbers like US11027025B2.",
+      "note_zh": "专利检索（免密钥走 Google Patents 后端；配置凭证后启用 EPO OPS / USPTO 后端），返回如 US11027025B2 的公开号。"
+    },
+    {
+      "tool": "gtex_expression",
+      "args": { "gene": "TP53", "limit": 5 },
+      "expect_regex": "TP53|[Tt]issue",
+      "note_en": "GTEx expression: top tissues for a gene (highest expression first).",
+      "note_zh": "GTEx 表达查询：基因表达量最高的组织（降序）。"
+    },
+    {
+      "tool": "pdb",
+      "args": { "query": "KRAS", "sections": ["experiment"] },
+      "expect_regex": "[0-9A-Z]{4}|KRAS",
+      "note_en": "PDB structure search with metadata sections (4-character PDB IDs).",
+      "note_zh": "PDB 结构检索，可按 section 取元数据（4 字符 PDB 编号）。"
+    }
+  ]
+}

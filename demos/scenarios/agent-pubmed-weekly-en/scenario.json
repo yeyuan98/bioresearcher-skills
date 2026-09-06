@@ -1,0 +1,31 @@
+{
+  "id": "agent-pubmed-weekly-en",
+  "kind": "agent",
+  "name": "PubMed weekly updatefiles: parse a trimmed sample into combined.xlsx",
+  "title_en": "PubMed weekly — updatefiles sample parsed into an Excel workbook",
+  "title_zh": "PubMed 周更——将 updatefiles 样例解析为 Excel 工作簿",
+  "summary_en": "The bioresearcher-pubmed-weekly skill streams a (trimmed) weekly updatefiles archive — 6 <PubmedArticle> entries plus a <DeleteCitation> block — into one combined.xlsx workbook via its pure-Python parser.",
+  "summary_zh": "bioresearcher-pubmed-weekly 技能用纯 Python 流式解析器，把裁剪版的周更 updatefiles 存档（6 条 <PubmedArticle> 记录 + 一个 <DeleteCitation> 块）解析为一个 combined.xlsx 工作簿。",
+  "level": "L1",
+  "lang": "en",
+  "purpose": "Fixture-driven agent demo: deterministic-ish parse of a 1.9 KB updatefiles sample; expected reference summary committed next to the scenario.",
+  "prompt": "In {DATA_DIR}/pubmed-sample.xml.gz you have a trimmed PubMed updatefiles sample. Load the bioresearcher-pubmed-weekly skill and parse this file into combined.xlsx in the working directory, then report the sheet names, row counts, and the deleted PMIDs.",
+  "timeoutMs": 600000,
+  "publish": {
+    "outputs": [
+      "combined.xlsx"
+    ]
+  },
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-combined-xlsx"
+    }
+  ]
+}

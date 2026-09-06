@@ -1,0 +1,48 @@
+{
+  "id": "mcp-tool-tour-zh",
+  "kind": "mcp-probe",
+  "name": "MCP tool tour (zh-flavored): BRAF V600E variant/drugs/trials chain",
+  "title_en": "MCP tool tour — the BRAF V600E variant-to-trials chain (zh notes)",
+  "title_zh": "MCP 工具巡览——BRAF V600E 从变异到临床试验的调用链（中文注释）",
+  "summary_en": "Same deterministic probe mechanics, themed on the WorkBuddy connector's third zh example (查找 BRAF V600E 变异的相关药物与临床试验): variant -> gene -> drugs -> trials in four keyless calls with bilingual notes.",
+  "summary_zh": "同款确定性探针，主题取自 WorkBuddy 连接器第三条中文示例语料（查找 BRAF V600E 变异的相关药物与临床试验）：变异 → 基因 → 药物 → 临床试验共 4 次免密钥调用，附中英双语注释。",
+  "level": "L1",
+  "lang": "zh",
+  "purpose": "Token-free TRUE API examples for the zh MCP doc; mirrors the connector's canonical example prompt.",
+  "server": {
+    "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"],
+    "initTimeoutMs": 180000,
+    "callTimeoutMs": 150000
+  },
+  "require_core_list": true,
+  "probe": [
+    {
+      "tool": "variant_search",
+      "args": { "gene": "BRAF", "hgvsp": "V600E", "limit": 3 },
+      "expect_regex": "BRAF",
+      "note_en": "Step 1 — structured variant lookup for BRAF V600E.",
+      "note_zh": "第 1 步——BRAF V600E 的结构化变异检索。"
+    },
+    {
+      "tool": "gene_get",
+      "args": { "symbol": "BRAF", "sections": ["core"] },
+      "expect_regex": "BRAF",
+      "note_en": "Step 2 — gene context for BRAF (core section).",
+      "note_zh": "第 2 步——BRAF 基因背景信息（core 摘要部分）。"
+    },
+    {
+      "tool": "gene_drugs",
+      "args": { "symbol": "BRAF" },
+      "expect_regex": ".",
+      "note_en": "Step 3 — drugs targeting BRAF.",
+      "note_zh": "第 3 步——作用于 BRAF 靶点的药物。"
+    },
+    {
+      "tool": "trial_search",
+      "args": { "query": "BRAF melanoma", "limit": 3 },
+      "expect_regex": "NCT\\d",
+      "note_en": "Step 4 — interventional trials touching BRAF melanoma.",
+      "note_zh": "第 4 步——涉及 BRAF 黑色素瘤的介入性临床试验。"
+    }
+  ]
+}

@@ -7,6 +7,10 @@
 agent-test/.runs/
 agent-test/data/
 
+# Demo replay workspace (see demos/.gitignore as well)
+demos/.runs/
+demos/data/
+
 # Python
 __pycache__/
 *.pyc

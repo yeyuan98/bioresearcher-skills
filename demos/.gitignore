@@ -1,0 +1,3 @@
+# Demo replay workspace (never committed; mirrors agent-test/.runs policy)
+.runs/
+data/

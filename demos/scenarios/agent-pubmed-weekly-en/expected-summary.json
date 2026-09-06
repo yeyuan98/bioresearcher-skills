@@ -1,0 +1,45 @@
+{
+  "source_files": [
+    "pubmed-sample.xml.gz"
+  ],
+  "article_count": 6,
+  "deleted_pmids": [
+    "99999991",
+    "99999992"
+  ],
+  "first_rows": [
+    {
+      "PMID": "12345678",
+      "DOI": "10.1234/test.2024.001",
+      "Title": "Sample Article for Testing PubMed Parser",
+      "Journal": "Test Journal of Biology",
+      "ISSN": "1234-5678",
+      "PubDate": "2024",
+      "FirstAuthor": "Smith J",
+      "LastAuthor": "Doe J",
+      "PublicationTypes": "Journal Article"
+    },
+    {
+      "PMID": "87654321",
+      "DOI": "",
+      "Title": "Second Test Article with Minimal Data",
+      "Journal": "Another Test Journal",
+      "ISSN": "",
+      "PubDate": "",
+      "FirstAuthor": "Test",
+      "LastAuthor": "Test",
+      "PublicationTypes": ""
+    },
+    {
+      "PMID": "31000001",
+      "DOI": "10.1234/jetm.2024.031",
+      "Title": "BRCA1 homologous recombination repair assessed by a novel reporter assay",
+      "Journal": "Journal of Experimental Test Medicine",
+      "ISSN": "0022-1007",
+      "PubDate": "2024-03",
+      "FirstAuthor": "Chen W",
+      "LastAuthor": "Nakamura Y",
+      "PublicationTypes": "Journal Article;Research Support, Non-U.S. Gov't"
+    }
+  ]
+}

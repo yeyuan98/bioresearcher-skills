@@ -1,0 +1,67 @@
+{
+  "test": "mcp-tool-tour-en",
+  "rep": 1,
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/mcp-tool-tour-en/20260906-133230-r1",
+  "reused": false,
+  "outcome": "PASS",
+  "reason": null,
+  "rubricPending": false,
+  "rubricFlags": [],
+  "checks": [
+    {
+      "type": "core_registry",
+      "desc": "tools/list contains all 41 pinned core tools",
+      "status": "pass",
+      "detail": "server total 41"
+    },
+    {
+      "type": "probe_call",
+      "desc": "article_search",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "gene_get",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "variant_search",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "trial_search",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "disease_search",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "patent_search",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "gtex_expression",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    },
+    {
+      "type": "probe_call",
+      "desc": "pdb",
+      "status": "pass",
+      "detail": "ok (no isError, all expectations matched)"
+    }
+  ],
+  "gradedAt": "2026-09-06T05:33:13.454Z"
+}
