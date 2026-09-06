@@ -1,0 +1,23 @@
+{
+  "artifactLang": "en",
+  "fanout": {
+    "en": "n/a — no research started (the interview turn comes first)",
+    "zh": "不适用——未开始检索（访谈轮次优先）"
+  },
+  "findings": {
+    "en": [
+      "No no-interview prefix: the skill must ask its clarifying questions before researching.",
+      "Even under non-interactive `opencode run --auto`, the agent posted ONE batch of questions and started NO research.",
+      "Objective checks: final answer contains '?'; contains no 'final_report'; none of article_search / trial_search / gene_get was called."
+    ],
+    "zh": [
+      "未加 no-interview 前缀：技能必须先提出澄清问题再开题。",
+      "即便在非交互的 `opencode run --auto` 模式下，智能体也只发出一整批问题、未启动任何检索。",
+      "客观校验：最终回答含「?」；不含「final_report」；article_search / trial_search / gene_get 均未被调用。"
+    ]
+  },
+  "evidence": {
+    "type": "interview",
+    "excerpt": "Before starting the deep research run, I need to clarify the scope (Step 1 of the workflow). Please answer the following — one round, then I'll proceed:\n\n1. **Safety outcomes**: Which toxicities matter most — CRS/ICANS only, on-target/off-tumor toxicity, or the full safety spectrum (including neurotoxicity, hematologic toxicity, insertional oncogenesis concerns)?\n2. **Tumor scope**: Pan-solid-tumor overview, or specific indications (e.g., glioblastoma, pancreatic, ovarian, lung)? …\n3. **Time window**: Last 5 years, or all available evidence?\n4. **Evidence scope**: Clinical trials only, or also include reviews/meta-analyses, case reports, and regulatory (FDA) documents?\n5. **Output format**: Default is a full report with numbered citations as Markdown + rendered HTML under `reports/` — is that fine, or Markdown-only (`no-html`)?\n\nI'll wait for your reply before decomposing the topic and launching the research.\n\n(Opening + all five questions verbatim from the session transcript; ellipsis only shortens the question list inside Q2.)"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "agent-deep-research-en",
+  "kind": "agent",
+  "name": "Deep research: BRCA1 DNA repair survey with cited report",
+  "title_en": "Deep research — BRCA1 DNA repair literature survey (English)",
+  "title_zh": "深度研究——BRCA1 DNA 修复文献调研（英文）",
+  "summary_en": "The bioresearcher-deep-research skill interviews-free light path decomposes a topic, queries PubMed via the biomcp MCP server, and writes a cited Markdown + HTML report (reports/<topic>/final_report.md/.html).",
+  "summary_zh": "bioresearcher-deep-research 技能的免访谈轻量路径：分解主题、经 biomcp MCP 服务检索 PubMed、产出带编号引用的 Markdown + HTML 报告（reports/<topic>/final_report.md/.html）。",
+  "level": "L2",
+  "lang": "en",
+  "purpose": "Flagship agent demo: deep-research skill + keyless biomcp MCP server; article_search-driven BRCA1 DNA repair survey citing PMIDs, default-on HTML rendering.",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.",
+  "timeoutMs": 900000,
+  "publish": {
+    "outputs": [
+      "reports/**/final_report.md",
+      "reports/**/final_report.html",
+      "reports/**/assumptions.md",
+      "reports/**/README.md"
+    ]
+  },
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "group",
+      "desc": "the survey ran article searches — directly, or via parallel Task workers whose outputs cite PMIDs",
+      "anyOf": [
+        {
+          "type": "tool_seq",
+          "seq": [
+            ["article_search", "*"]
+          ],
+          "mode": "subsequence"
+        },
+        {
+          "type": "group",
+          "allOf": [
+            { "type": "tool_count", "tool": "task", "min": 1 },
+            { "type": "text", "source": "tool:task", "op": "regex", "expect": "PMID" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "PMID"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "final_report\\.html",
+      "desc": "HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output"
+    }
+  ]
+}

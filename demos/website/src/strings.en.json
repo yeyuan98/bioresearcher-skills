@@ -1,0 +1,259 @@
+{
+  "nav": {
+    "home": "Home",
+    "getStarted": "Get started",
+    "skills": "Skills",
+    "mcp": "MCP",
+    "demos": "Demos",
+    "faq": "FAQ"
+  },
+  "splash": {
+    "pitch": "Biomedical research skills for AI agents: cited deep research, keyless bio-data tools, publication-grade figures.",
+    "foot": "Apache-2.0 · opencode / Claude Code / WorkBuddy"
+  },
+  "notfound": "This page does not exist.",
+  "notfoundHome": "Back to home",
+  "home": {
+    "heroTitle": "BioResearcher — biomedical research agent",
+    "heroSub": "5 skills · 41 + 15 MCP tools · works in opencode, Claude Code, WorkBuddy and every harness that reads SKILL.md.",
+    "cta": "Get started",
+    "ctaDemos": "See the demos",
+    "cardsTitle": "Highlights",
+    "cards": [
+      {
+        "title": "Cited deep research",
+        "body": "Every claim carries numbered citations (PMID / DOI / NCT / patent IDs); evidence gaps are stated, never fabricated."
+      },
+      {
+        "title": "Keyless biomedical data · 41+15 tools",
+        "body": "Articles, trials, genes, variants, drugs, diseases, patents, omics — zero configuration, zero credentials by default."
+      },
+      {
+        "title": "7/7 true-run demos pass",
+        "body": "5 agent runs + 2 MCP probes, objectively checked, commit-provenanced (2 rubric-adjudicated).",
+        "href": "demos/index.html"
+      },
+      {
+        "title": "Bilingual reports",
+        "body": "Ask in Chinese, get a Chinese report — with a true-run demo to prove it.",
+        "href": "demos/agent-deep-research-zh.html"
+      },
+      {
+        "title": "Publication-grade figures",
+        "body": "Alignment / collision / font-size gates, all judged by scripts — the KRAS demo iterated to all-green in a real session.",
+        "href": "demos/agent-plot-making-en.html"
+      },
+      {
+        "title": "China-friendly, ships everywhere",
+        "body": "Auto npmmirror detection; one command into opencode, Claude Code, WorkBuddy, or any SKILL.md host.",
+        "href": "get-started.html"
+      }
+    ],
+    "navTitle": "Explore",
+    "navCards": [
+      {
+        "title": "Skills",
+        "body": "What each of the five skills does, its version and outputs.",
+        "href": "skills/index.html"
+      },
+      {
+        "title": "MCP server",
+        "body": "biomcp-ts: 41 core + 15 optional tools over stdio, keyless by default.",
+        "href": "mcp.html"
+      },
+      {
+        "title": "Demo cases",
+        "body": "Seven true-run case reports with evidence you can inspect.",
+        "href": "demos/index.html"
+      },
+      {
+        "title": "Get started",
+        "body": "Install in under a minute on any harness.",
+        "href": "get-started.html"
+      },
+      {
+        "title": "FAQ",
+        "body": "Keys, privacy, mainland-China network, cost, license.",
+        "href": "faq.html"
+      }
+    ]
+  },
+  "getStarted": {
+    "title": "Get started",
+    "intro": "BioResearcher is an Agent Skills package: any harness that reads SKILL.md can load it. Pick your channel below — the biomedical MCP server (biomcp) is required for the research skills and can be bootstrapped automatically by the onboarding skill.",
+    "reqTitle": "Requirements",
+    "requirements": [
+      [
+        "Node.js",
+        ">= 22.13 with npx on PATH (npx --version)"
+      ],
+      [
+        "Optional",
+        "uv + python3 — the plotting and weekly-parsing skills bootstrap their own Python dependencies"
+      ],
+      [
+        "API keys",
+        "None required by default (see FAQ)"
+      ]
+    ],
+    "channelsTitle": "Install channels",
+    "channels": [
+      {
+        "name": "A · skills CLI (any harness)",
+        "desc": "Works with opencode, Claude Code, Codex, Cursor, Gemini CLI and every SKILL.md reader. Add just the onboarding skill to bootstrap the MCP runtime automatically.",
+        "code": "npx skills add yeyuan98/bioresearcher-skills\n# bootstrap the runtime immediately:\nnpx skills add yeyuan98/bioresearcher-skills --skill bioresearcher-onboard"
+      },
+      {
+        "name": "B · Claude Code plugin marketplace",
+        "desc": "Bundles the pinned biomcp MCP server (auto-starts, no manual .mcp.json) plus the deep-research worker subagent.",
+        "code": "/plugin marketplace add yeyuan98/bioresearcher-skills\n/plugin install bioresearcher@bioresearcher-skills"
+      },
+      {
+        "name": "C · WorkBuddy connector market",
+        "desc": "One market install: MCP server (npmmirror registry, managed Node 22) + four skills with Chinese/English descriptions. Search for “BioResearcher 生物医学研究”.",
+        "code": "# WorkBuddy -> connector market -> BioResearcher 生物医学研究 -> install"
+      },
+      {
+        "name": "D · git clone",
+        "desc": "Clone into the skills directory your harness reads (.opencode/skills/, .claude/skills/, .agents/skills/, .codex/skills/, .gemini/skills/).",
+        "code": "git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bioresearcher-skills"
+      }
+    ],
+    "chinaTitle": "Mainland-China networks",
+    "chinaBody": "The onboarding skill auto-detects network conditions and switches to the npmmirror registry for Node and biomcp downloads; the uv skill supports China PyPI mirrors; the WorkBuddy connector uses npmmirror by default. Upstream biomedical APIs (NCBI, ClinicalTrials.gov, MyGene…) are global endpoints — set HTTP(S)_PROXY on restricted networks.",
+    "doctorTitle": "Verify the server",
+    "doctorBody": "Diagnostics only (never starts the server); exit code 0 = healthy.",
+    "doctorCode": "npx -y biomcp@1.1.1 doctor --client opencode",
+    "more": "Full onboarding chapter (manual wiring, permissions, timeouts):",
+    "moreLink": "agent doc §5"
+  },
+  "faq": {
+    "title": "FAQ",
+    "intro": "The questions partners and users ask most. Each answer links the full documentation.",
+    "items": [
+      {
+        "q": "Is Chinese supported?",
+        "a": "Skills are authored in English (ecosystem convention for stable cross-harness triggering); the agent replies in the prompt's language — a Chinese prompt yields a Chinese report, with a true-run demo as proof. The WorkBuddy connector ships official zh descriptions and example prompts.",
+        "link": "demos/agent-deep-research-zh.html",
+        "linkText": "See the zh demo"
+      },
+      {
+        "q": "Do I need API keys?",
+        "a": "No — every demo on this site ran keyless. The only exceptions: OncoKB annotations require a token, and DisGeNET falls back to OpenTargets without one. Keys raise rate limits (e.g. NCBI 3→10 req/s).",
+        "link": "https://github.com/yeyuan98/bioresearcher-skills/blob/main/demos/docs/mcp.en.md",
+        "linkText": "MCP doc §5.3"
+      },
+      {
+        "q": "Does it work from mainland China?",
+        "a": "Yes — onboarding/uv skills and the WorkBuddy connector use npmmirror/China mirrors automatically; upstream biomedical APIs may need a proxy (HTTP(S)_PROXY is honored)."
+      },
+      {
+        "q": "Why do the demo reports open directly here, when GitHub can't render them?",
+        "a": "Because this site embeds the byte-exact final_report.html committed in the repository — the same file whose provenance is pinned by the repo commit. Nothing is re-rendered for display.",
+        "link": "demos/index.html",
+        "linkText": "Demos"
+      },
+      {
+        "q": "Can the agent fabricate references?",
+        "a": "The deep-research contract forbids internal-knowledge fallback: every claim needs a numbered citation (PMID/DOI/NCT/patent ID), missing evidence is stated, and failed queries are recorded as evidence gaps."
+      },
+      {
+        "q": "How many tokens / how long do runs take?",
+        "a": "Measured (opencode 1.18.29): interview 23 s; PubMed parse 56 s; deep research EN 515 s / ZH 814 s; structural figure incl. dependency install 1064 s. The MCP probes are token-free."
+      },
+      {
+        "q": "What about data privacy?",
+        "a": "All queries hit public biomedical APIs only; reports and figures stay local to your project; the repo contains no telemetry; demo artifacts contain no credentials."
+      },
+      {
+        "q": "License and commercial use?",
+        "a": "Apache-2.0 (repo LICENSE and the upstream biomcp-ts project). Commercial use and derivatives permitted with the license notice retained; citation metadata in CITATION.cff."
+      },
+      {
+        "q": "Does it work in Cursor / Codex / WorkBuddy?",
+        "a": "Yes — any harness that reads SKILL.md and can run an MCP server. See the compatibility matrix in the agent doc §4.5."
+      },
+      {
+        "q": "How do I reproduce the demos?",
+        "a": "Clone the repo and run node demos/run-demo.mjs --list; replay any case with --only <id> --publish. Agent cases spend LLM tokens (manual-run only); the MCP probes are token-free.",
+        "link": "https://github.com/yeyuan98/bioresearcher-skills/blob/main/demos/README.md",
+        "linkText": "demos/README.md"
+      }
+    ],
+    "more": "All fourteen questions:",
+    "moreLink": "agent doc §7"
+  },
+  "skills": {
+    "title": "Skills",
+    "intro": "Five independently versioned skills. Each page links the full SKILL.md contract; deep documentation lives in the repository.",
+    "p": {
+      "version": "Version",
+      "outputs": "Output contract",
+      "demo": "Demo case",
+      "skillMd": "SKILL.md on GitHub",
+      "contract": "Full interface contract (agent doc §4)"
+    }
+  },
+  "mcp": {
+    "title": "The MCP server: biomcp-ts",
+    "intro": "biomcp-ts (npm package biomcp, pinned 1.1.1) is an MCP server for biomedical data: 41 core + 15 optional tools over stdio JSON-RPC, spanning articles, trials, genes, variants, drugs, diseases, patents, omics databases, GTEx and Ensembl/PDB — keyless by default, rate-limited in-process.",
+    "catalogTitle": "Tool catalog",
+    "coreTitle": "Core tools",
+    "optionalTitle": "Optional tools",
+    "optionalNote": "env-gated, register at server start",
+    "wiringTitle": "Wiring (opencode)",
+    "wiringBody": "With the server named biomcp, tools surface as biomcp_article_search, biomcp_gene_get, … Exact version pinning via -p is mandatory (bare npx biomcp cannot resolve peer deps).",
+    "wiringCode": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": { \"biomcp\": { \"type\": \"local\",\n    \"command\": [\"npx\", \"-y\", \"-p\", \"biomcp@1.1.1\", \"biomcp\"] } }\n}",
+    "wiringMore": "Full wiring matrix (Claude Code, Codex, Cursor, …)",
+    "capturesTitle": "True captures",
+    "capturesIntro": "Real request/response pairs captured by a deterministic stdio probe — not hand-written examples.",
+    "request": "Request",
+    "response": "Response (excerpt, as captured)",
+    "tours": "Full tours:",
+    "more": "complete server documentation:",
+    "moreLink": "MCP doc"
+  },
+  "demos": {
+    "title": "Demo cases",
+    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.29; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
+    "htmlNote": "The embedded reports below are the byte-exact HTML artifacts committed to the repo — the site renders the original files, it does not re-render them.",
+    "replayAll": "Replay guide and artifact index:",
+    "pass": "PASS",
+    "rubricPass": "PASS · rubric SATISFIED",
+    "promptLang": "prompt",
+    "artifactLang": "artifact",
+    "promptTitle": "Prompt (verbatim)",
+    "findingsTitle": "What happened",
+    "evidenceTitle": "Evidence",
+    "checksTitle": "Objective checks",
+    "checks": "checks passed",
+    "rubricNote": "one rubric flag adjudicated SATISFIED post-run (recorded in result.json)",
+    "fanout": "Fan-out mode",
+    "provenance": "Provenance",
+    "replayTitle": "Replay",
+    "replayWarn": "Manual-run only — this replay spends LLM tokens (real opencode CLI + network).",
+    "replayFree": "Token-free replay — a deterministic stdio JSON-RPC probe (network + npx only, no LLM).",
+    "more": "In the repository",
+    "dir": "artifact directory (permalink)",
+    "embeddedReport": "Embedded report artifact",
+    "openFull": "Open full report",
+    "screenshot": "screenshot (chromium capture)",
+    "questionsLabel": "The clarifying-question batch (verbatim)",
+    "tool": "Tool",
+    "assert": "Assert",
+    "ms": "ms",
+    "request": "Request",
+    "response": "Response (excerpt)",
+    "artifactLangNoteEn": "The evidence below is in Chinese — a true-run output, untranslated.",
+    "artifactLangNoteZh": "The evidence below is in English — a true-run output, untranslated.",
+    "noPrompt": "n/a — this scenario is a deterministic stdio JSON-RPC probe, not a prompted agent session."
+  },
+  "footer": {
+    "built": "Built from repo commit",
+    "license": "License",
+    "agentDoc": "Agent doc (EN)",
+    "mcpDoc": "MCP doc (EN)",
+    "glossary": "Glossary",
+    "citation": "Citation"
+  }
+}

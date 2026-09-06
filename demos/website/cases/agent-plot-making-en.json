@@ -1,0 +1,37 @@
+{
+  "artifactLang": "en",
+  "fanout": {
+    "en": "Sequential procedural chain: uv env bootstrap → plot-making render → QA gates",
+    "zh": "顺序过程式串联：uv 环境引导 → plot-making 渲染 → QA 门禁"
+  },
+  "findings": {
+    "en": [
+      "Chained bioresearcher-python-setup-uv (pymol-open-source, matplotlib, pymupdf, numpy, pillow, biopython) then bioresearcher-plot-making.",
+      "The TRUE session iterated through two collision-audit FAIL rounds (text overlaps) before finishing all-green — the QA gates bit.",
+      "Rubric flag verify-structural-figure-publication-quality adjudicated SATISFIED: pdf/svg/png + LEGENDS.md + audit JSON committed."
+    ],
+    "zh": [
+      "先以 bioresearcher-python-setup-uv 装好 pymol-open-source、matplotlib、pymupdf、numpy、pillow、biopython，再执行 bioresearcher-plot-making。",
+      "真实会话经历两轮碰撞审计 FAIL（文字重叠）后全绿收尾——QA 门禁是真的在拦。",
+      "rubric 标记 verify-structural-figure-publication-quality 裁定 SATISFIED：pdf/svg/png + LEGENDS.md + 审计 JSON 已入库。"
+    ]
+  },
+  "evidence": {
+    "type": "figure",
+    "alt": "fig1_kras_landscape composite figure",
+    "qa": [
+      [
+        "Vector PDF collision audit",
+        "0 fail, 0 warn — PASS"
+      ],
+      [
+        "Glyph size floor (>= 5.0 pt)",
+        "minimum found 5.2 pt — PASS"
+      ],
+      [
+        "Panel alignment (<= 1.5 pt)",
+        "fail 0, warn 0, 4 comparisons — PASS"
+      ]
+    ]
+  }
+}

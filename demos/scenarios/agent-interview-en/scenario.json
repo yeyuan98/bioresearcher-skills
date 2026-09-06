@@ -1,0 +1,43 @@
+{
+  "id": "agent-interview-en",
+  "kind": "agent",
+  "name": "Interview-first: clarifying questions fire before any research",
+  "title_en": "Interview-first — clarifying questions before research starts",
+  "title_zh": "访谈优先——研究开始前先提出澄清问题",
+  "summary_en": "Without the no-interview prefix, the deep-research skill asks its clarifying-question batch as ONE turn and does not start researching — even under non-interactive `opencode run --auto`.",
+  "summary_zh": "未加 no-interview 前缀时，深度研究技能会在一轮内集中提出澄清问题，且不先开始检索——即便是在非交互的 `opencode run --auto` 模式下。",
+  "level": "L2",
+  "lang": "en",
+  "purpose": "Shows the interview-first core feature (cheap: no MCP network calls expected).",
+  "prompt": "Using the bioresearcher-deep-research skill, run a deep research report on CAR-T therapy safety in solid tumors.",
+  "timeoutMs": 300000,
+  "publish": {
+    "outputs": []
+  },
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "\\?",
+      "desc": "the final assistant message must be (or contain) the clarifying-question batch"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "not_contains",
+      "expect": "final_report",
+      "desc": "research must not have run yet - the interview turn comes first (skip only via the no-interview prefix)"
+    },
+    {
+      "type": "no_such_tool",
+      "tool": ["biomcp_article_search", "biomcp_trial_search", "biomcp_gene_get"],
+      "desc": "no research queries during the interview turn"
+    }
+  ]
+}

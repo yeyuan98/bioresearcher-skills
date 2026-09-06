@@ -1,0 +1,37 @@
+{
+  "test": "agent-interview-en",
+  "rep": 1,
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-interview-en/20260906-133339-r1",
+  "reused": false,
+  "outcome": "PASS",
+  "reason": null,
+  "rubricPending": false,
+  "rubricFlags": [],
+  "checks": [
+    {
+      "type": "tool_count",
+      "desc": null,
+      "status": "pass",
+      "detail": "count=1 of \"skill\"; bounds [1, inf]"
+    },
+    {
+      "type": "text",
+      "desc": "the final assistant message must be (or contain) the clarifying-question batch",
+      "status": "pass",
+      "detail": "regex \"\\\\?\" on \"final\" (984 chars)"
+    },
+    {
+      "type": "text",
+      "desc": "research must not have run yet - the interview turn comes first (skip only via the no-interview prefix)",
+      "status": "pass",
+      "detail": "not_contains \"final_report\" on \"final\" (984 chars)"
+    },
+    {
+      "type": "no_such_tool",
+      "desc": "no research queries during the interview turn",
+      "status": "pass",
+      "detail": "none of [biomcp_article_search, biomcp_trial_search, biomcp_gene_get] was called"
+    }
+  ],
+  "gradedAt": "2026-09-06T05:34:02.357Z"
+}

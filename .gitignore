@@ -7,6 +7,13 @@
 agent-test/.runs/
 agent-test/data/
 
+# Demo replay workspace (see demos/.gitignore as well)
+demos/.runs/
+demos/data/
+
+# Website build output (demos/website/build.mjs; deployed by pages.yml)
+demos/website/_site/
+
 # Python
 __pycache__/
 *.pyc

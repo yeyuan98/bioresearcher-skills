@@ -1,0 +1,49 @@
+name: pages
+
+# GitHub Pages showcase (demos/website). Static site built by the zero-dep
+# demos/website/build.mjs (includes an internal link check) and deployed via
+# the official Pages actions — no gh-pages branch, GITHUB_TOKEN only.
+# One-time repo setting required: Settings -> Pages -> Source: GitHub Actions
+# (then re-run this workflow from the Actions tab).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Official starter guidance: do NOT cancel in-progress production deploys.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/configure-pages@v6
+
+      - name: Build site (includes link check)
+        run: node demos/website/build.mjs
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: demos/website/_site
+          # Required: without this the tar step strips dotfiles and the
+          # .nojekyll marker never ships (Jekyll would then process the site).
+          include-hidden-files: true
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,92 @@
+{
+  "artifactLang": "en",
+  "fanout": {
+    "en": "n/a — no agent; deterministic probe",
+    "zh": "不适用——无智能体，确定性探针"
+  },
+  "findings": {
+    "en": [
+      "Deterministic stdio JSON-RPC probe: initialize -> notifications/initialized -> paginated tools/list -> 8 scripted tools/call; no LLM involved.",
+      "tools/list exposed 41 tools — all pinned core tools present (asserted against the vendored registry).",
+      "Every response below is a captured original; full pairs in capture.jsonl."
+    ],
+    "zh": [
+      "确定性 stdio JSON-RPC 探针：initialize -> notifications/initialized -> 分页 tools/list -> 8 次脚本化 tools/call；全程无 LLM。",
+      "tools/list 暴露 41 个工具——钉扎的核心工具全部在列（对照内置注册表断言）。",
+      "下列响应均为捕获原文；完整配对见 capture.jsonl。"
+    ]
+  },
+  "evidence": {
+    "type": "probe",
+    "calls": [
+      [
+        "article_search",
+        "pass",
+        "610"
+      ],
+      [
+        "gene_get",
+        "pass",
+        "188"
+      ],
+      [
+        "variant_search",
+        "pass",
+        "2230"
+      ],
+      [
+        "trial_search",
+        "pass",
+        "1537"
+      ],
+      [
+        "disease_search",
+        "pass",
+        "526"
+      ],
+      [
+        "patent_search",
+        "pass",
+        "2518"
+      ],
+      [
+        "gtex_expression",
+        "pass",
+        "849"
+      ],
+      [
+        "pdb",
+        "pass",
+        "1026"
+      ]
+    ],
+    "samples": [
+      {
+        "tool": "variant_search",
+        "args": {
+          "gene": "BRAF",
+          "hgvsp": "V600E",
+          "limit": 3
+        },
+        "note": {
+          "en": "Structured variant query: gene + protein change (never compound free text).",
+          "zh": "结构化变异检索：gene + 蛋白变化（勿用复合自由文本）。"
+        },
+        "response": "[{\"id\":\"rs113488022\",\"gene\":\"BRAF\",\"hgvs_p\":\"V600E\",\"hgvs_c\":\"c.1799T>A\",\"significance\":\"Pathogenic\",\"gnomad_af\":0.00000397994}]"
+      },
+      {
+        "tool": "trial_search",
+        "args": {
+          "query": "melanoma",
+          "phase": "Phase 3",
+          "limit": 3
+        },
+        "note": {
+          "en": "ClinicalTrials.gov search returning NCT IDs.",
+          "zh": "ClinicalTrials.gov 检索，返回 NCT 编号。"
+        },
+        "response": "{\"studies\": [{\"nct_id\": \"NCT00543205\", \"title\": \"Pharmacokinetics of G3139 in Subjects With Advanced Melanoma…\", \"status\": \"TERMINATED\", …}"
+      }
+    ]
+  }
+}

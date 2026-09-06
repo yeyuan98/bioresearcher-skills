@@ -1,0 +1,89 @@
+{
+  "test": "agent-plot-making-en",
+  "rep": 1,
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-plot-making-en/20260906-142434-r1",
+  "reused": false,
+  "outcome": "PASS",
+  "reason": null,
+  "rubricPending": true,
+  "rubricFlags": [
+    "verify-structural-figure-publication-quality"
+  ],
+  "checks": [
+    {
+      "type": "tool_count",
+      "desc": null,
+      "status": "pass",
+      "detail": "count=2 of \"skill\"; bounds [2, inf]"
+    },
+    {
+      "type": "text",
+      "desc": null,
+      "status": "pass",
+      "detail": "contains \"bioresearcher-python-setup-uv\" on \"tool:*\" (150251 chars)"
+    },
+    {
+      "type": "text",
+      "desc": null,
+      "status": "pass",
+      "detail": "contains \"bioresearcher-plot-making\" on \"tool:*\" (150251 chars)"
+    },
+    {
+      "type": "group",
+      "desc": null,
+      "status": "pass",
+      "detail": "anyOf matched: arm1[pass] regex \"0 [fF][aA][iI][lL]|collisions.*0\" on \"tool:*\" (150251 chars); arm2[pass] regex \"[cC][oO][lL][lL][iI][sS][iI][oO][nN].*([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE])|([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE]).*[cC][oO][lL][lL][iI][sS][iI][oO][nN]\" on \"final\" (1747 chars)",
+      "arms": [
+        {
+          "type": "text",
+          "desc": null,
+          "status": "pass",
+          "detail": "regex \"0 [fF][aA][iI][lL]|collisions.*0\" on \"tool:*\" (150251 chars)"
+        },
+        {
+          "type": "text",
+          "desc": null,
+          "status": "pass",
+          "detail": "regex \"[cC][oO][lL][lL][iI][sS][iI][oO][nN].*([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE])|([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE]).*[cC][oO][lL][lL][iI][sS][iI][oO][nN]\" on \"final\" (1747 chars)"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "desc": null,
+      "status": "pass",
+      "detail": "anyOf matched: arm1[fail] contains \"Panel alignment: PASS\" on \"tool:*\" (150251 chars); arm2[pass] regex \"[aA][lL][iI][gG][nN][mM][eE][nN][tT].*[pP][aA][sS][sS]|[pP][aA][sS][sS].*[aA][lL][iI][gG][nN][mM][eE][nN][tT]\" on \"final\" (1747 chars)",
+      "arms": [
+        {
+          "type": "text",
+          "desc": null,
+          "status": "fail",
+          "detail": "contains \"Panel alignment: PASS\" on \"tool:*\" (150251 chars)"
+        },
+        {
+          "type": "text",
+          "desc": null,
+          "status": "pass",
+          "detail": "regex \"[aA][lL][iI][gG][nN][mM][eE][nN][tT].*[pP][aA][sS][sS]|[pP][aA][sS][sS].*[aA][lL][iI][gG][nN][mM][eE][nN][tT]\" on \"final\" (1747 chars)"
+        }
+      ]
+    },
+    {
+      "type": "rubric",
+      "desc": null,
+      "status": "manual",
+      "detail": "unadjudicated rubric flag: verify-structural-figure-publication-quality",
+      "flag": "verify-structural-figure-publication-quality"
+    }
+  ],
+  "gradedAt": "2026-09-06T06:42:18.447Z",
+  "adjudications": [
+    {
+      "flag": "verify-structural-figure-publication-quality",
+      "verdict": "SATISFIED",
+      "note": "fig1_kras_landscape.png/.pdf/.svg + LEGENDS.md produced; final QA gates in transcript: collisions 0 fail/0 warn PASS, pdf_text min 5.2pt PASS, panel alignment PASS (fail 0, warn 0, 4 comparisons); session iterated through 2 collision-audit FIX rounds before PASS",
+      "by": "demos author",
+      "at": "2026-09-06T06:42:38.855078+00:00"
+    }
+  ]
+}

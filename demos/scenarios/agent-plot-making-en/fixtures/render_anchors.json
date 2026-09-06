@@ -1,0 +1,20 @@
+{
+  "frame": [
+    2200,
+    1500
+  ],
+  "chain_labels": {
+    "primary": {
+      "display_text": "KRAS Core",
+      "cx": 0.7,
+      "cy": 0.55,
+      "side": "right"
+    },
+    "switch2": {
+      "display_text": "Switch-II + AMG 510",
+      "cx": 0.35,
+      "cy": 0.5549,
+      "side": "left"
+    }
+  }
+}

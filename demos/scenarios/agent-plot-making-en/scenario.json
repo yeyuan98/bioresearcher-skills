@@ -1,0 +1,81 @@
+{
+  "id": "agent-plot-making-en",
+  "kind": "agent",
+  "name": "Publication-grade structural figure: KRAS Switch I/II dynamics with QA gates",
+  "title_en": "Publication-grade structural figure — KRAS Switch I/II with 3-layer QA",
+  "title_zh": "发表级结构生物学图——KRAS Switch I/II 与三层 QA 门禁",
+  "summary_en": "Chains bioresearcher-python-setup-uv (uv env + pymol-open-source/matplotlib/pymupdf/numpy/pillow/biopython) and bioresearcher-plot-making to render fig1_kras_landscape (.pdf/.svg/.png) + LEGENDS.md from structural fixtures, passing the bundled alignment/collision/PDF-text QA gates.",
+  "summary_zh": "串联 bioresearcher-python-setup-uv（uv 环境 + pymol-open-source/matplotlib/pymupdf/numpy/pillow/biopython）与 bioresearcher-plot-making，由结构数据fixtures 渲染 fig1_kras_landscape（.pdf/.svg/.png）与 LEGENDS.md，并通过自带的对齐/碰撞/PDF 文本三层 QA 门禁。",
+  "level": "L2",
+  "lang": "en",
+  "purpose": "Flagship visual demo: procedural skill chaining with verifiable QA-gate outputs.",
+  "prompt": "Using the input data in {DATA_DIR}, first use bioresearcher-python-setup-uv to install the scientific visualization dependencies (pymol-open-source, matplotlib, pymupdf, numpy, pillow, biopython). Then use bioresearcher-plot-making to create a publication-grade composite figure in figures/kras_inhibitors/ following the structural-biology_binder-visualization specification. Generate fig1_kras_landscape (.pdf, .svg, .png), run the bundled QA gates (audit_panel_alignment.py, audit_figure_collisions.py, and audit_pdf_text.py), and provide LEGENDS.md. Ensure all QA gates pass.",
+  "timeoutMs": 1500000,
+  "publish": {
+    "outputs": [
+      "figures/**/fig1_kras_landscape.png",
+      "figures/**/fig1_kras_landscape.pdf",
+      "figures/**/fig1_kras_landscape.svg",
+      "figures/**/LEGENDS.md",
+      "figures/**/fig1_kras_landscape.alignment.json"
+    ]
+  },
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 2
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "contains",
+      "expect": "bioresearcher-python-setup-uv"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "contains",
+      "expect": "bioresearcher-plot-making"
+    },
+    {
+      "type": "group",
+      "anyOf": [
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "tool:*",
+          "expect": "0 [fF][aA][iI][lL]|collisions.*0"
+        },
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "final",
+          "expect": "[cC][oO][lL][lL][iI][sS][iI][oO][nN].*([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE])|([pP][aA][sS][sS]|[cC][lL][eE][aA][nN]|[zZ][eE][rR][oO]|[nN][oO][nN][eE]).*[cC][oO][lL][lL][iI][sS][iI][oO][nN]"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "anyOf": [
+        {
+          "type": "text",
+          "op": "contains",
+          "source": "tool:*",
+          "expect": "Panel alignment: PASS"
+        },
+        {
+          "type": "text",
+          "op": "regex",
+          "source": "final",
+          "expect": "[aA][lL][iI][gG][nN][mM][eE][nN][tT].*[pP][aA][sS][sS]|[pP][aA][sS][sS].*[aA][lL][iI][gG][nN][mM][eE][nN][tT]"
+        }
+      ]
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-structural-figure-publication-quality"
+    }
+  ]
+}
