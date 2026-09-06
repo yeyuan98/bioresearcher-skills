@@ -215,7 +215,8 @@ server:
 | `skills-q03-discovery-pubmed` | L0 | Load injected skill `bioresearcher-pubmed-weekly` | — | manual-run |
 | `skills-q04-discovery-onboard` | L0 | Load injected skill `bioresearcher-onboard` (no installation) | — | manual-run |
 | `skills-q05-discovery-plot-making` | L0 | Load injected skill `bioresearcher-plot-making` (no plotting) | — | manual-run |
-| `deep-research-q01-light` | L2 | deep-research skill + keyless biomcp MCP: BRCA1 survey citing PMIDs | MCP | manual-run |
+| `deep-research-q01-light` | L2 | deep-research skill + keyless biomcp MCP: BRCA1 survey citing PMIDs (+ default-on HTML artifact) | MCP | manual-run |
+| `deep-research-q02-interview` | L2 | deep-research interview precedence: clarifying questions fire (no report) in non-interactive auto mode | — | manual-run |
 | `pubmed-weekly-q01-parse` | L1 | Parse trimmed updatefiles sample into combined.xlsx via the skill | fixture | manual-run (PASS*, rubric) |
 | `python-setup-uv-q01` | L1 | Create uv-managed `.venv` in the disposable run dir via the skill | — | manual-run (PASS*, rubric; mutates run dir only) |
 | `onboard-q01-bootstrap` | L1 | Bootstrap project-local BioMCP runtime in run dir via skill | — | manual-run (PASS*, rubric; mutates run dir only) |

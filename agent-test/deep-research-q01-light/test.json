@@ -30,6 +30,13 @@
       "source": "final",
       "op": "regex",
       "expect": "PMID"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "final_report\\.html",
+      "desc": "deep-research 1.1.1+: HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output (a converter-gap run fails this check by design - the suite mandates uv)"
     }
   ],
   "expectedOutputs": []
