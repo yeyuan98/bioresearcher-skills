@@ -1,0 +1,14 @@
+{
+  "id": "plugin-skills-discovery",
+  "name": "dsh skills registry discovers bundled skills",
+  "level": "L0",
+  "purpose": "Asserts dsh runtime discovers bundled skills and excludes bioresearcher-onboard (free, no LLM)",
+  "driver": "contract",
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-deep-research", "desc": "bioresearcher-deep-research discovered" },
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-plot-making", "desc": "bioresearcher-plot-making discovered" },
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-pubmed-weekly", "desc": "bioresearcher-pubmed-weekly discovered" },
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-python-setup-uv", "desc": "bioresearcher-python-setup-uv discovered" }
+  ]
+}

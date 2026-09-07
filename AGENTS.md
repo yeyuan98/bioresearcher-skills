@@ -115,6 +115,18 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
 - Built by `scripts/ci/build-connector-opencode.mjs`. No credentials, tokens, or
   real API keys in any connector file.
 
+## DeepSeek Harness (dsh) connector / plugin
+
+- Sources live in `connector/dsh/` only. Never commit build output (`dist/`).
+- `connector/dsh/connector-meta.json` and `package.json` `version` must
+  equal repo `VERSION` (check-drift gate); release workflow attaches
+  `bioresearcher-connector_dsh-v<VERSION>.tar.gz` to GitHub releases.
+- The bundled-skill list is defined in `connector/dsh/skill-bundle.json`.
+  `bioresearcher-onboard` is intentionally excluded (the plugin's apply hook
+  automatically registers `biomcp` into dsh's runtime).
+- Built by `scripts/ci/build-connector-dsh.mjs`. No credentials, tokens, or
+  real API keys in any connector file.
+
 ## Branching
 
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,
@@ -135,6 +147,9 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
   `CLAUDE_CONFIG_DIR` seeded from the host's `~/.claude/settings.json`
   (auth lands only in gitignored `.runs/`), disposable project cwd, and
   process-group kill. See its README before running.
+- `agent-test/opencode-plugin-specific/` and `agent-test/dsh-plugin-specific/`
+  are the OpenCode and DeepSeek Harness connector plugin sibling suites
+  (MANUAL-ONLY; CI validates hermetically with `--list` / `--dry-run`).
 - When editing biomcp guidance, re-verify tool names against the pinned
   registry and update `scripts/ci/biomcp-tools.json` when bumping the
   biomcp-ts pin.

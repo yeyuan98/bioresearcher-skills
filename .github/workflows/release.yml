@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release
@@ -127,3 +128,45 @@ jobs:
           fi
           node scripts/ci/build-connector-opencode.mjs --out dist
           gh release upload "$TAG" "dist/${ASSET}" $CLOBBER
+
+      # DeepSeek Harness (dsh) connector asset. Idempotent: builds from the tag target when
+      # the release is new, from the tag checkout when forcing or when an
+      # earlier run was interrupted before uploading; skips old tags that
+      # predate connector/dsh/.
+      - name: Bundle + attach DeepSeek Harness connector tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          VERSION="${{ steps.ver.outputs.version }}"
+          TAG="${{ steps.ver.outputs.tag }}"
+          ASSET="bioresearcher-connector_dsh-v${VERSION}.tar.gz"
+          CLOBBER=""
+          if [ "${{ steps.ver.outputs.exists }}" = "false" ]; then
+            test -f connector/dsh/connector-meta.json || { echo "skip: no dsh connector at HEAD"; exit 0; }
+          else
+            git cat-file -e "refs/tags/${TAG}:connector/dsh/connector-meta.json" || { echo "skip: no dsh connector at ${TAG}"; exit 0; }
+            if [ "${{ inputs.force_notes }}" = "true" ]; then
+              CLOBBER="--clobber"
+            elif gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "$ASSET"; then
+              echo "skip: $ASSET already attached to ${TAG}"
+              exit 0
+            fi
+            git checkout -q "refs/tags/${TAG}"
+          fi
+          node scripts/ci/build-connector-dsh.mjs --out dist/dsh
+          gh release upload "$TAG" "dist/dsh/${ASSET}" $CLOBBER
+
+      # Publish dsh-bioresearcher to npm via OIDC Trusted Publishing (or ambient token).
+      # Reusable script handles idempotency and skips already-published versions.
+      - name: Publish dsh connector to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eu
+          npm install -g npm@latest
+          # Ensure staged bundle exists even if previous step skipped tarball rebuild
+          if [ ! -d "dist/dsh/bioresearcher" ]; then
+            node scripts/ci/build-connector-dsh.mjs --out dist/dsh
+          fi
+          node scripts/ci/publish-npm.mjs dist/dsh/bioresearcher

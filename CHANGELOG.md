@@ -15,6 +15,31 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [1.6.0] - 2026-09-07
 
+### DeepSeek Harness (dsh) connector & plugin
+
+- New `connector/dsh/` package providing native plugin and connector distribution
+  for DeepSeek Harness (`dsh`) (CLI, TUI, and Web UI).
+- `connector/dsh/index.js`: zero-dependency ESM plugin implementing Cordis plugin contract:
+  - Dynamically mounts `@deepseek-ai/dsh-mcp-client` for the `biomcp` stdio MCP server
+    (pinned `biomcp@1.1.1`, timeout 120000 ms, automatic China mirror fallback).
+  - Automatically registers bundled skills (`bioresearcher-deep-research`,
+    `bioresearcher-plot-making`, `bioresearcher-pubmed-weekly`,
+    `bioresearcher-python-setup-uv`) into `ctx.skills.register` with `resourceBase`
+    pointing to the local skill directory.
+  - Prepares and registers the `bioresearcher-dr-worker` subagent prompt with
+    permissions and dynamic path resolution.
+- `connector/dsh/cordis.patch.yml`: declarative profile patch overlay for `--patch`
+  or profile bundle inclusion.
+- `connector/dsh/skill-bundle.json`: manifest of bundled skills; `bioresearcher-onboard`
+  is excluded as the plugin automatically handles MCP registration.
+- Build tooling: `scripts/ci/build-connector-dsh.mjs` generates reproducible
+  `dist/bioresearcher-connector_dsh-v1.6.0.tar.gz`.
+- Testing: new `agent-test/dsh-plugin-specific/` empirical test suite with 5 test cases
+  and hermetic CI validation.
+- CI & release automation: added build smoke test, release attachment, and generalized
+  `scripts/ci/publish-npm.mjs` supporting OIDC Trusted Publishing on npmjs.com.
+- Documentation: added `docs/connector-dsh.md`.
+
 ### OpenCode connector & plugin
 
 - New `connector/opencode/` package providing native plugin and connector

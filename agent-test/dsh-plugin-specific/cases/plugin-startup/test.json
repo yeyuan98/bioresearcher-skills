@@ -1,0 +1,12 @@
+{
+  "id": "plugin-startup",
+  "name": "dsh headless profile boots cleanly with plugin",
+  "level": "L0",
+  "purpose": "Asserts dsh boots with bioresearcher plugin with zero loader or syntax errors (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["--profile", "headless", "--dump-config"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "regex", "expect": "headless", "desc": "headless profile composed" }
+  ]
+}
