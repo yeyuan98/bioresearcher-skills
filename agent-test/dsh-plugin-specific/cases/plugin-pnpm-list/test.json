@@ -1,0 +1,12 @@
+{
+  "id": "plugin-pnpm-list",
+  "name": "dsh plugin list reports dsh-bioresearcher installed",
+  "level": "L0",
+  "purpose": "Asserts dsh plugin --profile headless ls lists dsh-bioresearcher as an installed profile dependency (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["plugin", "--profile", "headless", "ls"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "dsh-bioresearcher", "desc": "dsh-bioresearcher listed in profile dependencies" }
+  ]
+}

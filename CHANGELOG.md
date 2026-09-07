@@ -34,7 +34,10 @@ when that release PR is cut (the release workflow extracts only the
   is excluded as the plugin automatically handles MCP registration.
 - Build tooling: `scripts/ci/build-connector-dsh.mjs` generates reproducible
   `dist/bioresearcher-connector_dsh-v1.6.0.tar.gz`.
-- CI & release automation: added build smoke test and release attachment.
+- Testing: new `agent-test/dsh-plugin-specific/` empirical test suite with 5 test cases
+  and hermetic CI validation.
+- CI & release automation: added build smoke test, release attachment, and generalized
+  `scripts/ci/publish-npm.mjs` supporting OIDC Trusted Publishing on npmjs.com.
 - Documentation: added `docs/connector-dsh.md`.
 
 ### OpenCode connector & plugin

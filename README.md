@@ -115,9 +115,10 @@ node agent-test/run.mjs            # all cases
 ```
 
 See [agent-test/README.md](./agent-test/README.md) for the case schema and
-the 12 mechanical check types. The Claude Code plugin additionally has its
-own manual suite — see
-[agent-test/claude-plugin-specific/README.md](./agent-test/claude-plugin-specific/README.md).
+the 12 mechanical check types. Sibling plugin test suites:
+- [Claude Code plugin tests](./agent-test/claude-plugin-specific/README.md)
+- [OpenCode plugin tests](./agent-test/opencode-plugin-specific/README.md)
+- [DeepSeek Harness plugin tests](./agent-test/dsh-plugin-specific/README.md)
 
 ## Docs
 

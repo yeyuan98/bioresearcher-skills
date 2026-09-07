@@ -1,0 +1,13 @@
+{
+  "id": "plugin-config-dump",
+  "name": "dsh dump-config reflects bioresearcher bundle",
+  "level": "L0",
+  "purpose": "Asserts resolved Cordis patch tree contains bioresearcher plugin entry and dsh-bioresearcher package (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["--profile", "headless", "--dump-config"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "id: bioresearcher", "desc": "bioresearcher entry in patch tree" },
+    { "type": "cli_output", "op": "contains", "expect": "dsh-bioresearcher", "desc": "dsh-bioresearcher package reference in patch tree" }
+  ]
+}

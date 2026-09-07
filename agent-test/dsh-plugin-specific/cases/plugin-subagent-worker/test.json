@@ -1,0 +1,12 @@
+{
+  "id": "plugin-subagent-worker",
+  "name": "dsh worker subagent prompt resolves plugin root paths",
+  "level": "L0",
+  "purpose": "Asserts bioresearcher-dr-worker agent prompt replaces CLAUDE_PLUGIN_ROOT with real plugin root (free, no LLM)",
+  "driver": "contract",
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "skills/bioresearcher-deep-research/references/worker-protocol.md", "desc": "worker protocol reference path resolved" },
+    { "type": "cli_output", "op": "regex", "expect": "mcp__biomcp", "desc": "biomcp MCP tool reference present" }
+  ]
+}
