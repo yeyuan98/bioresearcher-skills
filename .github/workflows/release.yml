@@ -154,8 +154,8 @@ jobs:
             fi
             git checkout -q "refs/tags/${TAG}"
           fi
-          node scripts/ci/build-connector-dsh.mjs --out dist
-          gh release upload "$TAG" "dist/${ASSET}" $CLOBBER
+          node scripts/ci/build-connector-dsh.mjs --out dist/dsh
+          gh release upload "$TAG" "dist/dsh/${ASSET}" $CLOBBER
 
       # Publish dsh-bioresearcher to npm via OIDC Trusted Publishing (or ambient token).
       # Reusable script handles idempotency and skips already-published versions.
@@ -166,7 +166,7 @@ jobs:
           set -eu
           npm install -g npm@latest
           # Ensure staged bundle exists even if previous step skipped tarball rebuild
-          if [ ! -d "dist/bioresearcher" ]; then
-            node scripts/ci/build-connector-dsh.mjs --out dist
+          if [ ! -d "dist/dsh/bioresearcher" ]; then
+            node scripts/ci/build-connector-dsh.mjs --out dist/dsh
           fi
-          node scripts/ci/publish-npm.mjs dist/bioresearcher
+          node scripts/ci/publish-npm.mjs dist/dsh/bioresearcher

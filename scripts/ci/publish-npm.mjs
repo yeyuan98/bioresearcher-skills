@@ -60,6 +60,9 @@ const publishArgs = ["publish", dir, "--access", "public"];
 if (dryRun) {
   publishArgs.push("--dry-run");
 }
+if (process.env.GITHUB_ACTIONS === "true" && !dryRun) {
+  publishArgs.push("--provenance");
+}
 
 try {
   execFileSync("npm", publishArgs, {
