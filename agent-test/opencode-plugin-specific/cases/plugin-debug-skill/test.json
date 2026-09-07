@@ -1,0 +1,13 @@
+{
+  "id": "plugin-debug-skill",
+  "name": "opencode debug skill discovers bundled skills without onboard",
+  "level": "L0",
+  "purpose": "Asserts opencode discovers bundled skills and does not bundle bioresearcher-onboard from the plugin (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["debug", "skill"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-deep-research", "desc": "bioresearcher-deep-research discovered" },
+    { "type": "cli_output", "op": "contains", "expect": "bioresearcher-plot-making", "desc": "bioresearcher-plot-making discovered" }
+  ]
+}

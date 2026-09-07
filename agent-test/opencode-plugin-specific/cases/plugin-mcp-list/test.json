@@ -1,0 +1,12 @@
+{
+  "id": "plugin-mcp-list",
+  "name": "opencode mcp list reports biomcp connected",
+  "level": "L0",
+  "purpose": "Asserts opencode connects to biomcp MCP server over stdio and completes handshake (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["mcp", "list"],
+  "timeoutMs": 120000,
+  "checks": [
+    { "type": "cli_output", "op": "regex", "expect": "biomcp\\s+connected", "desc": "biomcp is reported as connected" }
+  ]
+}

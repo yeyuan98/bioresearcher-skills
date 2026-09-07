@@ -8,6 +8,7 @@ cd "$(dirname "$0")/../.."
 LEGACY='biomcp_article_searcher biomcp_article_getter biomcp_trial_searcher biomcp_trial_getter biomcp_trial_protocol_getter biomcp_trial_outcomes_getter biomcp_gene_getter biomcp_variant_searcher biomcp_variant_getter biomcp_drug_getter biomcp_openfda_adverse_searcher biomcp_openfda_label_searcher biomcp_openfda_approval_searcher biomcp_search biomcp_fetch biomcp_tool'
 PATHS=(skills/)
 [ -d .claude-plugin/agents ] && PATHS+=(".claude-plugin/agents/")
+[ -d connector/opencode ] && PATHS+=("connector/opencode/")
 fail=0
 for name in $LEGACY; do
   hits=$(grep -riFw -- "$name" "${PATHS[@]}" | wc -l || true)

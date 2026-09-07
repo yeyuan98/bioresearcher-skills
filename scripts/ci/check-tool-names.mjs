@@ -17,7 +17,7 @@ function walk(dir, acc = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, acc);
-    else if (/\.(md|py)$/.test(e.name)) acc.push(p);
+    else if (/\.(md|py|js)$/.test(e.name)) acc.push(p);
   }
   return acc;
 }
@@ -25,6 +25,8 @@ function walk(dir, acc = []) {
 const DIRS = [join(ROOT, "skills")];
 const agentsDir = join(ROOT, ".claude-plugin", "agents");
 if (existsSync(agentsDir)) DIRS.push(agentsDir);
+const opencodeDir = join(ROOT, "connector", "opencode");
+if (existsSync(opencodeDir)) DIRS.push(opencodeDir);
 
 // SCREAMING_SNAKE tokens with the biomcp_ prefix are env vars, not tools
 // (e.g. BIOMCP_PROJECT_CONFIG, the .biomcp.json kill switch).

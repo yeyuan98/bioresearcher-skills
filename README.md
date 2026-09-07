@@ -71,6 +71,11 @@ WorkBuddy connector — see [docs/connector-workbuddy.md](./docs/connector-workb
 Releases from v1.3.0 on carry a `bioresearcher-connector_workbuddy-v*.tar.gz`
 bundle for market submission.
 
+**OpenCode (plugin / connector):** the same server + skills + subagent ship as an
+OpenCode plugin — see [docs/connector-opencode.md](./docs/connector-opencode.md).
+Releases carry a `bioresearcher-connector_opencode-v*.tar.gz` bundle for local or
+CLI installation (`opencode plugin ./bioresearcher`).
+
 ## Development
 
 ```bash
@@ -83,6 +88,7 @@ bash scripts/ci/check-legacy-names.sh  # no retired biomcp-python tool names
 node scripts/ci/check-tool-names.mjs   # biomcp tool refs match pinned registry
 node scripts/ci/check-marketplace.mjs  # .claude-plugin validation
 node scripts/ci/build-connector-workbuddy.mjs  # WorkBuddy connector bundle -> dist/
+node scripts/ci/build-connector-opencode.mjs   # OpenCode connector bundle -> dist/
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus the official

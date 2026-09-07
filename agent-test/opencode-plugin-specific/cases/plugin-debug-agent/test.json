@@ -1,0 +1,13 @@
+{
+  "id": "plugin-debug-agent",
+  "name": "opencode debug agent bioresearcher-dr-worker resolves subagent and permissions",
+  "level": "L0",
+  "purpose": "Asserts opencode debug agent bioresearcher-dr-worker reflects mode subagent and bash deny permission (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["debug", "agent", "bioresearcher-dr-worker"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "contains", "expect": "\"mode\": \"subagent\"", "desc": "agent mode is subagent" },
+    { "type": "cli_output", "op": "contains", "expect": "\"permission\": \"bash\"", "desc": "bash permission rule present" }
+  ]
+}

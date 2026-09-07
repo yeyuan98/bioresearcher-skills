@@ -1,0 +1,23 @@
+{
+  "name": "BioResearcher 生物医学研究",
+  "name_zh": "BioResearcher 生物医学研究",
+  "name_en": "BioResearcher",
+  "description": "Biomedical research plugin for OpenCode: biomcp MCP server tools for literature, trials, genes, variants, drugs, diseases and patents, plus publication-grade plotting skills and deep-research subagent.",
+  "description_zh": "OpenCode 生物医学研究插件：biomcp MCP 服务提供文献、临床试验、基因、变异、药物、疾病与专利检索工具，并附发表级科研绘图技能与深度调研子代理。",
+  "description_en": "Biomedical research plugin for OpenCode: biomcp MCP server tools for literature, clinical trials, genes, variants, drugs, diseases and patents, plus skills for publication-grade figures and deep-research subagent.",
+  "source": "bioresearcher",
+  "type": "plugin",
+  "version": "1.6.0",
+  "harness": "opencode",
+  "examples_zh": [
+    "帮我做一个关于肿瘤免疫治疗的多方面文献综述并附引用",
+    "总结上周 PubMed 更新中与 CRISPR 相关的文献",
+    "查找 BRAF V600E 变异的相关药物与临床试验"
+  ],
+  "examples_en": [
+    "Run a multi-aspect literature review on tumor immunotherapy with citations",
+    "Summarize last week's PubMed updates about CRISPR",
+    "Find drugs and clinical trials related to the BRAF V600E variant"
+  ],
+  "minOpencodeVersion": "1.18.0"
+}

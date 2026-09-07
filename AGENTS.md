@@ -103,6 +103,18 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
   docs/connector-workbuddy.md).
 - No credentials, tokens, or real API keys in any connector file.
 
+## OpenCode connector / plugin
+
+- Sources live in `connector/opencode/` only. Never commit build output (`dist/`).
+- `connector/opencode/connector-meta.json` and `package.json` `version` must
+  equal repo `VERSION` (check-drift gate); release workflow attaches
+  `bioresearcher-connector_opencode-v<VERSION>.tar.gz` to GitHub releases.
+- The bundled-skill list is defined in `connector/opencode/skill-bundle.json`.
+  `bioresearcher-onboard` is intentionally excluded (the plugin's config hook
+  automatically registers `biomcp` into OpenCode's runtime).
+- Built by `scripts/ci/build-connector-opencode.mjs`. No credentials, tokens, or
+  real API keys in any connector file.
+
 ## Branching
 
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,

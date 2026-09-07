@@ -1,0 +1,12 @@
+{
+  "id": "plugin-startup",
+  "name": "opencode debug startup boots cleanly with plugin",
+  "level": "L0",
+  "purpose": "Asserts opencode boots cleanly with zero plugin initialization errors (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["debug", "startup"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "cli_output", "op": "regex", "expect": "[0-9]+(\\.[0-9]+)?", "desc": "startup timing printed" }
+  ]
+}
