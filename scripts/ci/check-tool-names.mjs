@@ -27,6 +27,8 @@ const agentsDir = join(ROOT, ".claude-plugin", "agents");
 if (existsSync(agentsDir)) DIRS.push(agentsDir);
 const opencodeDir = join(ROOT, "connector", "opencode");
 if (existsSync(opencodeDir)) DIRS.push(opencodeDir);
+const dshDir = join(ROOT, "connector", "dsh");
+if (existsSync(dshDir)) DIRS.push(dshDir);
 
 // SCREAMING_SNAKE tokens with the biomcp_ prefix are env vars, not tools
 // (e.g. BIOMCP_PROJECT_CONFIG, the .biomcp.json kill switch).

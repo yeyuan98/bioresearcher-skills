@@ -76,6 +76,11 @@ OpenCode plugin — see [docs/connector-opencode.md](./docs/connector-opencode.m
 Releases carry a `bioresearcher-connector_opencode-v*.tar.gz` bundle for local or
 CLI installation (`opencode plugin ./bioresearcher`).
 
+**DeepSeek Harness (plugin / connector):** the same server + skills + subagent ship as a
+DeepSeek Harness (dsh) plugin — see [docs/connector-dsh.md](./docs/connector-dsh.md).
+Releases carry a `bioresearcher-connector_dsh-v*.tar.gz` bundle for profile
+or overlay patch installation (`dsh plugin --profile web add ./bioresearcher`).
+
 ## Development
 
 ```bash
@@ -89,6 +94,7 @@ node scripts/ci/check-tool-names.mjs   # biomcp tool refs match pinned registry
 node scripts/ci/check-marketplace.mjs  # .claude-plugin validation
 node scripts/ci/build-connector-workbuddy.mjs  # WorkBuddy connector bundle -> dist/
 node scripts/ci/build-connector-opencode.mjs   # OpenCode connector bundle -> dist/
+node scripts/ci/build-connector-dsh.mjs        # DeepSeek Harness connector bundle -> dist/
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus the official

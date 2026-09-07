@@ -1,0 +1,5 @@
+# DeepSeek Harness (dsh) profile patch overlay for BioResearcher.
+# Installs and enables the bioresearcher Cordis plugin.
+- insert:
+    - id: bioresearcher
+      name: dsh-bioresearcher

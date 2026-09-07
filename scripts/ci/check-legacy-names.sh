@@ -9,6 +9,7 @@ LEGACY='biomcp_article_searcher biomcp_article_getter biomcp_trial_searcher biom
 PATHS=(skills/)
 [ -d .claude-plugin/agents ] && PATHS+=(".claude-plugin/agents/")
 [ -d connector/opencode ] && PATHS+=("connector/opencode/")
+[ -d connector/dsh ] && PATHS+=("connector/dsh/")
 fail=0
 for name in $LEGACY; do
   hits=$(grep -riFw -- "$name" "${PATHS[@]}" | wc -l || true)

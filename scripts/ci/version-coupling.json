@@ -6,6 +6,8 @@
     { "id": "connector-meta", "file": "connector/workbuddy/connector-meta.json", "json_path": "version" },
     { "id": "opencode-connector-meta", "file": "connector/opencode/connector-meta.json", "json_path": "version" },
     { "id": "opencode-package-json", "file": "connector/opencode/package.json", "json_path": "version" },
+    { "id": "dsh-connector-meta", "file": "connector/dsh/connector-meta.json", "json_path": "version" },
+    { "id": "dsh-package-json", "file": "connector/dsh/package.json", "json_path": "version" },
     { "id": "cff-version", "file": "CITATION.cff", "regex": "^version:\\s*(\\S+)", "flags": "m" },
     { "id": "agent-doc-en", "file": "demos/docs/agent.en.md", "regex": "repo v(\\d+\\.\\d+\\.\\d+)" },
     { "id": "agent-doc-zh", "file": "demos/docs/agent.zh.md", "regex": "仓库 v(\\d+\\.\\d+\\.\\d+)" }

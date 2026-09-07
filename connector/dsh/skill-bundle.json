@@ -1,0 +1,12 @@
+{
+  "description": "Skills bundled into the DeepSeek Harness (dsh) plugin archive. bioresearcher-onboard is excluded because the plugin itself automatically configures biomcp into dsh's runtime.",
+  "skills": [
+    "bioresearcher-deep-research",
+    "bioresearcher-plot-making",
+    "bioresearcher-pubmed-weekly",
+    "bioresearcher-python-setup-uv"
+  ],
+  "excluded": {
+    "bioresearcher-onboard": "Installing and registering biomcp in harness configs is already performed automatically by the dsh plugin's apply hook."
+  }
+}

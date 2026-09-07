@@ -115,6 +115,18 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
 - Built by `scripts/ci/build-connector-opencode.mjs`. No credentials, tokens, or
   real API keys in any connector file.
 
+## DeepSeek Harness (dsh) connector / plugin
+
+- Sources live in `connector/dsh/` only. Never commit build output (`dist/`).
+- `connector/dsh/connector-meta.json` and `package.json` `version` must
+  equal repo `VERSION` (check-drift gate); release workflow attaches
+  `bioresearcher-connector_dsh-v<VERSION>.tar.gz` to GitHub releases.
+- The bundled-skill list is defined in `connector/dsh/skill-bundle.json`.
+  `bioresearcher-onboard` is intentionally excluded (the plugin's apply hook
+  automatically registers `biomcp` into dsh's runtime).
+- Built by `scripts/ci/build-connector-dsh.mjs`. No credentials, tokens, or
+  real API keys in any connector file.
+
 ## Branching
 
 - After bootstrap: all work on `agent/coder/<issue-description>` branches,

@@ -1,0 +1,35 @@
+{
+  "name": "dsh-bioresearcher",
+  "version": "1.6.0",
+  "description": "Biomedical research plugin for DeepSeek Harness (dsh): biomcp MCP server tools, scientific plotting skills, and deep-research subagent",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "package.json",
+    "connector-meta.json",
+    "cordis.patch.yml",
+    "skill-bundle.json",
+    "skills/",
+    "agents/"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "cordis-plugin",
+    "biomcp",
+    "biomedical",
+    "deep-research"
+  ],
+  "author": "Ye Yuan",
+  "license": "Apache-2.0"
+}
