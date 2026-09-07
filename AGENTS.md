@@ -108,7 +108,8 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
 - Sources live in `connector/opencode/` only. Never commit build output (`dist/`).
 - `connector/opencode/connector-meta.json` and `package.json` `version` must
   equal repo `VERSION` (check-drift gate); release workflow attaches
-  `bioresearcher-connector_opencode-v<VERSION>.tar.gz` to GitHub releases.
+  `bioresearcher-connector_opencode-v<VERSION>.tar.gz` to GitHub releases and
+  publishes `opencode-bioresearcher` to npm via `scripts/ci/publish-npm.mjs`.
 - The bundled-skill list is defined in `connector/opencode/skill-bundle.json`.
   `bioresearcher-onboard` is intentionally excluded (the plugin's config hook
   automatically registers `biomcp` into OpenCode's runtime).

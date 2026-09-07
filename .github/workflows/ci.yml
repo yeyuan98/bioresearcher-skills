@@ -77,10 +77,14 @@ jobs:
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/package.json'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/index.js'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/loader.js'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/skill-bundle.json'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/README.md'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/LICENSE'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/agents/bioresearcher-dr-worker.md'
           N="$(node -p 'require("./connector/opencode/skill-bundle.json").skills.length')"
           M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
           test "$N" -eq "$M"
+          (cd "$OUT/bioresearcher" && npm pack --dry-run)
 
       - name: DeepSeek Harness connector build smoke
         run: |

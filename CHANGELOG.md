@@ -72,6 +72,8 @@ when that release PR is cut (the release workflow extracts only the
 - Governance: Series 1 version coupling slots added to
   `scripts/ci/version-coupling.json`; tool name gates expanded to scan
   `connector/opencode/`.
+- Automated npm publishing: published to npm as `opencode-bioresearcher` via
+  `scripts/ci/publish-npm.mjs` with OIDC Trusted Publishing and release workflow hardening.
 
 ## [1.5.0] - 2026-09-06
 

@@ -60,9 +60,31 @@ and the release workflow attaches the tarball to every GitHub release.
 
 ## Installation & usage
 
-Users can install the release archive through either of two methods:
+Users can install the plugin through any of the following methods:
 
-### Method A: CLI installation (Recommended)
+### Method A: Config declaration via npm (Recommended)
+
+Declare `opencode-bioresearcher` in your project or global `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "opencode-bioresearcher"
+  ]
+}
+```
+
+OpenCode automatically installs and loads the plugin from npm on startup.
+
+### Method B: CLI installation
+
+```bash
+opencode plugin opencode-bioresearcher          # Local project scope
+opencode plugin -g opencode-bioresearcher       # Global scope (~/.config/opencode)
+```
+
+Or from an extracted release tarball:
 
 ```bash
 tar -xzf bioresearcher-connector_opencode-v<VERSION>.tar.gz
@@ -70,7 +92,7 @@ opencode plugin ./bioresearcher            # Local (project) scope
 opencode plugin -g /path/to/bioresearcher   # Global scope (~/.config/opencode)
 ```
 
-### Method B: Drop-in to `.opencode/plugins/` (Zero Config)
+### Method C: Drop-in to `.opencode/plugins/` (Offline Zero Config)
 
 ```bash
 tar -xzf bioresearcher-connector_opencode-v<VERSION>.tar.gz -C .opencode/plugins/
