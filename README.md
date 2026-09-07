@@ -73,8 +73,9 @@ bundle for market submission.
 
 **OpenCode (plugin / connector):** the same server + skills + subagent ship as an
 OpenCode plugin — see [docs/connector-opencode.md](./docs/connector-opencode.md).
-Releases carry a `bioresearcher-connector_opencode-v*.tar.gz` bundle for local or
-CLI installation (`opencode plugin ./bioresearcher`).
+Published to npm as `opencode-bioresearcher` (`"plugin": ["opencode-bioresearcher"]`
+in `opencode.json` or `opencode plugin opencode-bioresearcher`). Releases also carry
+a `bioresearcher-connector_opencode-v*.tar.gz` bundle for local or offline installation.
 
 **DeepSeek Harness (plugin / connector):** the same server + skills + subagent ship as a
 DeepSeek Harness (dsh) plugin — see [docs/connector-dsh.md](./docs/connector-dsh.md).

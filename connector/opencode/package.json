@@ -4,11 +4,29 @@
   "description": "Biomedical research plugin for OpenCode: biomcp MCP server tools, scientific plotting skills, and deep-research subagent",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeyuan98/bioresearcher-skills.git",
+    "directory": "connector/opencode"
+  },
+  "homepage": "https://github.com/yeyuan98/bioresearcher-skills/tree/main/connector/opencode#readme",
+  "bugs": {
+    "url": "https://github.com/yeyuan98/bioresearcher-skills/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "index.js",
     "loader.js",
     "package.json",
     "connector-meta.json",
+    "skill-bundle.json",
+    "README.md",
+    "LICENSE",
     "skills/",
     "agents/"
   ],

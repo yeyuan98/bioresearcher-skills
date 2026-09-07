@@ -63,7 +63,11 @@ for (const name of bundle) {
   if (!skillsDir.includes(name)) fail(`skill-bundle.json key "${name}" has no skills/ directory`);
 }
 for (const name of skillsDir.filter((n) => !bundle.includes(n))) {
-  warn(`skills/${name} not bundled into the OpenCode connector (intentional? document in skill-bundle.json)`);
+  if (bundleFile.excluded?.[name]) {
+    ok(`skills/${name} excluded intentionally (${bundleFile.excluded[name]})`);
+  } else {
+    warn(`skills/${name} not bundled into the OpenCode connector (intentional? document in skill-bundle.json)`);
+  }
 }
 ok(`bundle manifest: ${bundle.length} skill(s): ${bundle.join(", ")}`);
 
@@ -80,8 +84,17 @@ const stage = join(stageRoot, "bioresearcher");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 
-for (const f of ["package.json", "connector-meta.json", "index.js", "loader.js"]) {
+for (const f of ["package.json", "connector-meta.json", "index.js", "loader.js", "skill-bundle.json"]) {
   cpSync(join(FLAVOR, f), join(stage, f));
+}
+
+if (existsSync(join(ROOT, "LICENSE"))) {
+  cpSync(join(ROOT, "LICENSE"), join(stage, "LICENSE"));
+}
+if (existsSync(join(FLAVOR, "README.md"))) {
+  cpSync(join(FLAVOR, "README.md"), join(stage, "README.md"));
+} else if (existsSync(join(ROOT, "docs", "connector-opencode.md"))) {
+  cpSync(join(ROOT, "docs", "connector-opencode.md"), join(stage, "README.md"));
 }
 
 mkdirSync(join(stage, "agents"), { recursive: true });
@@ -101,6 +114,9 @@ JSON.parse(readFileSync(join(stage, "connector-meta.json"), "utf8"));
 JSON.parse(readFileSync(join(stage, "package.json"), "utf8"));
 if (!existsSync(join(stage, "index.js"))) fail("staged bundle missing index.js");
 if (!existsSync(join(stage, "loader.js"))) fail("staged bundle missing loader.js");
+if (!existsSync(join(stage, "skill-bundle.json"))) fail("staged bundle missing skill-bundle.json");
+if (!existsSync(join(stage, "README.md"))) fail("staged bundle missing README.md");
+if (!existsSync(join(stage, "LICENSE"))) fail("staged bundle missing LICENSE");
 if (!existsSync(join(stage, "agents", "bioresearcher-dr-worker.md"))) fail("staged bundle missing dr-worker agent");
 
 for (const name of bundle) {

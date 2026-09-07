@@ -74,7 +74,7 @@ jobs:
           gh release edit "${{ steps.ver.outputs.tag }}" --notes-file /tmp/opencode-release-notes.md
 
       # WorkBuddy connector asset. Idempotent: builds from the tag target when
-      # the release is new, from the tag checkout when forcing or when an
+      # the release is new, from an isolated tag worktree when forcing or when an
       # earlier run was interrupted before uploading; skips old tags that
       # predate connector/workbuddy/.
       - name: Bundle + attach WorkBuddy connector tarball
@@ -88,6 +88,7 @@ jobs:
           CLOBBER=""
           if [ "${{ steps.ver.outputs.exists }}" = "false" ]; then
             test -f connector/workbuddy/connector-meta.json || { echo "skip: no connector at HEAD"; exit 0; }
+            node scripts/ci/build-connector-workbuddy.mjs --out dist
           else
             git cat-file -e "refs/tags/${TAG}:connector/workbuddy/connector-meta.json" || { echo "skip: no connector at ${TAG}"; exit 0; }
             if [ "${{ inputs.force_notes }}" = "true" ]; then
@@ -96,13 +97,15 @@ jobs:
               echo "skip: $ASSET already attached to ${TAG}"
               exit 0
             fi
-            git checkout -q "refs/tags/${TAG}"
+            WORK_DIR="$(mktemp -d)"
+            git worktree add --detach "$WORK_DIR" "refs/tags/${TAG}"
+            (cd "$WORK_DIR" && node scripts/ci/build-connector-workbuddy.mjs --out "$GITHUB_WORKSPACE/dist")
+            git worktree remove --force "$WORK_DIR"
           fi
-          node scripts/ci/build-connector-workbuddy.mjs --out dist
           gh release upload "$TAG" "dist/${ASSET}" $CLOBBER
 
       # OpenCode connector asset. Idempotent: builds from the tag target when
-      # the release is new, from the tag checkout when forcing or when an
+      # the release is new, from an isolated tag worktree when forcing or when an
       # earlier run was interrupted before uploading; skips old tags that
       # predate connector/opencode/.
       - name: Bundle + attach OpenCode connector tarball
@@ -116,6 +119,7 @@ jobs:
           CLOBBER=""
           if [ "${{ steps.ver.outputs.exists }}" = "false" ]; then
             test -f connector/opencode/connector-meta.json || { echo "skip: no opencode connector at HEAD"; exit 0; }
+            node scripts/ci/build-connector-opencode.mjs --out dist/opencode
           else
             git cat-file -e "refs/tags/${TAG}:connector/opencode/connector-meta.json" || { echo "skip: no opencode connector at ${TAG}"; exit 0; }
             if [ "${{ inputs.force_notes }}" = "true" ]; then
@@ -124,13 +128,15 @@ jobs:
               echo "skip: $ASSET already attached to ${TAG}"
               exit 0
             fi
-            git checkout -q "refs/tags/${TAG}"
+            WORK_DIR="$(mktemp -d)"
+            git worktree add --detach "$WORK_DIR" "refs/tags/${TAG}"
+            (cd "$WORK_DIR" && node scripts/ci/build-connector-opencode.mjs --out "$GITHUB_WORKSPACE/dist/opencode")
+            git worktree remove --force "$WORK_DIR"
           fi
-          node scripts/ci/build-connector-opencode.mjs --out dist
-          gh release upload "$TAG" "dist/${ASSET}" $CLOBBER
+          gh release upload "$TAG" "dist/opencode/${ASSET}" $CLOBBER
 
       # DeepSeek Harness (dsh) connector asset. Idempotent: builds from the tag target when
-      # the release is new, from the tag checkout when forcing or when an
+      # the release is new, from an isolated tag worktree when forcing or when an
       # earlier run was interrupted before uploading; skips old tags that
       # predate connector/dsh/.
       - name: Bundle + attach DeepSeek Harness connector tarball
@@ -144,6 +150,7 @@ jobs:
           CLOBBER=""
           if [ "${{ steps.ver.outputs.exists }}" = "false" ]; then
             test -f connector/dsh/connector-meta.json || { echo "skip: no dsh connector at HEAD"; exit 0; }
+            node scripts/ci/build-connector-dsh.mjs --out dist/dsh
           else
             git cat-file -e "refs/tags/${TAG}:connector/dsh/connector-meta.json" || { echo "skip: no dsh connector at ${TAG}"; exit 0; }
             if [ "${{ inputs.force_notes }}" = "true" ]; then
@@ -152,10 +159,38 @@ jobs:
               echo "skip: $ASSET already attached to ${TAG}"
               exit 0
             fi
-            git checkout -q "refs/tags/${TAG}"
+            WORK_DIR="$(mktemp -d)"
+            git worktree add --detach "$WORK_DIR" "refs/tags/${TAG}"
+            (cd "$WORK_DIR" && node scripts/ci/build-connector-dsh.mjs --out "$GITHUB_WORKSPACE/dist/dsh")
+            git worktree remove --force "$WORK_DIR"
           fi
-          node scripts/ci/build-connector-dsh.mjs --out dist/dsh
           gh release upload "$TAG" "dist/dsh/${ASSET}" $CLOBBER
+
+      # Publish opencode-bioresearcher to npm via OIDC Trusted Publishing (or ambient token).
+      # Reusable script handles idempotency and skips already-published versions.
+      - name: Publish OpenCode connector to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eu
+          TAG="${{ steps.ver.outputs.tag }}"
+          if [ "${{ steps.ver.outputs.exists }}" = "true" ] && ! git cat-file -e "refs/tags/${TAG}:connector/opencode/connector-meta.json" 2>/dev/null; then
+            echo "skip: opencode connector not present in ${TAG}"
+            exit 0
+          fi
+          test -f connector/opencode/connector-meta.json || { echo "skip: no opencode connector in working tree"; exit 0; }
+          test -f scripts/ci/build-connector-opencode.mjs || { echo "skip: no opencode build script in working tree"; exit 0; }
+          test -f scripts/ci/publish-npm.mjs || { echo "skip: no npm publisher in working tree"; exit 0; }
+
+          npm install -g npm@latest
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}"
+          fi
+          # Ensure staged bundle exists even if previous step skipped tarball rebuild
+          if [ ! -d "dist/opencode/bioresearcher" ]; then
+            node scripts/ci/build-connector-opencode.mjs --out dist/opencode
+          fi
+          node scripts/ci/publish-npm.mjs dist/opencode/bioresearcher
 
       # Publish dsh-bioresearcher to npm via OIDC Trusted Publishing (or ambient token).
       # Reusable script handles idempotency and skips already-published versions.
@@ -164,7 +199,19 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -eu
+          TAG="${{ steps.ver.outputs.tag }}"
+          if [ "${{ steps.ver.outputs.exists }}" = "true" ] && ! git cat-file -e "refs/tags/${TAG}:connector/dsh/connector-meta.json" 2>/dev/null; then
+            echo "skip: dsh connector not present in ${TAG}"
+            exit 0
+          fi
+          test -f connector/dsh/connector-meta.json || { echo "skip: no dsh connector in working tree"; exit 0; }
+          test -f scripts/ci/build-connector-dsh.mjs || { echo "skip: no dsh build script in working tree"; exit 0; }
+          test -f scripts/ci/publish-npm.mjs || { echo "skip: no npm publisher in working tree"; exit 0; }
+
           npm install -g npm@latest
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}"
+          fi
           # Ensure staged bundle exists even if previous step skipped tarball rebuild
           if [ ! -d "dist/dsh/bioresearcher" ]; then
             node scripts/ci/build-connector-dsh.mjs --out dist/dsh
