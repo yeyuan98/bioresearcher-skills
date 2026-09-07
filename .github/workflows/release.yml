@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release
@@ -155,3 +156,17 @@ jobs:
           fi
           node scripts/ci/build-connector-dsh.mjs --out dist
           gh release upload "$TAG" "dist/${ASSET}" $CLOBBER
+
+      # Publish dsh-bioresearcher to npm via OIDC Trusted Publishing (or ambient token).
+      # Reusable script handles idempotency and skips already-published versions.
+      - name: Publish dsh connector to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eu
+          npm install -g npm@latest
+          # Ensure staged bundle exists even if previous step skipped tarball rebuild
+          if [ ! -d "dist/bioresearcher" ]; then
+            node scripts/ci/build-connector-dsh.mjs --out dist
+          fi
+          node scripts/ci/publish-npm.mjs dist/bioresearcher

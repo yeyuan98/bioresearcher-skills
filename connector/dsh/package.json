@@ -7,12 +7,27 @@
   "exports": {
     ".": "./index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeyuan98/bioresearcher-skills.git",
+    "directory": "connector/dsh"
+  },
+  "homepage": "https://github.com/yeyuan98/bioresearcher-skills/tree/main/connector/dsh#readme",
+  "bugs": {
+    "url": "https://github.com/yeyuan98/bioresearcher-skills/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "files": [
     "index.js",
     "package.json",
     "connector-meta.json",
     "cordis.patch.yml",
     "skill-bundle.json",
+    "README.md",
+    "LICENSE",
     "skills/",
     "agents/"
   ],

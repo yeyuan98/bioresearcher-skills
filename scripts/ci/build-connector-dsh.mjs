@@ -91,6 +91,15 @@ for (const f of ["package.json", "connector-meta.json", "index.js", "cordis.patc
   cpSync(join(FLAVOR, f), join(stage, f));
 }
 
+if (existsSync(join(ROOT, "LICENSE"))) {
+  cpSync(join(ROOT, "LICENSE"), join(stage, "LICENSE"));
+}
+if (existsSync(join(FLAVOR, "README.md"))) {
+  cpSync(join(FLAVOR, "README.md"), join(stage, "README.md"));
+} else if (existsSync(join(ROOT, "docs", "connector-dsh.md"))) {
+  cpSync(join(ROOT, "docs", "connector-dsh.md"), join(stage, "README.md"));
+}
+
 mkdirSync(join(stage, "agents"), { recursive: true });
 cpSync(agentSrc, join(stage, "agents", "bioresearcher-dr-worker.md"));
 
