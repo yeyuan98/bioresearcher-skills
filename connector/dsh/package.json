@@ -17,8 +17,7 @@
     "url": "https://github.com/yeyuan98/bioresearcher-skills/issues"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "files": [
     "index.js",
