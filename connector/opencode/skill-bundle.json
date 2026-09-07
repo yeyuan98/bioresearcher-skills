@@ -1,0 +1,12 @@
+{
+  "description": "Skills bundled into the OpenCode plugin archive. bioresearcher-onboard is excluded because the plugin itself automatically configures biomcp into OpenCode's runtime.",
+  "skills": [
+    "bioresearcher-deep-research",
+    "bioresearcher-plot-making",
+    "bioresearcher-pubmed-weekly",
+    "bioresearcher-python-setup-uv"
+  ],
+  "excluded": {
+    "bioresearcher-onboard": "Installing and registering biomcp in harness configs is already performed automatically by the OpenCode plugin's config hook."
+  }
+}

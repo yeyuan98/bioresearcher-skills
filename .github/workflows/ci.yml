@@ -67,6 +67,21 @@ jobs:
           M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
           test "$N" -eq "$M"
 
+      - name: OpenCode connector build smoke
+        run: |
+          OUT="$(mktemp -d)"
+          node scripts/ci/build-connector-opencode.mjs --out "$OUT"
+          TARBALL="$OUT/bioresearcher-connector_opencode-v$(tr -d '[:space:]' < VERSION).tar.gz"
+          test -s "$TARBALL"
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/connector-meta.json'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/package.json'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/index.js'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/loader.js'
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/agents/bioresearcher-dr-worker.md'
+          N="$(node -p 'require("./connector/opencode/skill-bundle.json").skills.length')"
+          M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
+          test "$N" -eq "$M"
+
       # Supplementary: official spec reference validator, pinned by commit.
       # Non-blocking (upstream marks it "not for production").
       - name: skills-ref validate (supplementary)
@@ -112,6 +127,12 @@ jobs:
           node --check agent-test/claude-plugin-specific/run.mjs
           node agent-test/claude-plugin-specific/run.mjs --list
           node agent-test/claude-plugin-specific/run.mjs --dry-run
+
+      - name: opencode plugin suite validation (hermetic, no LLM spawn)
+        run: |
+          node --check agent-test/opencode-plugin-specific/run.mjs
+          node agent-test/opencode-plugin-specific/run.mjs --list
+          node agent-test/opencode-plugin-specific/run.mjs --dry-run
 
       - name: demos pack validation (hermetic, no LLM spawn, no network)
         run: |

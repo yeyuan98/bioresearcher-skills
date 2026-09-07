@@ -1,0 +1,15 @@
+{
+  "id": "plugin-debug-config",
+  "name": "opencode debug config reflects biomcp, skills, and agent",
+  "level": "L0",
+  "purpose": "Asserts resolved config contains local biomcp MCP server (timeout 120000), skills.paths, and bioresearcher-dr-worker agent (free, no LLM)",
+  "driver": "cli",
+  "cliArgs": ["debug", "config"],
+  "timeoutMs": 30000,
+  "checks": [
+    { "type": "json_path", "path": "mcp.biomcp.type", "expect": "local", "desc": "biomcp MCP server is local" },
+    { "type": "json_path", "path": "mcp.biomcp.timeout", "expect": 120000, "desc": "biomcp MCP server timeout is 120000ms" },
+    { "type": "json_path", "path": "agent.bioresearcher-dr-worker.mode", "expect": "subagent", "desc": "dr-worker agent mode is subagent" },
+    { "type": "cli_output", "op": "contains", "expect": "skills", "desc": "skills path registered" }
+  ]
+}
