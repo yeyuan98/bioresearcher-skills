@@ -13,6 +13,41 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [1.6.0] - 2026-09-07
+
+### OpenCode connector & plugin
+
+- New `connector/opencode/` package providing native plugin and connector
+  distribution for the OpenCode AI coding agent (CLI, TUI, and desktop).
+- `connector/opencode/index.js`: zero-dependency ESM plugin implementing
+  OpenCode's `config` lifecycle hook:
+  - Automatically registers the `biomcp` stdio MCP server (`type: "local"`,
+    pinned `biomcp@1.1.1`, timeout 120000 ms, automatic China mirror fallback),
+    providing seamless out-of-the-box MCP tools without requiring manual onboarding.
+  - Automatically registers bundled skills (`bioresearcher-deep-research`,
+    `bioresearcher-plot-making`, `bioresearcher-pubmed-weekly`,
+    `bioresearcher-python-setup-uv`) into `cfg.skills.paths`.
+  - Automatically registers the `bioresearcher-dr-worker` subagent
+    (`mode: "subagent"`, security permissions `bash: "deny"` and
+    `task: "deny"`, dynamically resolving prompt reference paths).
+  - Preserves user configurations non-destructively (`if (!cfg.mcp["biomcp"])`).
+- `connector/opencode/loader.js`: root loader for zero-config drop-in usage
+  into `.opencode/plugins/`, bridging OpenCode's shallow directory scanner.
+- `connector/opencode/skill-bundle.json`: manifest of bundled skills;
+  intentionally excludes `bioresearcher-onboard` (its purpose is fulfilled
+  natively by the plugin).
+- Build tooling: `scripts/ci/build-connector-opencode.mjs` generates a
+  reproducible release archive
+  `dist/bioresearcher-connector_opencode-v1.6.0.tar.gz` (GNU tar normalized
+  mtime/owner/group/sort piped to gzip); wired into CI smoke checks and
+  GitHub release asset attachment.
+- Empirical test suite: `agent-test/opencode-plugin-specific/` with 5
+  automated CLI test cases (`plugin-debug-config`, `plugin-mcp-list`,
+  `plugin-debug-skill`, `plugin-debug-agent`, `plugin-startup`).
+- Governance: Series 1 version coupling slots added to
+  `scripts/ci/version-coupling.json`; tool name gates expanded to scan
+  `connector/opencode/`.
+
 ## [1.5.0] - 2026-09-06
 
 ### Demos (partner publication pack)

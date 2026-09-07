@@ -172,12 +172,15 @@ async function main() {
   fs.cpSync(path.join(testStage, "bioresearcher", "loader.js"), path.join(workspaceDir, ".opencode", "plugins", "bioresearcher.js"));
 
   let failed = 0;
-  const tmpOut = path.join(workspaceDir, ".cli-out.txt");
+  const outLogDir = path.join(RUNS_DIR, "logs");
+  fs.mkdirSync(outLogDir, { recursive: true });
+
   for (const c of selected) {
     process.stdout.write(`  ${c.id.padEnd(28)} ... `);
     const cliArgs = c.cliArgs || ["debug", "config"];
     
-    // Bun unflushed stdout workaround: execute with shell redirect to file
+    // Bun unflushed stdout workaround: execute with shell redirect to file outside workspace
+    const tmpOut = path.join(outLogDir, `${c.id}.txt`);
     const escapedArgs = cliArgs.map((a) => (/[ \t\n"$`\\]/.test(a) ? JSON.stringify(a) : a)).join(" ");
     const cmd = `${args.opencodeBin} ${escapedArgs} > "${tmpOut}" 2>&1`;
     spawnSync("sh", ["-c", cmd], {

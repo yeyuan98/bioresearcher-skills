@@ -6,8 +6,8 @@ authors:
   - family-names: Yuan
     given-names: Ye
 type: software
-version: 1.5.0
-date-released: "2026-09-06"
+version: 1.6.0
+date-released: "2026-09-07"
 license: Apache-2.0
 repository-code: "https://github.com/yeyuan98/bioresearcher-skills"
 abstract: >-
