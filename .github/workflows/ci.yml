@@ -124,6 +124,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           python3 -m py_compile skills/bioresearcher-deep-research/scripts/markdown-to-html.py \
+            skills/bioresearcher-deep-research/scripts/vet-references.py \
             skills/bioresearcher-pubmed-weekly/scripts/parse_updatefiles.py \
             skills/bioresearcher-pubmed-weekly/scripts/pubmed_weekly.py \
             skills/bioresearcher-plot-making/scripts/plot_helpers.py \

@@ -13,6 +13,18 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [Unreleased]
+
+### bioresearcher-deep-research 1.2.0
+
+- `scripts/vet-references.py`: new zero-dependency script for independent programmatic citation validation via NCBI PubMed E-utilities (`esummary`), backfilling missing volume, issue, and page numbers, correcting typographical discrepancies, and guarding against mismatching records with rate-limiting compliance and fail-safe error handling.
+- `scripts/markdown-to-html.py`: publication-grade HTML report generator featuring:
+  - Header branding hero card with BioResearcher badge, report title, and metadata grid (topic, date, scope).
+  - Responsive Table of Contents: sticky desktop sidebar with ScrollSpy and mobile slide-over drawer with backdrop overlay.
+  - Interactive citation system: superscript badges, floating boundary-aware tooltips with tail flipping, auto-linkified DOIs, PMIDs, NCT trial IDs, and smooth scroll to bibliography items with animated target highlight pulse.
+  - 100% self-contained offline architecture with zero external assets and print-ready typography.
+- `SKILL.md`: added Step 5b reference vetting phase prior to final report and HTML generation.
+
 ## [1.6.0] - 2026-09-07
 
 ### DeepSeek Harness (dsh) connector & plugin
