@@ -20,11 +20,10 @@
       "desc": "the final assistant message must be (or contain) the clarifying-question batch"
     },
     {
-      "type": "text",
-      "source": "final",
-      "op": "not_contains",
-      "expect": "final_report",
-      "desc": "research must not have run yet - the interview turn comes first (skip only via the no-interview prefix)"
+      "type": "tool_count",
+      "tool": "biomcp_article_search",
+      "max": 0,
+      "desc": "research must not have run yet - zero evidence queries before the interview reply (skip only via the no-interview prefix; the question text itself may legitimately mention the final_report output files)"
     }
   ],
   "expectedOutputs": []
