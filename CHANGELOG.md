@@ -22,7 +22,7 @@ when that release PR is cut (the release workflow extracts only the
   - Header branding hero card with embedded official BioResearcher logo (`icon.jpg`), report title, and metadata grid (topic, date, scope).
   - Responsive Table of Contents: sticky desktop sidebar with ScrollSpy and mobile slide-over drawer with backdrop overlay.
   - Interactive citation system: superscript badges, floating boundary-aware tooltips with tail flipping, auto-linkified DOIs, PMIDs, NCT trial IDs, and smooth scroll to bibliography items with animated target highlight pulse.
-  - Bidirectional citation navigation: jump to references and seamlessly return to calling text location via floating return chip, inline backlinks (`↩`), or native browser Back gestures, with visual reorientation pulse.
+  - Bidirectional citation navigation: jump to references and seamlessly resume reading in one click via unified active origin pill (`[↩ §Section (k)]`), context-aware multiway occurrence pills with section and excerpt previews, synchronized floating return chip (`← Return to §Section [N]`), and 3-stage visual reorientation (center scroll, badge pulse, ambient paragraph glow) with native browser Back gesture and WCAG 2.2 AA touch target compliance.
   - 100% self-contained offline architecture with zero external assets and print-ready typography.
 - `SKILL.md`: added Step 5b reference vetting phase prior to final report and HTML generation.
 

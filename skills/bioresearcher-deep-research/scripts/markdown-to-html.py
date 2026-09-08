@@ -587,12 +587,36 @@ body {
   }
 }
 
+.cite-caller-block-highlight {
+  animation: cite-block-glow 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cite-block-glow {
+  0% {
+    background-color: rgba(254, 240, 138, 0.4);
+    box-shadow: 0 0 0 8px rgba(254, 240, 138, 0.4);
+    border-radius: 6px;
+  }
+  60% {
+    background-color: rgba(254, 240, 138, 0.15);
+    box-shadow: 0 0 0 8px rgba(254, 240, 138, 0.15);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto !important; }
   .cite-ref a.cite-pulse {
     animation: none;
     background-color: #fef08a;
     transition: background-color 1s ease;
+  }
+  .cite-caller-block-highlight {
+    animation: none;
+    background-color: transparent;
   }
   .cite-return-chip {
     transition: none;
@@ -675,33 +699,110 @@ body {
 }
 
 .ref-backlink, .ref-backlinks {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   margin-left: 8px;
-  color: var(--primary);
-  text-decoration: none;
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.ref-occ-prefix {
+  color: var(--text-light);
+  font-size: 13px;
+  margin-right: 2px;
+  user-select: none;
+}
+
+.ref-occ-others {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
-.ref-backlink:hover, .ref-backlinks a:hover {
-  text-decoration: underline;
-}
-
-.ref-backlinks a {
+.ref-occ-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
+  gap: 4px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
   background: var(--primary-light);
   border: 1px solid var(--primary-border);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 11px;
+  font-weight: 500;
   color: var(--primary);
   text-decoration: none;
+  position: relative;
+  transition: all 0.15s ease;
+  vertical-align: middle;
+  outline: none;
+}
+
+.ref-occ-pill:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: var(--primary-hover);
+  text-decoration: none;
+}
+
+.ref-occ-pill:focus-visible {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* Touch target expansion (44x44px minimum for mobile compliance) */
+.ref-occ-pill::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Active Origin Pill (One-Click Return to calling text) */
+.ref-occ-pill.ref-occ-active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary-hover);
+  font-weight: 600;
+  padding: 0 8px;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.35);
+  animation: occ-active-bounce 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes occ-active-bounce {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.ref-occ-pill.ref-occ-active:hover {
+  background: var(--primary-hover);
+  color: #ffffff;
+}
+
+.ref-occ-pill.ref-occ-active .pill-arrow {
+  font-size: 12px;
+}
+
+.ref-occ-pill.ref-occ-active .pill-sec {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-occ-pill.ref-occ-active .pill-occ {
+  opacity: 0.85;
+  font-size: 10px;
+  font-weight: normal;
 }
 .cite-ref {
   font-size: 0.75em;
@@ -952,7 +1053,8 @@ body {
   #cite-tooltip,
   #cite-return-chip,
   .ref-backlink,
-  .ref-backlinks {
+  .ref-backlinks,
+  .ref-occ-pill {
     display: none !important;
   }
   .report-wrapper {
@@ -1182,8 +1284,63 @@ CLIENT_SCRIPT = r"""
     node.parentNode.replaceChild(frag, node);
   });
 
-  // ---- 3. Inject Inline Backlinks on References ----
-  refsMap.forEach(function(_, num) {
+  // ---- 3. Single-Pass Document Indexer: Map Citations to Headings & Excerpts ----
+  var callMetaMap = new Map();
+  var headings = Array.from(contentEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+  var mainHeadings = headings.filter(function(h) {
+    return !h.closest('.references-container') && h !== refHeading;
+  });
+  var allCiteLinks = Array.from(contentEl.querySelectorAll('.cite-ref a'));
+
+  function extractSentenceSnippet(blockEl, targetLink) {
+    if (!blockEl) return '';
+    var fullText = blockEl.textContent.replace(/\s+/g, ' ').trim();
+    var linkText = targetLink.textContent.trim();
+    var linkIdx = fullText.indexOf('[' + linkText + ']');
+    if (linkIdx === -1) linkIdx = fullText.indexOf(linkText);
+    if (linkIdx === -1) return fullText.slice(0, 80) + '...';
+    var start = Math.max(0, linkIdx - 40);
+    var end = Math.min(fullText.length, linkIdx + 40);
+    var snippet = fullText.slice(start, end).trim();
+    if (start > 0) snippet = '…' + snippet;
+    if (end < fullText.length) snippet = snippet + '…';
+    return snippet;
+  }
+
+  var hIdx = 0;
+  var currentHeading = { id: '', text: 'Overview', cleanText: 'Overview', shortSec: 'Overview' };
+
+  allCiteLinks.forEach(function(link) {
+    while (hIdx < mainHeadings.length &&
+           (mainHeadings[hIdx].compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      var rawTitle = mainHeadings[hIdx].textContent.trim();
+      var cleanTitle = rawTitle.replace(/^[#\d\.\s]+/, '') || rawTitle || 'Section';
+      var numMatch = rawTitle.match(/^(\d+(?:\.\d+)*)/);
+      var shortSec = numMatch ? ('§' + numMatch[1]) : (cleanTitle.length > 16 ? cleanTitle.slice(0, 14) + '…' : cleanTitle);
+      currentHeading = {
+        id: mainHeadings[hIdx].id,
+        text: rawTitle,
+        cleanText: cleanTitle,
+        shortSec: shortSec
+      };
+      hIdx++;
+    }
+
+    var block = link.closest('p, li, td, th, blockquote') || link.parentElement;
+    var snippet = extractSentenceSnippet(block, link);
+
+    callMetaMap.set(link.id, {
+      callId: link.id,
+      refNum: parseInt(link.getAttribute('data-ref'), 10),
+      headingId: currentHeading.id,
+      headingText: currentHeading.text,
+      shortSec: currentHeading.shortSec,
+      snippet: snippet
+    });
+  });
+
+  // ---- 4. Intelligent In-Situ Reference Backlinks with Unified Active Origin Pill ----
+  function renderReferenceBacklinks(num, activeCallId) {
     var item = document.getElementById('ref-' + num);
     if (!item) return;
     var bodyEl = item.querySelector('.ref-body');
@@ -1191,29 +1348,79 @@ CLIENT_SCRIPT = r"""
     var calls = refCallMap.get(num);
     if (!calls || calls.length === 0) return;
 
+    var existingBl = bodyEl.querySelector('.ref-backlinks');
+    if (existingBl) existingBl.remove();
+
+    var span = document.createElement('span');
+    span.className = 'ref-backlinks';
+
     if (calls.length === 1) {
+      var cid = calls[0];
+      var meta = callMetaMap.get(cid) || { headingText: 'Section', shortSec: 'Section', snippet: '' };
+      var isActive = (activeCallId === cid);
       var bl = document.createElement('a');
-      bl.className = 'ref-backlink';
-      bl.href = '#' + calls[0];
-      bl.setAttribute('data-call-id', calls[0]);
-      bl.setAttribute('aria-label', 'Jump back to citation ' + num + ' in text');
-      bl.innerHTML = '<span aria-hidden="true">↩</span>';
-      bodyEl.appendChild(bl);
+      bl.className = 'ref-occ-pill' + (isActive ? ' ref-occ-active' : '');
+      bl.href = '#' + cid;
+      bl.setAttribute('data-call-id', cid);
+      bl.setAttribute('aria-label', (isActive ? 'Return to reading in ' : 'Jump to citation in ') + meta.headingText + (meta.snippet ? ': ' + meta.snippet : ''));
+      bl.title = (isActive ? 'Return to text in ' : 'Citation in ') + meta.headingText + (meta.snippet ? ':\n"' + meta.snippet + '"' : '');
+      if (isActive) bl.setAttribute('aria-current', 'location');
+      bl.innerHTML = '<span class="pill-arrow" aria-hidden="true">↩</span> <span class="pill-sec">' + esc(meta.shortSec) + '</span>';
+      span.appendChild(bl);
     } else {
-      var span = document.createElement('span');
-      span.className = 'ref-backlinks';
-      span.setAttribute('aria-label', 'Jump back to citation ' + num + ' occurrences:');
-      span.innerHTML = '<span aria-hidden="true">↩</span> ';
-      calls.forEach(function(cid, idx) {
-        var occLink = document.createElement('a');
-        occLink.href = '#' + cid;
-        occLink.setAttribute('data-call-id', cid);
-        occLink.setAttribute('aria-label', 'Occurrence ' + (idx + 1));
-        occLink.textContent = (idx + 1);
-        span.appendChild(occLink);
-      });
-      bodyEl.appendChild(span);
+      var activeIdx = calls.indexOf(activeCallId);
+      if (activeIdx !== -1) {
+        var activeMeta = callMetaMap.get(activeCallId) || { headingText: 'Section', shortSec: 'Section', snippet: '' };
+        var actPill = document.createElement('a');
+        actPill.className = 'ref-occ-pill ref-occ-active';
+        actPill.href = '#' + activeCallId;
+        actPill.setAttribute('data-call-id', activeCallId);
+        actPill.setAttribute('aria-current', 'location');
+        actPill.setAttribute('aria-label', 'Return to reading in ' + activeMeta.headingText + ' (occurrence ' + (activeIdx + 1) + ' of ' + calls.length + '): ' + activeMeta.snippet);
+        actPill.title = 'Return to reading in ' + activeMeta.headingText + ' (occurrence ' + (activeIdx + 1) + '):\n"' + activeMeta.snippet + '"';
+        actPill.innerHTML = '<span class="pill-arrow" aria-hidden="true">↩</span> <span class="pill-sec">' + esc(activeMeta.shortSec) + '</span> <span class="pill-occ">(' + (activeIdx + 1) + ')</span>';
+        span.appendChild(actPill);
+
+        var othersWrap = document.createElement('span');
+        othersWrap.className = 'ref-occ-others';
+        othersWrap.setAttribute('aria-label', 'Other occurrences in report:');
+        calls.forEach(function(cid, idx) {
+          if (idx === activeIdx) return;
+          var m = callMetaMap.get(cid) || { headingText: 'Section', shortSec: 'Section', snippet: '' };
+          var link = document.createElement('a');
+          link.className = 'ref-occ-pill';
+          link.href = '#' + cid;
+          link.setAttribute('data-call-id', cid);
+          link.setAttribute('aria-label', 'Occurrence ' + (idx + 1) + ' in ' + m.headingText + ': ' + m.snippet);
+          link.title = 'Occurrence ' + (idx + 1) + ' in ' + m.headingText + (m.snippet ? ':\n"' + m.snippet + '"' : '');
+          link.textContent = (idx + 1);
+          othersWrap.appendChild(link);
+        });
+        span.appendChild(othersWrap);
+      } else {
+        var prefix = document.createElement('span');
+        prefix.className = 'ref-occ-prefix';
+        prefix.innerHTML = '<span aria-hidden="true">↩</span>';
+        span.appendChild(prefix);
+
+        calls.forEach(function(cid, idx) {
+          var m = callMetaMap.get(cid) || { headingText: 'Section', shortSec: 'Section', snippet: '' };
+          var link = document.createElement('a');
+          link.className = 'ref-occ-pill';
+          link.href = '#' + cid;
+          link.setAttribute('data-call-id', cid);
+          link.setAttribute('aria-label', 'Occurrence ' + (idx + 1) + ' in ' + m.headingText + ': ' + m.snippet);
+          link.title = 'Occurrence ' + (idx + 1) + ' in ' + m.headingText + (m.snippet ? ':\n"' + m.snippet + '"' : '');
+          link.textContent = (idx + 1);
+          span.appendChild(link);
+        });
+      }
     }
+    bodyEl.appendChild(span);
+  }
+
+  refsMap.forEach(function(_, num) {
+    renderReferenceBacklinks(num, null);
   });
 
   // ---- 3. Interactive Singleton Tooltip Engine ----
@@ -1320,6 +1527,13 @@ CLIENT_SCRIPT = r"""
   function showReturnChip(callId, refNum) {
     if (!chipEl) return;
     activeReturnTarget = callId;
+    var meta = callMetaMap.get(callId);
+    var labelText = 'Return to text';
+    if (meta && meta.shortSec) {
+      labelText = 'Return to ' + meta.shortSec;
+    }
+    var returnTextEl = chipBtn ? chipBtn.querySelector('.return-text') : null;
+    if (returnTextEl) returnTextEl.textContent = labelText;
     if (chipBadge) chipBadge.textContent = '[' + refNum + ']';
     chipEl.classList.add('visible');
     chipEl.setAttribute('aria-hidden', 'false');
@@ -1338,13 +1552,38 @@ CLIENT_SCRIPT = r"""
     el.classList.add('cite-pulse');
   }
 
+  function triggerBlockGlow(el) {
+    el.classList.remove('cite-caller-block-highlight');
+    void el.offsetWidth;
+    el.classList.add('cite-caller-block-highlight');
+    setTimeout(function() {
+      el.classList.remove('cite-caller-block-highlight');
+    }, 2000);
+  }
+
   function jumpToCallingText(callId) {
     var el = document.getElementById(callId);
     if (!el) return;
     hideReturnChip();
+
+    var parentDetails = el.closest('details');
+    if (parentDetails) parentDetails.open = true;
+
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     triggerPulse(el);
+
+    var parentBlock = el.closest('p, li, td, th, blockquote') || el.parentElement;
+    if (parentBlock) triggerBlockGlow(parentBlock);
+
+    el.setAttribute('tabindex', '-1');
     el.focus({ preventScroll: true });
+
+    var refNum = el.getAttribute('data-ref');
+    if (refNum) {
+      setTimeout(function() {
+        renderReferenceBacklinks(parseInt(refNum, 10), null);
+      }, 600);
+    }
 
     if (history.state && history.state.citeOrigin === callId) {
       history.back();
@@ -1363,8 +1602,10 @@ CLIENT_SCRIPT = r"""
         e.preventDefault();
         var callId = a.id;
         var refNum = a.getAttribute('data-ref');
+        var meta = callMetaMap.get(callId);
         history.replaceState({ citeOrigin: callId }, '');
-        history.pushState({ citeOrigin: callId, refId: 'ref-' + refNum, refNum: refNum }, '', '#ref-' + refNum);
+        history.pushState({ citeOrigin: callId, refId: 'ref-' + refNum, refNum: refNum, headingText: meta ? meta.headingText : '' }, '', '#ref-' + refNum);
+        renderReferenceBacklinks(parseInt(refNum, 10), callId);
         var targetRef = document.getElementById('ref-' + refNum);
         if (targetRef) targetRef.scrollIntoView({ behavior: 'smooth' });
         showReturnChip(callId, refNum);
@@ -1378,8 +1619,10 @@ CLIENT_SCRIPT = r"""
       e.preventDefault();
       var jCallId = activeTrigger.id;
       var jRefNum = activeTrigger.getAttribute('data-ref');
+      var jMeta = callMetaMap.get(jCallId);
       history.replaceState({ citeOrigin: jCallId }, '');
-      history.pushState({ citeOrigin: jCallId, refId: 'ref-' + jRefNum, refNum: jRefNum }, '', '#ref-' + jRefNum);
+      history.pushState({ citeOrigin: jCallId, refId: 'ref-' + jRefNum, refNum: jRefNum, headingText: jMeta ? jMeta.headingText : '' }, '', '#ref-' + jRefNum);
+      renderReferenceBacklinks(parseInt(jRefNum, 10), jCallId);
       var targetRefJump = document.getElementById('ref-' + jRefNum);
       if (targetRefJump) targetRefJump.scrollIntoView({ behavior: 'smooth' });
       showReturnChip(jCallId, jRefNum);
@@ -1387,11 +1630,13 @@ CLIENT_SCRIPT = r"""
       return;
     }
 
-    var backlink = e.target.closest('.ref-backlink, .ref-backlinks a');
+    var backlink = e.target.closest('.ref-occ-pill, .ref-backlink');
     if (backlink) {
       e.preventDefault();
       var targetId = backlink.getAttribute('data-call-id');
-      jumpToCallingText(targetId);
+      if (targetId) {
+        jumpToCallingText(targetId);
+      }
       return;
     }
 
@@ -1413,12 +1658,18 @@ CLIENT_SCRIPT = r"""
   window.addEventListener('popstate', function(e) {
     if (e.state && e.state.citeOrigin) {
       if (e.state.refId && window.location.hash === '#' + e.state.refId) {
+        renderReferenceBacklinks(parseInt(e.state.refNum, 10), e.state.citeOrigin);
         showReturnChip(e.state.citeOrigin, e.state.refNum || '');
       } else {
         var el = document.getElementById(e.state.citeOrigin);
         if (el) {
+          var parentDetails = el.closest('details');
+          if (parentDetails) parentDetails.open = true;
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           triggerPulse(el);
+          var parentBlock = el.closest('p, li, td, th, blockquote') || el.parentElement;
+          if (parentBlock) triggerBlockGlow(parentBlock);
+          el.setAttribute('tabindex', '-1');
           el.focus({ preventScroll: true });
         }
         hideReturnChip();
