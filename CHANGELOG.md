@@ -20,6 +20,7 @@ when that release PR is cut (the release workflow extracts only the
 - Interactive research area plan review (Step 2): after clarifying questions are answered, the orchestrator proposes the 2-5 research aspects (or top 2 for `light-research`) with scope breakdowns and anticipated evidence tools for user feedback before initiating subagents.
 - User feedback discipline: incorporated immediately to update aspects and launch research without extra confirmation rounds, unless the user explicitly requests re-confirmation of the revised plan (Case C).
 - Clarifications and autonomy hints: autonomy hints do not waive Step 1 or Step 2 interactive turns; `no-interview` skips both Step 1 questions and Step 2 plan review; observed non-interactive sessions degrade gracefully with assumed plan recorded in `reports/<TOPIC>/assumptions.md`.
+- Test suite: new empirical test case `agent-test/deep-research-q03-plan-review` verifying Step 2 plan proposal and user feedback precedence without premature evidence queries.
 
 ## [1.7.0] - 2026-09-08
 
