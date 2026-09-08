@@ -17,11 +17,11 @@ clinical-trial / gene / variant / drug / disease / patent retrieval,
 publication-grade plotting, PubMed weekly processing, Python environment
 bootstrapping, and automated MCP runtime onboarding.
 
-Current release: repo v1.7.0 with five independently versioned skills:
+Current release: repo v1.8.0 with five independently versioned skills:
 
 | Skill | Version | What it does |
 |---|---|---|
-| `bioresearcher-deep-research` | 1.2.0 | Deep-research orchestrator: clarify → decompose into 2–5 aspects → parallel (or sequential) investigation → PubMed E-utilities reference vetting → fully cited Markdown + HTML report with 1-click active return navigation |
+| `bioresearcher-deep-research` | 1.3.0 | Deep-research orchestrator: clarify → align research area plan → decompose into 2–5 aspects → parallel (or sequential) investigation → PubMed E-utilities reference vetting → fully cited Markdown + HTML report with 1-click active return navigation |
 | `bioresearcher-onboard` | 1.1.0 | Bootstraps `.bioresearcher-runtime/` in the project: portable Node.js 22, vendored biomcp (official or npmmirror mirror, auto-detected), optional R/Biowasm/SQLite features, and registers the server into OpenCode, Claude Code, Cursor, ZCode, Pi, CodeBuddy, or WorkBuddy |
 | `bioresearcher-plot-making` | 1.0.0 | Biomedical plotting router + engine: publication-grade composite figures (protein–binder complexes, conformational dynamics, literature method summaries, case registers, evidence tables) with three-layer QA gates |
 | `bioresearcher-pubmed-weekly` | 1.0.0 | Downloads and parses NCBI's past-week PubMed updatefiles (pure-Python streaming parser handling both `<PubmedArticle>` and `<DeleteCitation>`) into one Excel workbook |
@@ -89,7 +89,7 @@ Distribution: skills CLI · Claude plugin marketplace (bundled MCP+subagent) ·
 ### 3.2 Workflow (deep research)
 
 Six steps: ① clarifying interview (skippable via `no-interview`) →
-② decompose the topic into 2–5 research aspects (`light-research` keeps the
+② decompose topic and align research area plan (`light-research` keeps the
 top two) → ③ one worker per aspect, parallel or sequential (tool choice per
 `references/tool-selection.md`, collecting identifiers) → ④ synthesize
 `reports/<TOPIC>/final_report.md` (numbered citations + bibliography) →
@@ -135,7 +135,7 @@ Case-sensitive, leading tokens (trailing `:` tolerated):
 
 | Prefix | Effect |
 |---|---|
-| `no-interview` | Skip the Step-1 interview |
+| `no-interview` | Skip the interview workflow (both Step-1 questions and Step-2 plan review) |
 | `light-research` | Research only the top two aspects |
 | `no-html` | Markdown only; skip HTML rendering |
 

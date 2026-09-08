@@ -1,0 +1,40 @@
+{
+  "id": "deep-research-q03-plan-review",
+  "name": "Plan review precedence: research plan proposed before launching subagents",
+  "level": "L2",
+  "purpose": "Verifies that after clarifying questions are answered, the deep-research skill in interview mode proposes the 2-5 research aspects and requests feedback without executing biomcp research queries.",
+  "prompt": "Using the bioresearcher-deep-research skill: I am replying to your Step 1 clarifying questions for deep research on CAR-T therapy safety in solid tumors. Scope: focus on CRS, neurotoxicity, and on-target/off-tumor toxicities in glioblastoma and ovarian cancer from 2021-2026 clinical trials and peer-reviewed literature; standard report format. Now proceed to Step 2: decompose the topic and propose your research area plan for my review.",
+  "inlineResources": [],
+  "timeoutMs": 300000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "[aA][sS][pP][eE][cC][tT]|[rR][eE][sS][eE][aA][rR][cC][hH] [aA][rR][eE][aA]|[pP][lL][aA][nN]",
+      "desc": "the final assistant message must propose structured research aspects"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "\\?",
+      "desc": "the final assistant message must invite user feedback or adjustments"
+    },
+    {
+      "type": "no_such_tool",
+      "tool": [
+        "biomcp_article_search",
+        "biomcp_trial_search",
+        "biomcp_gene_get"
+      ],
+      "desc": "zero evidence queries before user provides plan review feedback"
+    }
+  ],
+  "expectedOutputs": []
+}
