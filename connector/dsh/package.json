@@ -1,6 +1,6 @@
 {
   "name": "dsh-bioresearcher",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Biomedical research plugin for DeepSeek Harness (dsh): biomcp MCP server tools, scientific plotting skills, and deep-research subagent",
   "type": "module",
   "main": "index.js",

@@ -33,6 +33,9 @@ Example:
 ```
 
 When PMID is unavailable, use DOI: `DOI: 10.xxxx/xxxxx`. Both may be given.
+Online ahead of print records may omit Volume(Issue):Pages until assigned;
+`scripts/vet-references.py` automatically resolves and backfills these fields
+via NCBI PubMed E-utilities.
 
 ### Clinical trials (from trial_search / trial_get)
 

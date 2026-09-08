@@ -13,6 +13,26 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [Unreleased]
+
+## [1.7.0] - 2026-09-08
+
+### bioresearcher-deep-research 1.2.0
+
+- `scripts/vet-references.py`: new zero-dependency script for independent programmatic citation validation via NCBI PubMed E-utilities (`esummary`), backfilling missing volume, issue, and page numbers, correcting typographical discrepancies, and guarding against mismatching records with rate-limiting compliance and fail-safe error handling.
+- `scripts/markdown-to-html.py`: publication-grade HTML report generator featuring:
+  - Header branding hero card with embedded official BioResearcher logo (`icon.jpg`), report title, and metadata grid (topic, date, scope).
+  - Responsive Table of Contents: sticky desktop sidebar with ScrollSpy and mobile slide-over drawer with backdrop overlay.
+  - Interactive citation system: superscript badges, floating boundary-aware tooltips with tail flipping, auto-linkified DOIs, PMIDs, NCT trial IDs, and smooth scroll to bibliography items with animated target highlight pulse.
+  - Bidirectional citation navigation: jump to references and seamlessly resume reading in one click via unified active origin pill (`[↩ §Section (k)]`), context-aware multiway occurrence pills with section and excerpt previews, synchronized floating return chip (`← Return to §Section [N]`), and 3-stage visual reorientation (center scroll, badge pulse, ambient paragraph glow) with native browser Back gesture and WCAG 2.2 AA touch target compliance.
+  - 100% self-contained offline architecture with zero external assets and print-ready typography.
+- `SKILL.md`: added Step 5b reference vetting phase prior to final report and HTML generation.
+
+### Packaging & Connectors
+
+- Bump repository product package to v1.7.0 across Claude Code plugin, WorkBuddy connector, OpenCode plugin, and DeepSeek Harness (`dsh`) connector.
+- Synchronize all connector distribution bundles with bioresearcher-deep-research 1.2.0 enhancements and verified reproducible build tarballs.
+
 ## [1.6.0] - 2026-09-07
 
 ### DeepSeek Harness (dsh) connector & plugin

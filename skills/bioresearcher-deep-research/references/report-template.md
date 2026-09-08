@@ -105,6 +105,7 @@ combination [4]."
 - [ ] Access dates for web/official-site sources
 - [ ] Limitations honest about gaps and auth-gated tools not used
 - [ ] Findings re-numbered into one bibliography in final_report.md
+- [ ] References vetted against NCBI via vet-references.py (volume, issue, pages backfilled)
 - [ ] Conflicting findings surfaced, not silently dropped
 
 ## Common mistakes

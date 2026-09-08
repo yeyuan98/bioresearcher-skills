@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.1.1"
+  version: "1.2.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -214,11 +214,30 @@ final report addressing the user's inquiry, following the mandatory 6-section
 structure in `references/report-template.md` (Executive Summary, Data Sources,
 Analysis Methodology, Findings, Limitations, References) with full
 bibliography. Reconcile conflicting findings across aspects explicitly rather
-than silently dropping one side.
+than silently dropping one side. Write the synthesized draft to
+`reports/<TOPIC>/final_report.md`.
+
+### Step 5b: Vet references (independent NCBI verification)
+
+After synthesizing `reports/<TOPIC>/final_report.md`, run the independent
+reference vetting script to programmatically validate citations against NCBI
+PubMed E-utilities and backfill volume, issue, and page numbers:
+
+```bash
+python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --apply
+```
+
+- **Fail-safe contract**: on API timeout, rate-limiting, or network failure, the
+  script exits 0 and keeps pre-vetting citations unchanged. Non-PMID citations
+  (clinical trials, patents, genes, web URLs) are automatically preserved.
+- If the script is unreachable (in harnesses without filesystem access to
+  `<skill_dir>`), proceed directly to Step 6 without blocking.
+- When run without `--apply`, the script outputs clean correction suggestions
+  for manual inspection before final HTML rendering.
 
 ### Step 6: Write final report + HTML
 
-- Write `reports/<TOPIC>/final_report.md`.
+- Ensure `reports/<TOPIC>/final_report.md` is finalized and vetted.
 - Then render `reports/<TOPIC>/final_report.html` - ALWAYS by default,
   unless the query carries the leading `no-html` prefix or the user
   explicitly declined HTML. The markdown report is the complete deliverable;
