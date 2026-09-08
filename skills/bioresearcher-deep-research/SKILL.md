@@ -1,25 +1,25 @@
 ---
 name: bioresearcher-deep-research
-description: "Deep biomedical research orchestrator powered by the biomcp MCP server: clarifies the question, decomposes the topic into 2-5 research aspects, researches each aspect via parallel subagents (sequential fallback), and synthesizes a fully cited report under reports/<topic>/. Use for deep research, literature review, clinical trials, drugs, genes, variants, diseases, patents, PubMed, functional genomics, biomcp."
+description: "Deep biomedical research orchestrator powered by the biomcp MCP server: clarifies the question, aligns research area plan with user, decomposes into 2-5 aspects, researches each aspect via subagents (sequential fallback), and synthesizes a fully cited report. Use for deep research, literature review, clinical trials, drugs, genes, variants, diseases, patents, PubMed, functional genomics, biomcp."
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
 
 # Bioresearcher Deep Research
 
-Reference-based biomedical research: interview the user, split the topic into
-research aspects, investigate each aspect with biomcp tools, then synthesize a
-succinct, accurately cited report. Harness-agnostic: works with or without a
-subagent/Task tool.
+Reference-based biomedical research: interview the user to clarify scope and
+align the research plan, split the topic into research aspects, investigate each
+aspect with biomcp tools, then synthesize a succinct, accurately cited report.
+Harness-agnostic: works with or without a subagent/Task tool.
 
 ## What it does
 
-- Decomposes a biomedical question (disease, drug, gene, variant, trial
-  landscape, patent space, dataset) into 2-5 independent research aspects.
+- Clarifies the research question and proposes a structured research plan
+  with 2-5 independent aspects for user feedback before execution.
 - Runs one focused worker per aspect - in parallel via the harness's
   subagent/Task tool when available, sequentially otherwise.
 - Workers query the biomcp MCP server (articles/PubMed, ClinicalTrials.gov,
@@ -77,7 +77,7 @@ mid-query never trigger.
 
 | Prefix | Effect |
 |--------|--------|
-| `no-interview` | Skip the Step 1 interview entirely |
+| `no-interview` | Skip the interview workflow entirely (both Step 1 questions and Step 2 plan review) |
 | `light-research` | Combine and/or pick only the top TWO aspects (Step 2) |
 | `no-html` | Skip the Step 6 HTML rendering (markdown-only output) |
 
@@ -89,11 +89,12 @@ evidence is missing.
 
 Harness autonomy hints ("operate autonomously", "don't block", "user not
 watching", auto-accept banners) govern tool-permission confirmations and edit
-approvals. They do NOT waive this skill's Step 1 interview: the interview is
-one completed assistant turn containing questions - not a blocking
-confirmation - so those hints never require skipping it. When such a hint
-seems to conflict with this workflow, treat the Step 1 interview and the
-Step 6 output contract as deliverables that proceed unchanged.
+approvals. They do NOT waive this skill's interactive interview workflow (Step 1
+clarification and Step 2 plan review): the interview turns are completed
+assistant turns engaging the user - not blocking permission confirmations - so
+those hints never require skipping them. When such a hint seems to conflict with
+this workflow, treat the Step 1 interview, Step 2 plan review, and the Step 6
+output contract as deliverables that proceed unchanged.
 
 ### Step 1: Clarify (interview - mandatory)
 
@@ -128,7 +129,7 @@ start researching." GOOD: post the questions, end the turn, wait. Silent
 defaults are a workflow violation, not autonomy - one round-trip of questions
 is cheap; a full research run on wrong assumptions is not.
 
-### Step 2: Decompose
+### Step 2: Decompose & Review Plan
 
 Comprehend the (clarified) inquiry and identify 2-5 critical research aspects
 that together answer it.
@@ -138,8 +139,56 @@ that together answer it.
 - Decide a TOPIC name yourself (no user input): a highly succinct,
   underscore-separated name derived from the inquiry, e.g.
   `braf_inhibitor_resistance`.
-- Track the aspect list with the harness's todo mechanism if available
-  (TodoWrite or equivalent); otherwise keep it in working memory.
+
+**Interview waiver (`no-interview`):**
+If the query carries the leading `no-interview` prefix, skip the plan review
+turn entirely: finalize the 2-5 aspects, track them with the harness's todo
+mechanism if available (TodoWrite or equivalent), and proceed immediately to
+Step 3 and Step 4.
+
+**Plan review (interview mode - default):**
+When running in interview mode (without `no-interview`), present your proposed
+research area plan to the user before launching workers:
+
+1. Formulate and present:
+   - A structured list of the 2-5 research aspects (or top 2 under
+     `light-research`), each with an aspect title, 1-2 sentence focus summary,
+     and primary tools/evidence sources (e.g. PubMed/articles,
+     ClinicalTrials.gov, genes, drugs, patents).
+   - An explicit prompt inviting user feedback and adjustments on these
+     research areas.
+2. End your turn with the plan proposal (using the harness's question/ask tool
+   when available, or chat text) and WAIT for the user's reply. Do not spawn
+   workers or create output directories before receiving user feedback.
+3. User feedback handling:
+   - **Case A (approval / "looks good" / "proceed"):** Proceed directly to
+     Step 3 and Step 4.
+   - **Case B (default feedback - modifications without re-review request):**
+     Incorporate the user's requested adjustments, additions, drops, or scope
+     changes into the research aspects immediately (strictly adhering to the
+     2-5 aspect ceiling, or top 2 under `light-research`). Then **PROCEED
+     DIRECTLY to Step 3 and Step 4. Do NOT ask for another round of
+     confirmation.**
+   - **Case C (special case - explicit re-confirmation requested):** ONLY if the
+     user explicitly asks to review or confirm the revised plan (e.g. "show me
+     the updated plan before starting" or "revise the plan and ask me again"),
+     present the updated plan in a new turn and wait for confirmation before
+     dispatching subagents (limit plan re-confirmations to at most 2 rounds).
+   - **User inquiries during review:** If the user asks a clarifying question
+     (e.g. "can we include pediatric trials?"), answer succinctly in 1-2
+     sentences, incorporate the suggested scope into the relevant aspect, and
+     proceed directly to Step 3 and Step 4 unless explicit re-confirmation was
+     demanded.
+
+**Degrade to defaults on OBSERVATION:**
+Like Step 1, degrade only after the plan was posted and the session
+demonstrably produced no usable reply in-turn (e.g. an ask tool returning
+immediately empty in unattended/headless runs): proceed under the initial
+proposed plan, record the default plan in `reports/<TOPIC>/assumptions.md`,
+and cite that file in the report's Limitations section.
+
+Track the finalized aspect list with the harness's todo mechanism if available
+(TodoWrite or equivalent); otherwise keep it in working memory.
 
 ### Step 3: Create the output directory
 
@@ -284,8 +333,8 @@ reports/<TOPIC>/
 ├── <aspect_1>.md          # per-aspect research notes + citations
 ├── <aspect_2>.md
 ├── ...
-├── assumptions.md         # only when Step 1 degrades (observed
-│                          # non-interactive session)
+├── assumptions.md         # only when Step 1 or Step 2 degrades
+│                          # (observed non-interactive session)
 ├── final_report.md        # synthesized report (always)
 └── final_report.html      # rendered report (default; skipped only via
                            # `no-html`, user decline, or converter gap -

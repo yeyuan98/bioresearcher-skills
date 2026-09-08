@@ -19,7 +19,7 @@ BioResearcher 是一套面向生物医学研究的**智能体技能包（Agent S
 
 | 技能 | 版本 | 功能 |
 |---|---|---|
-| `bioresearcher-deep-research` | 1.2.0 | 深度研究编排器：澄清问题 → 把主题拆成 2–5 个研究侧面 → 并行（或顺序）调研 → PubMed E-utilities 自动核验补全引用 → 产出带编号引用的 Markdown + HTML 报告（支持一键回跳阅读锚点） |
+| `bioresearcher-deep-research` | 1.3.0 | 深度研究编排器：澄清问题并对齐研究方案 → 把主题拆成 2–5 个研究侧面 → 并行（或顺序）调研 → PubMed E-utilities 自动核验补全引用 → 产出带编号引用的 Markdown + HTML 报告（支持一键回跳阅读锚点） |
 | `bioresearcher-onboard` | 1.1.0 | 项目本地运行时引导：在 `.bioresearcher-runtime/` 下载便携 Node.js 22、供应商化 biomcp（自动探测官方源或 npmmirror 镜像）、按需启用 R/Biowasm/SQLite，并把服务注册进 OpenCode、Claude Code、Cursor、ZCode、Pi、CodeBuddy 或 WorkBuddy |
 | `bioresearcher-plot-making` | 1.0.0 | 生物医学科研绘图路由与引擎：按数据类型选择规范，产出发表级复合图（蛋白-结合体结构、构象动态、文献方法综述、病例登记、证据表），内置三层 QA 门禁 |
 | `bioresearcher-pubmed-weekly` | 1.0.0 | 下载并解析 NCBI 上周 PubMed updatefiles（纯 Python 流式解析器，同时处理 `<PubmedArticle>` 与 `<DeleteCitation>`），汇总为一个 Excel 工作簿 |
@@ -79,8 +79,8 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 
 ### 3.2 工作流（以深度研究为例）
 
-六步：① 澄清访谈（`no-interview` 前缀可跳过）→ ② 主题分解为 2–5 个研究
-侧面（`light-research` 前缀只取前两个）→ ③ 每侧面一个 worker 并行/顺序
+六步：① 澄清访谈（`no-interview` 前缀可跳过）→ ② 主题分解与方案对齐（`light-research`
+前缀只取前两个）→ ③ 每侧面一个 worker 并行/顺序
 调研（按 `references/tool-selection.md` 选择工具，收集标识符）→ ④ 汇总为
 `reports/<TOPIC>/final_report.md`（编号引用 + 文献表）→ ⑤ 默认渲染
 `final_report.html`（`no-html` 前缀跳过）→ ⑥ 交付。Worker 契约见
@@ -123,7 +123,7 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 
 | 前缀 | 效果 |
 |---|---|
-| `no-interview` | 跳过第一步访谈 |
+| `no-interview` | 跳过访谈工作流（含第一步提问与第二步方案确认） |
 | `light-research` | 只研究前两个侧面（轻量模式） |
 | `no-html` | 只出 Markdown，不渲染 HTML |
 

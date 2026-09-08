@@ -11,10 +11,10 @@ BioResearcher 双语文档共享术语锚点。中文译名以 WorkBuddy 连接�
 | harness | 宿主 / 运行环境 | opencode、Claude Code、Codex、Cursor、Gemini CLI、WorkBuddy 等 |
 | MCP (Model Context Protocol) | MCP（模型上下文协议） | 本项目使用 stdio JSON-RPC 传输 |
 | biomcp-ts / biomcp | biomcp-ts MCP 服务 / biomcp 包 | npm 包名 `biomcp`，本仓库钉扎 `1.1.1` |
-| deep research | 深度研究 | `bioresearcher-deep-research` 技能：访谈→分解→并行调研→引用报告 |
+| deep research | 深度研究 | `bioresearcher-deep-research` 技能：访谈→方案对齐→分解→并行调研→引用报告 |
 | aspect (research aspect) | 研究侧面（连接器文案作「研究方面」） | 深度研究把主题拆成 2–5 个独立侧面，每侧面一个 worker |
 | fan-out / sequential fallback | 并行扇出 / 顺序回退 | 有子代理（Task）工具时并行；否则顺序执行 |
-| interview (Step 1) | 访谈（第一步） | 深度研究强制先集中提问澄清，除非 `no-interview` 前缀 |
+| interview (Step 1-2) | 访谈（第一至二步） | 深度研究强制先集中提问澄清并对齐方案，除非 `no-interview` 前缀 |
 | request prefix | 请求前缀 | `no-interview` / `light-research` / `no-html`，置于提问开头 |
 | cited report | 引用报告 | `reports/<topic>/final_report.md` + `.html`，编号引用 + 文献表 |
 | publication-grade figure | 发表级科研绘图（连接器文案作「发表级科研图表」） | `bioresearcher-plot-making` 技能，三层 QA 门禁 |
