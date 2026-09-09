@@ -15,6 +15,16 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+### bioresearcher-deep-research 1.4.0
+
+- Structured evidence ledger for citation integrity: workers append one JSON record per potentially-citable source to `reports/<TOPIC>/evidence/<ASPECT>.jsonl` as they search (fields copied verbatim from biomcp tool output; missing fields null, never invented), and compose bibliographies by re-reading the ledger (worker-protocol rule 8, two-file worker contract).
+- New `scripts/evidence-ledger.py` (zero-dep, fail-safe): `add` (validate + normalize + primary/secondary-id merge-fill dedupe), `merge` (per-aspect union; own output and `_`-prefixed quarantine files excluded), `verify` (NCBI esummary audit + fill-missing-only backfill; title backfill for LitSense hint records; epub records legitimately stay locator-less), `bib` (numbered Vancouver bibliography with computed initials, epub locator-less rendering, optional `--expand-pages`, loud `[MISSING field]`/`[MISSING record]`), `get`/`keys`/`stats`, and a hermetic `selftest` feature matrix.
+- New shared `scripts/ncbi_esummary.py` module; `vet-references.py` now imports the esummary client from it (behavior unchanged, DRY).
+- Orchestrator Step 5a (merge -> verify -> bib; References section composed from `bib` output) added before the vet-references safety net; output layout gains the `evidence/` subtree.
+- LitSense hint enrichment duty: title-less records must be enriched via `article_get(pmid)` before citing (standard retry ladder, then Step 5a backfill).
+- Docs: citations.md integrity rule 6 (ledger-first) + epub rendering rule; article-literature.md biomcp >= 1.4.0 field contract and backend locator coverage; best-practices.md "Store first, cite later"; report-template.md checklist.
+- Requires the biomcp 1.4.0 server pin (locator fields, entity decoding, honest LitSense mapping); tolerates older pins via Step 5a backfill.
+
 ### bioresearcher-onboard 1.1.1
 
 - Pin sweep: vendored biomcp server version bumped from 1.1.1 to 1.4.0 (`scripts/onboard.mjs` install pin and docs), picking up PubMed/EuropePMC citation locator fields (volume/issue/pages), HTML-entity decoding, and honest LitSense hint mapping.

@@ -78,6 +78,30 @@ Full metadata plus citations for a known PMID:
 | Fewer results than limit on federated search | dedup-then-limit semantics | page with `offset`; duplicates across sources collapse into one entry |
 | citation section empty in fast mode | providers returned no items (fast auto-falls back to PubMed) | retry with `citation_mode: "full"` |
 
+## Field contract (biomcp >= 1.4.0)
+
+Article records from every article tool path (`article_search`,
+`article_get`, `batch_get`, `discover`) carry: `pmid`, `pmcid`, `doi`,
+`title`, `authors` (full "LastName ForeName" strings - Vancouver initials are
+computed by the evidence-ledger `bib` command), `journal`, `publication_date`
+(raw string), `volume`, `issue`, `pages` (null when the upstream record has
+none, e.g. epub-ahead-of-print), plus `mesh_headings`/`publication_types`/
+`keywords`/`chemicals` on PubMed paths. HTML entities are decoded to UTF-8.
+
+Backend coverage notes:
+
+- Only `pubmed` and `europepmc` return locator fields (volume/issue/pages).
+- `semantic_scholar`, `pubtator`, and `litsense` records never carry
+  locators.
+- LitSense hits are HINT records: `{pmid, pmcid, score, source}` only - no
+  title, no abstract. Before citing a LitSense-only PMID, enrich it with
+  `article_get(pmid)` (one sequential call; standard retry ladder on
+  failure). If enrichment fails, the Step 5a ledger `verify` backfills the
+  title from NCBI esummary.
+
+When citation metadata matters most, pin `source: "pubmed"` or
+`"europepmc"` so locators arrive directly in the search payload.
+
 ## Integration notes
 
 - Citation chains: `article_get(sections:["citation"])` on a seminal paper is
