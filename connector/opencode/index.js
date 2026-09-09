@@ -35,12 +35,12 @@ export const BioresearcherPlugin = async () => {
 
   return {
     config: async (cfg) => {
-      // 1. Automatically register biomcp stdio MCP server (pinned to 1.1.1)
+      // 1. Automatically register biomcp stdio MCP server (pinned to 1.4.0)
       cfg.mcp = cfg.mcp || {};
       if (!cfg.mcp["biomcp"]) {
         cfg.mcp["biomcp"] = {
           type: "local",
-          command: [npxCmd, "-y", "-p", "biomcp@1.1.1", "biomcp"],
+          command: [npxCmd, "-y", "-p", "biomcp@1.4.0", "biomcp"],
           enabled: true,
           timeout: 120000,
           environment: {

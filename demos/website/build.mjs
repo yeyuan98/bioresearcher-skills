@@ -14,7 +14,7 @@
  * collected, then the build fails ONCE with the full list):
  *   VERSION, skills.json, per-skill SKILL.md frontmatter (skills dir),
  *   connector/workbuddy/skill-locales.json, connector/workbuddy/icon.jpg,
- *   demos/lib/biomcp-tools@1.1.1.json,
+ *   demos/lib/biomcp-tools@1.4.0.json,
  *   demos/scenarios (per-scenario scenario.json),
  *   demos/artifacts (per-case result.json, provenance.json, outputs,
  *   screenshots),
@@ -184,7 +184,7 @@ function loadInputs() {
   const skillsJson = need("skills.json");
   const locales = need("connector/workbuddy/skill-locales.json");
   const icon = need("connector/workbuddy/icon.jpg");
-  const registry = need(path.join("demos", "lib", "biomcp-tools@1.1.1.json"));
+  const registry = need(path.join("demos", "lib", "biomcp-tools@1.4.0.json"));
   const stringsEn = need(path.join("demos", "website", "src", "strings.en.json"));
   const stringsZh = need(path.join("demos", "website", "src", "strings.zh.json"));
   const skillsExtra = need(path.join("demos", "website", "src", "skills-extra.json"));

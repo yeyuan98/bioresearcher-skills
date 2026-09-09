@@ -4,11 +4,11 @@
 >
 > 覆盖：功能、技术架构/API 文档、核心特性、开通流程、应用案例、Demo 链接与
 > 常见 Q&A。所有请求/响应样本均为**探针真实捕获**（`demos/lib/mcp-probe.mjs`
-> 直连 `biomcp@1.1.1`，零 LLM、零密钥），非手写示例。
+> 直连 `biomcp@1.4.0`，零 LLM、零密钥），非手写示例。
 
 ## 1. 功能总览
 
-biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.1.1**）是一个生物医学数据
+biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.4.0**）是一个生物医学数据
 **MCP 服务器**：通过 stdio JSON-RPC 向智能体宿主暴露 41 个核心工具 +
 15 个可选工具，覆盖文献、临床试验、基因、变异、药物、疾病、专利、
 组学数据库、GTEx、Ensembl/PDB 等公开数据源。默认**免密钥**即可使用。
@@ -24,7 +24,7 @@ biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.1.1**）是一个生物医学
 
 - **免密钥默认可用**：41 个核心工具零配置零凭证（个别增强除外，见 5.3）
 - **服务内建按源限流**：无需（也不应）在客户端 sleep/节流（数值见 3.3）
-- **确定性版本钉扎**：`npx -p biomcp@1.1.1` 精确版本，避免 npx 缓存
+- **确定性版本钉扎**：`npx -p biomcp@1.4.0` 精确版本，避免 npx 缓存
   语义漂移与 peer 依赖问题（禁止裸 `npx biomcp`，见 Q&A Q1）
 - **诊断工具**：`biomcp doctor` 环境体检（不启动服务器）；
   `biomcp_configure` 交互式管理可选凭证（写入项目 `.biomcp.json`）
@@ -60,9 +60,9 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 | 变体 | 命令数组 |
 |---|---|
-| 全功能（db + R 分析） | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-| 核心 + R 分析（无 db） | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","biomcp"]` |
-| 仅核心 | `["npx","-y","-p","biomcp@1.1.1","biomcp"]` |
+| 全功能（db + R 分析） | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+| 核心 + R 分析（无 db） | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","biomcp"]` |
+| 仅核心 | `["npx","-y","-p","biomcp@1.4.0","biomcp"]` |
 
 要求 Node.js ≥ 22.13。`-p` 精确钉扎使 peer 依赖随包解析（裸
 `npx biomcp` 会因缓存无法解析 peer 依赖而失败）。
@@ -193,7 +193,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 从 biomcp-python 迁移：旧包采用 `*-searcher`/`*-getter` 后缀命名，本包为
 `领域_动作` 短名（如 `article_search` / `gene_get`）；完整逐条映射表见仓库
 `docs/migration-from-plugin.md`。能力差异（降级）：openFDA 的批准/标签/
-不良事件三检索在 1.1.1 中未提供（不良事件能力部分并入药物工具链）；
+不良事件三检索在 1.4.0 中未提供（不良事件能力部分并入药物工具链）；
 旧 `protocol` 分节由 `core`+`eligibility` 分节承担。其余领域
 （文献/基因/变异/药物/疾病/试验/专利/组学）为超集。
 
@@ -212,7 +212,7 @@ BioResearcher 运行时」（`bioresearcher-onboard` 技能自动落地
 ```json
 {"$schema": "https://opencode.ai/config.json",
  "mcp": {"biomcp": {"type": "local",
-   "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"]}}}
+   "command": ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]}}}
 ```
 
 服务器命名 `biomcp` 时工具显示为 `biomcp_article_search`、`biomcp_gene_get`
@@ -224,7 +224,7 @@ BioResearcher 运行时」（`bioresearcher-onboard` 技能自动落地
 
 ```json
 {"mcpServers": {"biomcp": {"type": "stdio", "command": "npx",
-  "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"], "timeout": 120000}}}
+  "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"], "timeout": 120000}}}
 ```
 
 手动注册与插件捆绑**不会按命令去重**，二选一并停用另一个（`/mcp`）。
@@ -254,7 +254,7 @@ WorkBuddy 用户直接装连接器（市场托管，npmmirror + Node 22）。
 ### 5.4 健康检查（doctor）
 
 ```bash
-npx -y biomcp@1.1.1 doctor --client opencode   # 也支持 claude-code/codex/…
+npx -y biomcp@1.4.0 doctor --client opencode   # 也支持 claude-code/codex/…
 ```
 
 仅诊断（Node 版本、npx、网络），不启动服务器；退出码 0 = 健康。
@@ -289,7 +289,7 @@ npx -y biomcp@1.1.1 doctor --client opencode   # 也支持 claude-code/codex/…
 ## 7. 常见 Q&A
 
 **Q1：为什么不能用裸 `npx biomcp`？**
-npx 缓存无法解析 peer 依赖（webr/mysql2 等），必须 `-p biomcp@1.1.1 -p
+npx 缓存无法解析 peer 依赖（webr/mysql2 等），必须 `-p biomcp@1.4.0 -p
 webr@0.6 …` 形式钉扎（见 3.2）。
 
 **Q2：需要密钥吗？**
@@ -303,7 +303,8 @@ npx 冷启动要下载包（约 10–60 s，之后有缓存）；连接超时建
 不需要。服务端按源限流（3.3）；例外：HPA 分节与 GEO 补充文件不限流。
 
 **Q5：支持远程/SSE 部署吗？**
-1.1.1 仅 stdio 本地子进程形态，无远程模式。
+本仓库钉扎接线仅 stdio 本地子进程。1.3.0 起服务端另提供 streamable-HTTP
+远程模式（`biomcp serve`）；本仓库接线不使用。
 
 **Q6：R 分析工具为何没出现？**
 可选组随启动注册：命令需含 `-p webr@0.6`（R）/`-p mysql2@3`（db），并设置
@@ -320,7 +321,7 @@ npx 冷启动要下载包（约 10–60 s，之后有缓存）；连接超时建
 ≥ 22.13（含 npx）。
 
 **Q10：版本如何钉扎/升级？**
-所有接线示例精确钉 `biomcp@1.1.1`；升级由本仓库发版同步（钉扎注册表
+所有接线示例精确钉 `biomcp@1.4.0`；升级由本仓库发版同步（钉扎注册表
 `scripts/ci/biomcp-tools.json` 随 pin 更新，Demo 内置副本逐字节一致并受
 CI 校验）。
 
@@ -336,7 +337,7 @@ Apache-2.0。
 - 上游源码与完整工具契约：<https://github.com/yeyuan98/biomcp-ts>
 - 接线/认证/限流原文：仓库 `docs/biomcp-ts-setup.md`
 - 钉扎注册表：`scripts/ci/biomcp-tools.json`（Demo 副本
-  `demos/lib/biomcp-tools@1.1.1.json`，CI 保证一致）
+  `demos/lib/biomcp-tools@1.4.0.json`，CI 保证一致）
 - 迁移映射：仓库 `docs/migration-from-plugin.md`
 - 智能体（技能层）文档：[agent.zh.md](./agent.zh.md)；术语表：
   [glossary.md](./glossary.md)

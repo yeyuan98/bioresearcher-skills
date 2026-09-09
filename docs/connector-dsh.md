@@ -6,7 +6,7 @@ an automated Cordis plugin and connector bundle for [DeepSeek Harness](https://g
 
 ## Bundle contents
 
-A single `biomcp` stdio MCP server (pinned `biomcp@1.1.1`, 120 s connection
+A single `biomcp` stdio MCP server (pinned `biomcp@1.4.0`, 120 s connection
 timeout, automatic China npm mirror detection via `Intl.DateTimeFormat` or env)
 plus four bundled skills and the `bioresearcher-dr-worker` subagent prompt:
 
@@ -37,7 +37,7 @@ When booted in a `dsh` profile (e.g. `web`, `headless`, `tui`), the plugin perfo
 
 1. **Automatic MCP Server Registration**:
    Dynamically mounts `@deepseek-ai/dsh-mcp-client` with `serverName: "biomcp"`,
-   launching `npx -y -p biomcp@1.1.1 biomcp` over stdio with timeout 120000 ms.
+   launching `npx -y -p biomcp@1.4.0 biomcp` over stdio with timeout 120000 ms.
    DeepSeek Harness automatically registers the tools under the `mcp__biomcp__<tool>`
    namespace (e.g. `mcp__biomcp__article_search`).
 2. **Dynamic Skills Discovery**:

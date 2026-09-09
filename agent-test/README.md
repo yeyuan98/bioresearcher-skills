@@ -30,7 +30,7 @@ node agent-test/run.mjs --dry-run  # discovery + schema validation + provisionin
   1.18.x). The runner spawns `opencode run --dir <run-dir> --auto <prompt>
   --format json` per rep.
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
-- Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.1.1
+- Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.4.0
   biomcp`, keyless — no credentials anywhere; exact pin avoids npm range
   revalidation delays so startup completes well within opencode's 30s
   MCP connection window). Works through proxies honoring HTTP(S)_PROXY via
@@ -179,7 +179,7 @@ the bare schema; MCP cases wire servers explicitly, e.g. the keyless biomcp
 server:
 
 ```json
-{"$schema":"https://opencode.ai/config.json","mcp":{"biomcp":{"type":"local","command":["npx","-y","-p","biomcp@1.1.1","biomcp"]}}}
+{"$schema":"https://opencode.ai/config.json","mcp":{"biomcp":{"type":"local","command":["npx","-y","-p","biomcp@1.4.0","biomcp"]}}}
 ```
 
 - Never rename it to `opencode.jsonc` — root `.gitignore` patterns commonly

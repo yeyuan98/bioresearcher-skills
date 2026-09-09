@@ -286,7 +286,7 @@ function readmeBody(scenario, resultDoc, prov, outputs, skippedOutputs, costStr,
     "",
     ...promptBlock,
     `**How it was run:** ${isProbe
-      ? `deterministic MCP stdio probe (\`demos/lib/mcp-probe.mjs\`) against \`${(scenario.spec.server?.command ?? ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"]).join(" ")}\` — no LLM tokens`
+      ? `deterministic MCP stdio probe (\`demos/lib/mcp-probe.mjs\`) against \`${(scenario.spec.server?.command ?? ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]).join(" ")}\` — no LLM tokens`
       : `real \`opencode run --auto\` session driven by \`demos/run-demo.mjs\` with the repo skills injected${durationSec !== null ? `, ${durationSec} s wall-clock` : ""}${costStr ? `, ${costStr} model cost` : ""}`}.`,
     "",
     `**Provenance:** commit ${prov.gitCommit ?? "?"} (${commitLine ? `[permalink](${commitLine})` : "local"}), ${prov.opencodeVersion ? `opencode ${prov.opencodeVersion}, ` : ""}node ${prov.nodeVersion}${prov.biomcpPin ? `, biomcp@${prov.biomcpPin}` : ""}; raw rep: ${runDirLine ?? "n/a"}. See [provenance.json](./provenance.json) for per-skill sha256.`,
@@ -307,7 +307,7 @@ function readmeBody(scenario, resultDoc, prov, outputs, skippedOutputs, costStr,
     "",
     ...(!isProbe && resultDoc.promptText ? ["**提示词**", "", "```text", resultDoc.promptText, "```", ""] : []),
     `**运行方式：** ${isProbe
-      ? `确定性 MCP stdio 探针（\`demos/lib/mcp-probe.mjs\`），直连 \`${(scenario.spec.server?.command ?? ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"]).join(" ")}\` — 不消耗任何 LLM token`
+      ? `确定性 MCP stdio 探针（\`demos/lib/mcp-probe.mjs\`），直连 \`${(scenario.spec.server?.command ?? ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]).join(" ")}\` — 不消耗任何 LLM token`
       : `由 \`demos/run-demo.mjs\` 驱动的真实 \`opencode run --auto\` 会话（注入本仓库技能）${durationSec !== null ? `，耗时 ${durationSec} 秒` : ""}${costStr ? `，模型成本 ${costStr}` : ""}`}。`,
     "",
     `**溯源：** 提交 ${prov.gitCommit ?? "?"}${commitLine ? `（[固定链接](${commitLine})）` : ""}，${prov.opencodeVersion ? `opencode ${prov.opencodeVersion}、` : ""}node ${prov.nodeVersion}${prov.biomcpPin ? `、biomcp@${prov.biomcpPin}` : ""}；各技能 SKILL.md 的 sha256 见 [provenance.json](./provenance.json)。`,

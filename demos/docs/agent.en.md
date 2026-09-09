@@ -77,7 +77,7 @@ documented separately in the [MCP doc](./mcp.en.md).
 │  └────────────────────────┬─────────────────────────────────┘  │
 │                           │ MCP protocol (stdio JSON-RPC)       │
 │  ┌────────────────────────▼─────────────────────────────────┐  │
-│  │ biomcp-ts MCP server (npm `biomcp`, pinned 1.1.1; 41 core │  │
+│  │ biomcp-ts MCP server (npm `biomcp`, pinned 1.4.0; 41 core │  │
 │  │ + 15 optional tools: articles/trials/genes/variants/       │  │
 │  │ drugs/diseases/patents/omics/…)                            │  │
 │  └──────────────────────────────────────────────────────────┘  │

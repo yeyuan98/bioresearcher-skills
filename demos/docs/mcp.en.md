@@ -5,11 +5,11 @@
 > Covering: functionality, technical architecture/API, core features,
 > onboarding, application cases, demo links, and FAQ. Every request/response
 > sample below is a **true probe capture** (`demos/lib/mcp-probe.mjs` against
-> `biomcp@1.1.1`, zero LLM, zero keys) — not a hand-written example.
+> `biomcp@1.4.0`, zero LLM, zero keys) — not a hand-written example.
 
 ## 1. What it does
 
-biomcp-ts (npm package `biomcp`, pinned here to **1.1.1**) is an MCP server
+biomcp-ts (npm package `biomcp`, pinned here to **1.4.0**) is an MCP server
 for biomedical data: it exposes 41 core + 15 optional tools over stdio
 JSON-RPC to any agent harness, spanning articles, clinical trials, genes,
 variants, drugs, diseases, patents, omics databases, GTEx, Ensembl/PDB —
@@ -28,7 +28,7 @@ all public sources, **keyless by default**.
   zero credentials (enhancements optional, §5.3)
 - **In-process per-source rate limiting**: no client-side sleeps/throttles
   needed (numbers in §3.3)
-- **Deterministic version pinning**: `npx -p biomcp@1.1.1` — exact version,
+- **Deterministic version pinning**: `npx -p biomcp@1.4.0` — exact version,
   avoids npx-cache drift and the bare-`npx biomcp` peer-dep trap (Q1)
 - **Diagnostics**: `biomcp doctor` environment check (never starts the
   server); `biomcp_configure` interactively manages optional credentials
@@ -67,9 +67,9 @@ implementation ships in `demos/lib/mcp-probe.mjs` (single-file, zero deps).
 
 | Variant | Command array |
 |---|---|
-| All features (db + R analysis) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-| Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","biomcp"]` |
-| Core only | `["npx","-y","-p","biomcp@1.1.1","biomcp"]` |
+| All features (db + R analysis) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+| Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","biomcp"]` |
+| Core only | `["npx","-y","-p","biomcp@1.4.0","biomcp"]` |
 
 Requires Node.js >= 22.13. The `-p` exact pin resolves peer deps with the
 package (bare `npx biomcp` fails: the npx cache cannot resolve peer deps).
@@ -202,7 +202,7 @@ Migrating from biomcp-python: the old package used `*-searcher`/`*-getter`
 suffixed names; this package uses short `domain_action` names (e.g.
 `article_search`, `gene_get`). The full per-tool mapping table lives in the
 repo's `docs/migration-from-plugin.md`. Capability deltas: the openFDA
-approval/label/adverse-event searches are not provided in 1.1.1 (adverse
+approval/label/adverse-event searches are not provided in 1.4.0 (adverse
 event capability is partly folded into the drug tools); the old `protocol`
 section is now covered by the `core` + `eligibility` sections.
 All other domains are a superset.
@@ -223,7 +223,7 @@ auto-detects npmmirror).
 ```json
 {"$schema": "https://opencode.ai/config.json",
  "mcp": {"biomcp": {"type": "local",
-   "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"]}}}
+   "command": ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]}}}
 ```
 
 With the server named `biomcp`, tools surface as `biomcp_article_search`,
@@ -235,7 +235,7 @@ bioresearcher@bioresearcher-skills`; bundled core-only server, tools as
 
 ```json
 {"mcpServers": {"biomcp": {"type": "stdio", "command": "npx",
-  "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"], "timeout": 120000}}}
+  "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"], "timeout": 120000}}}
 ```
 
 A manual registration and the plugin-bundled server do not deduplicate when
@@ -267,7 +267,7 @@ interactively by `biomcp_configure`; restart to apply).
 ### 5.4 Health check (doctor)
 
 ```bash
-npx -y biomcp@1.1.1 doctor --client opencode   # also claude-code/codex/…
+npx -y biomcp@1.4.0 doctor --client opencode   # also claude-code/codex/…
 ```
 
 Diagnostics only (Node version, npx, network); never starts the server;
@@ -304,7 +304,7 @@ Higher-level agent cases (deep research, plotting, …): [Agent doc §6](./agent
 
 **Q1: Why not bare `npx biomcp`?**
 The npx cache cannot resolve peer deps (webr, mysql2, …) — pin with
-`-p biomcp@1.1.1 -p webr@0.6 …` (§3.2).
+`-p biomcp@1.4.0 -p webr@0.6 …` (§3.2).
 
 **Q2: Do I need keys?**
 No by default; `variant_oncokb` requires an OncoKB token, and DisGeNET falls
@@ -319,7 +319,9 @@ No — per-source limiters run in-process (§3.3). Exceptions: HPA sections and
 GEO supplementary downloads are unthrottled.
 
 **Q5: Is remote/SSE deployment supported?**
-1.1.1 is stdio-only (local subprocess); no remote mode.
+The pinned wiring here is stdio-only (local subprocess). Since 1.3.0 the server
+also ships a streamable-HTTP remote mode (`biomcp serve`); this repo's wiring
+does not use it.
 
 **Q6: Why don't the R analysis tools appear?**
 Optional groups register at start: the command needs `-p webr@0.6` (R) /
@@ -337,7 +339,7 @@ your local environment or `.biomcp.json`.
 >= 22.13 (with npx).
 
 **Q10: How is the version pinned/upgraded?**
-All wiring pins `biomcp@1.1.1` exactly; upgrades ride this repo's releases
+All wiring pins `biomcp@1.4.0` exactly; upgrades ride this repo's releases
 (the pinned registry `scripts/ci/biomcp-tools.json` updates with the pin, and
 the demos' vendored copy is CI-checked byte-identical).
 
@@ -353,7 +355,7 @@ this repo's skills and docs are Apache-2.0 as well.
 - Upstream source and full tool contracts: <https://github.com/yeyuan98/biomcp-ts>
 - Wiring/auth/rate-limit source of truth: repo `docs/biomcp-ts-setup.md`
 - Pinned registry: `scripts/ci/biomcp-tools.json` (demo copy
-  `demos/lib/biomcp-tools@1.1.1.json`, CI-verified identical)
+  `demos/lib/biomcp-tools@1.4.0.json`, CI-verified identical)
 - Migration map: repo `docs/migration-from-plugin.md`
 - Agent (skills layer) doc: [agent.en.md](./agent.en.md); glossary:
   [glossary.md](./glossary.md)

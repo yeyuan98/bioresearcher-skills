@@ -48,16 +48,16 @@ full workflow - answer directly with the matching biomcp tool using
 
 The biomcp MCP server (npm package [`biomcp`](https://www.npmjs.com/package/biomcp),
 canonical source [yeyuan98/biomcp-ts](https://github.com/yeyuan98/biomcp-ts) pinned to
-`biomcp@1.1.1`) connected to the harness. For automated zero-dependency local
+`biomcp@1.4.0`) connected to the harness. For automated zero-dependency local
 setup, run the `bioresearcher-onboard` skill.
 
 Recommended client command (all features):
 
 ```json
-["npx", "-y", "-p", "biomcp@1.1.1", "-p", "webr@0.6", "-p", "mysql2@3", "biomcp"]
+["npx", "-y", "-p", "biomcp@1.4.0", "-p", "webr@0.6", "-p", "mysql2@3", "biomcp"]
 ```
 
-Requires Node.js >= 22.13. Verify with `npx -y biomcp@1.1.1 doctor` (exit 0 =
+Requires Node.js >= 22.13. Verify with `npx -y biomcp@1.4.0 doctor` (exit 0 =
 healthy). API keys are optional except where noted in
 `references/rate-limiting-auth.md`.
 

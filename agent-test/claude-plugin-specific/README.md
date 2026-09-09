@@ -34,7 +34,7 @@ node agent-test/claude-plugin-specific/run.mjs --dry-run  # discovery + schema +
   - or run `claude` once interactively inside a kept config dir
     (`--keep-config`, see below).
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
-- Network: the bundled server runs `npx -y -p biomcp@1.1.1 biomcp` (keyless;
+- Network: the bundled server runs `npx -y -p biomcp@1.4.0 biomcp` (keyless;
   first tool call pays the npx download).
 
 ## Isolation model

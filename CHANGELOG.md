@@ -15,6 +15,10 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+### bioresearcher-onboard 1.1.1
+
+- Pin sweep: vendored biomcp server version bumped from 1.1.1 to 1.4.0 (`scripts/onboard.mjs` install pin and docs), picking up PubMed/EuropePMC citation locator fields (volume/issue/pages), HTML-entity decoding, and honest LitSense hint mapping.
+
 ## [1.8.0] - 2026-09-08
 
 ### bioresearcher-deep-research 1.3.0

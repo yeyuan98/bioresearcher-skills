@@ -5,7 +5,7 @@ Route a research question to the correct biomcp tool, then shape the call with
 
 ## Overview
 
-biomcp (npm `biomcp`, pinned `biomcp@1.1`) exposes 56 tools: 41 core plus 15
+biomcp (npm `biomcp`, pinned `biomcp@1.4`) exposes 56 tools: 41 core plus 15
 environment-gated optional tools (3 database, 4 R analysis, 8 biowasm). This
 file routes question types to tools; per-domain parameter detail lives in the
 domain reference files.

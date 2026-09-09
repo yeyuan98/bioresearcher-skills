@@ -4,7 +4,7 @@ description: "Bootstraps a project-local biomcp MCP server runtime in .bioresear
 license: Apache-2.0
 compatibility: "Unix-like shells (Linux, macOS) and Windows (PowerShell, cmd.exe); OpenCode, Claude Code, Cursor, ZCode, Pi Coding Agent, CodeBuddy, WorkBuddy"
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   source: "bioresearcher-skills"
 allowed-tools: Bash Read Write Edit
 ---
@@ -53,7 +53,7 @@ The script automatically:
 1. Reuses your host Node.js if version >= 22.13 is available.
 2. If missing, downloads and verifies the official portable Node.js archive into
    `.bioresearcher-runtime/node/`.
-3. Installs `biomcp@1.1.1` into `.bioresearcher-runtime/node_modules/`.
+3. Installs `biomcp@1.4.0` into `.bioresearcher-runtime/node_modules/`.
 4. Updates your harness configuration (`opencode.json` or `.mcp.json`) with
    absolute executable paths.
 
