@@ -93,6 +93,7 @@ bash scripts/ci/check-bundle.sh        # <=1000 files / <=10 MiB per skill
 bash scripts/ci/check-legacy-names.sh  # no retired biomcp-python tool names
 node scripts/ci/check-tool-names.mjs   # biomcp tool refs match pinned registry
 node scripts/ci/check-marketplace.mjs  # .claude-plugin validation
+node scripts/ci/check-skill-scripts.mjs # skill python scripts: selftest + help smoke
 node scripts/ci/build-connector-workbuddy.mjs  # WorkBuddy connector bundle -> dist/
 node scripts/ci/build-connector-opencode.mjs   # OpenCode connector bundle -> dist/
 node scripts/ci/build-connector-dsh.mjs        # DeepSeek Harness connector bundle -> dist/

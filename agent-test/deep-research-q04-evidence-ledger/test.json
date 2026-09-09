@@ -1,0 +1,56 @@
+{
+  "id": "deep-research-q04-evidence-ledger",
+  "name": "Evidence ledger light happy path: worker writes the ledger, orchestrator scripts run",
+  "level": "L2",
+  "purpose": "L2 wiring check for the deep-research 1.4.0 evidence ledger: a light-research run must create reports/<TOPIC>/evidence/<ASPECT>.jsonl (worker rule 8) and invoke evidence-ledger.py (stats + verify dry-run) with output reported back.",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.\n\nAfter the final report is written, additionally run these two commands and report their full stdout in your FINAL message inside one fenced code block, followed by the line 'LEDGER CHECK DONE':\n1. python3 .opencode/skills/bioresearcher-deep-research/scripts/evidence-ledger.py stats reports/<TOPIC>/evidence/sources.jsonl (if sources.jsonl does not exist, run stats on the per-aspect ledger file that does exist)\n2. python3 .opencode/skills/bioresearcher-deep-research/scripts/evidence-ledger.py verify reports/<TOPIC>/evidence/sources.jsonl (dry-run, no --apply)\nYour final message must mention at least one PMID.",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "tool_seq",
+      "seq": [["article_search", "*"]],
+      "mode": "subsequence"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "evidence\\/[A-Za-z0-9_.-]+\\.jsonl",
+      "desc": "some tool output references a per-aspect evidence ledger file (worker rule 8 or the ledger scripts). Note: if this run dispatches Tier A subagents whose inner tool events do not reach the parent stream, this check depends on the worker report-back (ledger path + record count) or the stats/verify stdout instead"
+    },
+    {
+      "type": "tool_count",
+      "tool": "bash",
+      "min": 1,
+      "desc": "evidence-ledger.py stats/verify invocations"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "\\[evidence-ledger\\] (stats|verify):",
+      "desc": "verb banners from evidence-ledger.py pasted into the assistant report"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "PMID:?\\s*\\d",
+      "desc": "final message cites at least one PMID"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "final_report\\.html",
+      "desc": "deep-research 1.1.1+: HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output (a converter-gap run fails this check by design - the suite mandates uv)"
+    }
+  ],
+  "expectedOutputs": []
+}

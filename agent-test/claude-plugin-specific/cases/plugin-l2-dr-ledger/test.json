@@ -1,0 +1,31 @@
+{
+  "id": "plugin-l2-dr-ledger",
+  "name": "Tier A dr-worker raw-JSONL evidence ledger via Write (no worker shell)",
+  "level": "L2",
+  "purpose": "dr-worker has no Bash: it must write reports/<TOPIC>/evidence/<ASPECT>.jsonl through the Write tool (worker-protocol rule 8) and the orchestrator's merge must validate it. Companion to agent-test/deep-research-q04-evidence-ledger for the Claude Code plugin Tier A path.",
+  "driver": "session",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research plugin skill, survey the recent article landscape on PARP inhibitor synthetic lethality in BRCA-mutant tumors. Cite sources with PMIDs.",
+  "budgetUsd": 1.5,
+  "timeoutMs": 1200000,
+  "permissionMode": "acceptEdits",
+  "checks": [
+    {
+      "type": "group",
+      "desc": "worker dispatch fired (Tier A preferred, Tier B acceptable)",
+      "anyOf": [
+        { "type": "subagent_by_type", "agent": "bioresearcher-dr-worker", "min": 1, "desc": "Tier A: dedicated worker agent spawned" },
+        { "type": "tool_use", "name": "^Task$", "regex": true, "path": "subagent_type", "op": "regex", "expect": "bioresearcher-dr-worker", "desc": "Tier A via Task(subagent_type) input" },
+        { "type": "subagent_by_type", "agent": "general-purpose", "min": 1, "desc": "Tier B: generic subagent fallback" }
+      ]
+    },
+    { "type": "file_exists", "pattern": "reports/**/evidence/*.jsonl", "desc": "a per-aspect evidence ledger file exists under the rep project dir (worker rule 8)" },
+    { "type": "file_exists", "pattern": "reports/**/*.md", "desc": "at least one aspect report written" },
+    { "type": "tool_use", "name": "^Write$", "regex": true, "path": "file_path", "op": "regex", "expect": "evidence\\/[A-Za-z0-9_.-]+\\.jsonl", "desc": "the Write tool was used with an evidence/...jsonl path (Tier A workers have no Bash)" },
+    { "type": "text", "op": "regex", "expect": "PMID", "source": "assistant", "desc": "citations present" },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "ledger-discipline: open reports/**/evidence/*.jsonl and spot-check 2-3 records: fields copied verbatim from tool output (titles not paraphrased, locator fields present or null - not invented), provenance entries carry the aspect, and every References entry in the aspect report is coverable by a ledger record. Record whether the orchestrator ran the Step 5a merge/verify (bash) or the sequential Tier C inline path was taken."
+    }
+  ]
+}

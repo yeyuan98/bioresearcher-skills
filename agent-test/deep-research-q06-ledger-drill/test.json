@@ -1,0 +1,53 @@
+{
+  "id": "deep-research-q06-ledger-drill",
+  "name": "Ledger CLI feature drill: dedupe, quarantine, missing-record loudness, expand-pages, epub rendering, initials",
+  "level": "L2",
+  "purpose": "Deterministic drill of every evidence-ledger.py feature against inline fixtures (no skill run, no network dependency beyond optional verify): secondary-id dedupe, merge quarantine, loud [MISSING record] with non-zero exit, --expand-pages arithmetic, epub locator-less rendering, and Vancouver initials incl. group-author passthrough. The same matrix runs hermetically in CI via selftest; this case observes the features through the real agent-driven CLI.",
+  "prompt": "Work in a fresh subdirectory `evdrill/`. Execute each numbered command in its OWN Bash tool call (no chaining), then paste ALL outputs verbatim in one fenced code block in your FINAL message, ending with the line 'DRILL DONE'. Script path: python3 .opencode/skills/bioresearcher-deep-research/scripts/evidence-ledger.py\n\nFirst create the fixture files exactly as follows (one Bash call or Write tool):\n- evdrill/a.jsonl containing this single line:\n  {\"schema\":\"bioresearcher-evidence/1\",\"key\":\"pmid:21639808\",\"type\":\"article\",\"ids\":{\"pmid\":\"21639808\",\"doi\":\"10.1056/nejmoa1103782\",\"pmcid\":\"PMC3549296\"},\"title\":\"Improved survival with vemurafenib in melanoma with BRAF V600E mutation\",\"authors\":[\"Chapman Paul B\",\"Hauschild Axel\",\"Robert Caroline\",\"BRIM-3 Investigators\"],\"journal\":\"N Engl J Med\",\"year\":\"2011\",\"volume\":\"364\",\"issue\":\"26\",\"pages\":\"2507-16\",\"verified\":false,\"backfilled\":[],\"provenance\":[{\"aspect\":\"drill\",\"tool\":\"fixture\"}]}\n- evdrill/b.jsonl containing this single line (same DOI, different pmid - must merge into the first record via secondary-id dedupe):\n  {\"schema\":\"bioresearcher-evidence/1\",\"type\":\"article\",\"ids\":{\"pmid\":\"99991111\",\"doi\":\"10.1056/NEJMoa1103782\"},\"title\":null,\"provenance\":[{\"aspect\":\"drill2\",\"tool\":\"fixture\"}]}\n- evdrill/c.jsonl containing exactly two lines: a valid article record with key pmid:42487519, ids {\"pmid\":\"42487519\",\"doi\":\"10.1111/cas.70480\"}, title \"New Treatment Strategy and Future Research Direction for BRAF-Mutated Cancer\", authors [\"Takahashi Masanobu\",\"Taniguchi Sakura Hiraide\"], journal \"Cancer Sci\", year \"2026\", volume/issue/pages null, verified false, provenance [{\"aspect\":\"drill\",\"tool\":\"fixture\"}] - followed by this malformed second line: not json at all\n\nCommands (each its own Bash call):\n1. evidence-ledger.py add evdrill/a.jsonl '<the a.jsonl record JSON again>'\n2. evidence-ledger.py add evdrill/b.jsonl '<the b.jsonl record JSON again>'\n3. evidence-ledger.py merge -o evdrill/sources.jsonl 'evdrill/*.jsonl'   (expect the malformed c.jsonl line quarantined to evdrill/_invalid.jsonl)\n4. evidence-ledger.py stats evdrill/sources.jsonl   (expect 2 records: pmid:21639808 and pmid:42487519 - the doi twin merged)\n5. evidence-ledger.py bib evdrill/sources.jsonl --keys pmid:21639808,pmid:nope   (expect a [MISSING record pmid:nope] line and a non-zero exit; run `echo exit=$?` as part of the SAME Bash call immediately after)\n6. evidence-ledger.py bib evdrill/sources.jsonl --keys pmid:21639808 --expand-pages   (expect pages expanded to 2507-2516)\n7. evidence-ledger.py bib evdrill/sources.jsonl --keys pmid:42487519   (epub record: locator-less render - Cancer Sci. 2026. DOI: ... PMID: ...; authors as Takahashi M, Taniguchi SH; Chapman PB-style initials on the other record)",
+  "inlineResources": [],
+  "timeoutMs": 600000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "bash",
+      "min": 6,
+      "desc": "one Bash call per numbered command is mandated by the prompt (>=6 of the 7)"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "_invalid\\.jsonl",
+      "desc": "quarantine file surfaced in the pasted output"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "MISSING record pmid:nope",
+      "desc": "unknown-key loudness observed"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "2507-2516",
+      "desc": "expand-pages arithmetic observed"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "Chapman PB",
+      "desc": "Vancouver initials computed from full names"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "exit=(1|[1-9]\\d*)",
+      "desc": "non-zero exit for the unknown-key bib reported"
+    }
+  ],
+  "expectedOutputs": []
+}
