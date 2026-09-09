@@ -274,8 +274,8 @@ than silently dropping one side. Write the synthesized draft to
 
 ### Step 5a: Merge + verify the evidence ledger
 
-Before drafting `final_report.md`, consolidate and verify the per-aspect
-ledgers with the evidence-ledger script (fail-safe: network failure never
+Before composing the References section of `final_report.md`, consolidate
+and verify the per-aspect ledgers with the evidence-ledger script (fail-safe: network failure never
 blocks the report):
 
 ```bash

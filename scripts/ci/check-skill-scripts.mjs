@@ -37,11 +37,21 @@ for (const check of checks) {
     continue;
   }
   const out = String(res.stdout || "");
-  if (check.name.includes("selftest") && !/selftest: \d+\/\d+ group\(s\) passed(?!.*FAIL)/.test(out)) {
-    console.error(`fail ${check.name}: completion banner not found`);
-    console.error(out.trim());
-    failures++;
-    continue;
+  if (check.name.includes("selftest")) {
+    // FAIL lines print BEFORE the summary banner; the exit code is the primary
+    // guard, these checks catch an exit-0-with-failures regression directly.
+    if (/^FAIL /m.test(out)) {
+      console.error(`fail ${check.name}: FAIL line present in selftest output`);
+      console.error(out.trim());
+      failures++;
+      continue;
+    }
+    if (!/\[evidence-ledger\] selftest: \d+\/\d+ group\(s\) passed/.test(out)) {
+      console.error(`fail ${check.name}: completion banner not found`);
+      console.error(out.trim());
+      failures++;
+      continue;
+    }
   }
   console.log(`ok   ${check.name}`);
 }

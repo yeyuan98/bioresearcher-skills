@@ -15,7 +15,7 @@ JSON-RPC to any agent harness, spanning articles, clinical trials, genes,
 variants, drugs, diseases, patents, omics databases, GTEx, Ensembl/PDB —
 all public sources, **keyless by default**.
 
-- Transport: **stdio only** (local subprocess); no remote/SSE form
+- Transport used here: **stdio** (local subprocess); the server also ships a streamable-HTTP mode (`biomcp serve`) since 1.3.0, unused in this repo's wiring
 - Upstreams: NCBI E-utilities (PubMed/GEO/SRA/GenBank), ClinicalTrials.gov,
   MyGene/MyVariant, OpenTargets, GTEx, Ensembl, RCSB PDB, Google Patents
   (plus optional EPO OPS / USPTO with credentials), Semantic Scholar, …

@@ -18,7 +18,7 @@ import urllib.parse
 import urllib.request
 
 NCBI_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-USER_AGENT = "bioresearcher-skills/1.2 (vet-references; +https://github.com/bioresearcher-agent)"
+USER_AGENT = "bioresearcher-skills/1.2 (evidence tools; +https://github.com/bioresearcher-agent)"
 
 
 def fetch_ncbi_summaries(pmids: list, timeout: float = 15.0) -> dict:

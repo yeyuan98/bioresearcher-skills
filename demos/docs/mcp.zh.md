@@ -13,7 +13,7 @@ biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.4.0**）是一个生物医学
 15 个可选工具，覆盖文献、临床试验、基因、变异、药物、疾病、专利、
 组学数据库、GTEx、Ensembl/PDB 等公开数据源。默认**免密钥**即可使用。
 
-- 传输：**仅 stdio**（本地子进程），不提供远程/SSE 形态
+- 本仓库接线传输：**stdio**（本地子进程）；1.3.0 起服务端另提供 streamable-HTTP 模式（`biomcp serve`），本仓库不使用
 - 上游：NCBI E-utilities（PubMed/GEO/SRA/GenBank）、ClinicalTrials.gov、
   MyGene/MyVariant、OpenTargets、GTEx、Ensembl、PDB/RCSB、Google Patents
   （及凭证可选启用的 EPO OPS / USPTO）、Semantic Scholar 等

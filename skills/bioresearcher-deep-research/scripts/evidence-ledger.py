@@ -100,6 +100,10 @@ def normalize_record(raw, require_provenance_aspect=None) -> dict:
         title = str(title).strip() or None
     if not title and not ids:
         raise ValueError("record needs a title or at least one id")
+    if raw.get("meta") is not None and not isinstance(raw.get("meta"), dict):
+        raise ValueError("meta must be an object")
+    if raw.get("authors") is not None and not isinstance(raw.get("authors"), list):
+        raise ValueError("authors must be a list of name strings")
 
     key = canonical_key(raw.get("key"), rtype, ids)
 
@@ -216,13 +220,22 @@ NO_FILL_FIELDS = {
     "title_original", "provenance",
 }
 
+# Key-namespace precedence for twin merges: a pmid-bearing twin promotes the
+# union record to the pmid key so bib lookups work regardless of which aspect
+# file sorted first (pmid > doi > pmcid).
+_KEY_STRENGTH = {"pmid": 3, "doi": 2, "pmcid": 1}
+
+
+def _key_namespace(key: str) -> str:
+    return key.split(":", 1)[0]
+
 
 def merge_fill(base: dict, incoming: dict) -> None:
     """Fill missing base fields from incoming; NEVER overwrite non-null values."""
     for field, value in incoming.items():
         if field in NO_FILL_FIELDS or field.startswith("_"):
             continue
-        if base.get(field) in (None, "", []) and value not in (None, "", []):
+        if base.get(field) in (None, "", [], {}) and value not in (None, "", [], {}):
             base[field] = value
     base_provs = base.setdefault("provenance", [])
     known_aspects = {p.get("aspect") for p in base_provs}
@@ -248,7 +261,6 @@ class Ledger:
         existing = self.by_key.get(rec["key"])
         if existing is not None:
             merge_fill(existing, rec)
-            rec = existing
         else:
             twin_key = None
             for sid in secondary_ids(rec):
@@ -256,8 +268,18 @@ class Ledger:
                 if twin_key:
                     break
             if twin_key is not None and twin_key in self.by_key:
-                merge_fill(self.by_key[twin_key], rec)
-                rec = self.by_key[twin_key]
+                base = self.by_key[twin_key]
+                merge_fill(base, rec)
+                # promote to the stronger key namespace (pmid > doi > pmcid)
+                if _KEY_STRENGTH.get(_key_namespace(rec["key"]), 0) > _KEY_STRENGTH.get(_key_namespace(twin_key), 0):
+                    del self.by_key[twin_key]
+                    base["key"] = rec["key"]
+                    self.by_key[rec["key"]] = base
+                    for sid, k in list(self.sec_index.items()):
+                        if k == twin_key:
+                            self.sec_index[sid] = rec["key"]
+                    twin_key = rec["key"]
+                rec = base
             else:
                 self.by_key[rec["key"]] = rec
         for sid in secondary_ids(rec):
@@ -279,7 +301,7 @@ def read_ledger(path: Path) -> Ledger:
     led = Ledger()
     if not path.is_file():
         return led
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for lineno, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
         s = line.strip()
         if not s:
             continue
@@ -292,8 +314,20 @@ def read_ledger(path: Path) -> Ledger:
 
 def append_quarantine(out_path: Path, entries: list) -> Path:
     qpath = out_path.parent / "_invalid.jsonl"
+    seen = set()
+    if qpath.is_file():
+        for line in qpath.read_text(encoding="utf-8-sig").splitlines():
+            try:
+                e = json.loads(line)
+                seen.add((e.get("file"), e.get("line"), e.get("error")))
+            except (json.JSONDecodeError, AttributeError):
+                continue
     with qpath.open("a", encoding="utf-8") as fh:
         for e in entries:
+            fingerprint = (e.get("file"), e.get("line"), e.get("error"))
+            if fingerprint in seen:
+                continue
+            seen.add(fingerprint)
             fh.write(json.dumps(e, ensure_ascii=False) + "\n")
     return qpath
 
@@ -306,8 +340,10 @@ def _parse_incoming(args) -> list:
     if args.stdin:
         payload = json.loads(sys.stdin.read())
         return payload if isinstance(payload, list) else [payload]
+    if getattr(args, "record", None) is None:
+        raise ValueError("provide a record JSON, @file, or --stdin")
     if args.record.startswith("@"):
-        payload = json.loads(Path(args.record[1:]).read_text(encoding="utf-8"))
+        payload = json.loads(Path(args.record[1:]).read_text(encoding="utf-8-sig"))
         return payload if isinstance(payload, list) else [payload]
     return [json.loads(args.record)]
 
@@ -458,9 +494,15 @@ def cmd_verify(args) -> int:
 
 _GROUP_AUTHOR_RE = re.compile(
     r"\b(group|consortium|investigators?|network|committee|collaborative|initiative|"
-    r"team|registry|alliance|panel|authors?|working|study|trial|project|program)\b",
+    r"team|registry|alliance|panel|authors?|working|study|trial|project|program|"
+    r"organization|organisation|society|association|institute|council|foundation|"
+    r"university|college)\b",
     re.IGNORECASE,
 )
+
+# lowercase surname particles absorbed into the family name ("van der Berg Jan"
+# -> "van der Berg J"), never treated as given-name initials
+_SURNAME_PARTICLES = {"van", "der", "den", "de", "del", "la", "di", "da", "dos", "von", "ter", "ten", "op", "'t"}
 
 
 def vancouver_author(name: str) -> str:
@@ -473,9 +515,20 @@ def vancouver_author(name: str) -> str:
     tokens = name.split()
     if len(tokens) == 1:
         return name
-    last = tokens[0]
-    initials = "".join(t[0].upper() for t in tokens[1:] if t and t[0].isalpha())
-    return f"{last} {initials}" if initials else last
+    if tokens[0].lower() in _SURNAME_PARTICLES:
+        # particle-leading surname: "van der Berg Jan" -> surname "van der Berg"
+        i = 0
+        while i < len(tokens) and tokens[i].lower() in _SURNAME_PARTICLES:
+            i += 1
+        if i < len(tokens):
+            surname = " ".join(tokens[: i + 1])
+            given = tokens[i + 1 :]
+        else:
+            surname, given = name, []
+    else:
+        surname, given = tokens[0], tokens[1:]
+    initials = "".join(t[0].upper() for t in given if t and t[0].isalpha())
+    return f"{surname} {initials}" if initials else surname
 
 
 def _author_list(rec: dict, max_authors: int = 3) -> str:
@@ -496,6 +549,8 @@ def expand_pages(pages: str) -> str:
     left, right = m.group(1), m.group(2)
     if len(right) < len(left):
         right = left[: len(left) - len(right)] + right
+    if int(right) < int(left):
+        return pages  # ambiguous abbreviation; keep verbatim
     return f"{left}-{right}"
 
 
@@ -625,7 +680,7 @@ def render_web(rec: dict) -> str:
     meta = rec.get("meta") or {}
     updated = f" Updated {meta['updated']}." if meta.get("updated") else ""
     url = rec.get("url") or (rec.get("ids") or {}).get("url") or "[MISSING field: url]"
-    accessed = meta.get("accessed") or _dt.date.today().isoformat()
+    accessed = meta.get("accessed") or "[MISSING field: meta.accessed]"
     return f"{_need(rec, 'title')}. {meta.get('organization') or '[MISSING field: meta.organization]'}.{updated} {url}. Accessed: {accessed}."
 
 
@@ -807,6 +862,24 @@ def selftest() -> int:
             rc2, _ = _capture(cmd_merge, argparse.Namespace(out=str(out), inputs=[str(sub / "*.jsonl")]))
             led2 = read_ledger(out)
             assert rc2 == 0 and set(led2.by_key) == {"pmid:21639808", "pmid:1"}, f"glob re-run broke ledger: {sorted(led2.by_key)}"
+            # quarantine stays idempotent across re-merges
+            qbefore = len((sub / "_invalid.jsonl").read_text(encoding="utf-8").splitlines())
+            _capture(cmd_merge, argparse.Namespace(out=str(out), inputs=[str(sub / "*.jsonl")]))
+            qafter = len((sub / "_invalid.jsonl").read_text(encoding="utf-8").splitlines())
+            assert qbefore == qafter, "quarantine grew on re-merge"
+            # doi-first twin ordering promotes the union record to the pmid key
+            d1, d2 = sub / "aa_doi.jsonl", sub / "zz_pmid.jsonl"
+            d1.write_text(json.dumps({"type": "article", "ids": {"doi": "10.9999/promote"},
+                                      "title": "Union record", "volume": None,
+                                      "provenance": [{"aspect": "doi_side"}]}) + "\n", encoding="utf-8")
+            d2.write_text(json.dumps({"key": "pmid:777", "type": "article", "ids": {"pmid": "777", "doi": "10.9999/promote"},
+                                      "title": None, "volume": "9",
+                                      "provenance": [{"aspect": "pmid_side"}]}) + "\n", encoding="utf-8")
+            out2 = sub / "promoted.jsonl"
+            _capture(cmd_merge, argparse.Namespace(out=str(out2), inputs=[str(d1), str(d2)]))
+            led3 = read_ledger(out2)
+            assert set(led3.by_key) == {"pmid:777"}, f"key promotion failed: {sorted(led3.by_key)}"
+            assert led3.by_key["pmid:777"]["volume"] == "9" and led3.by_key["pmid:777"]["title"] == "Union record"
         check("merge", st_merge)
 
         # ---- verify offline (fail-safe) -----------------------------------------
@@ -865,6 +938,18 @@ def selftest() -> int:
 
         # ---- bib -------------------------------------------------------------------
         def st_bib():
+            # Vancouver initials: standard, particle surnames, group passthrough
+            assert vancouver_author("Chapman Paul B") == "Chapman PB"
+            assert vancouver_author("van der Berg Jan") == "van der Berg J", vancouver_author("van der Berg Jan")
+            assert vancouver_author("De la Cruz Maria E") == "De la Cruz ME", vancouver_author("De la Cruz Maria E")
+            assert vancouver_author("World Health Organization") == "World Health Organization"
+            assert vancouver_author("Li Jiang") == "Li J"
+            assert vancouver_author("WHO") == "WHO"
+            # expand_pages guards
+            assert expand_pages("2507-16") == "2507-2516"
+            assert expand_pages("2507-2516") == "2507-2516"
+            assert expand_pages("e71310") == "e71310"
+            assert expand_pages("2507-6") == "2507-6", "backwards expansion must be rejected"
             f = d / "b.jsonl"
             f.write_text(json.dumps(_fixture_article()) + "\n", encoding="utf-8")
             rc, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pmid:21639808", expand_pages=False, offset=0))

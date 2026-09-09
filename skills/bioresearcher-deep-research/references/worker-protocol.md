@@ -6,8 +6,8 @@ subagents and the sequential fallback in the main conversation.
 ## Overview
 
 Each worker owns exactly ONE research aspect of a TOPIC. It queries biomcp
-tools, collects identifiers, and writes one markdown file under
-`reports/<TOPIC>/`. Workers never re-delegate, never fabricate, and never fall
+tools, collects identifiers, and writes one markdown report plus its evidence
+ledger under `reports/<TOPIC>/`. Workers never re-delegate, never fabricate, and never fall
 back to internal knowledge for facts. Workers also never interview the user -
 clarification and plan review are exclusively the orchestrator's domain (SKILL.md).
 

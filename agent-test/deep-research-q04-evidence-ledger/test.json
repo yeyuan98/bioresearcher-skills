@@ -22,7 +22,7 @@
       "source": "tool:*",
       "op": "regex",
       "expect": "evidence\\/[A-Za-z0-9_.-]+\\.jsonl",
-      "desc": "some tool output references a per-aspect evidence ledger file (worker rule 8 or the ledger scripts). Note: if this run dispatches Tier A subagents whose inner tool events do not reach the parent stream, this check depends on the worker report-back (ledger path + record count) or the stats/verify stdout instead"
+      "desc": "some tool output references an evidence ledger JSONL path - anchored on the Step 5a merge/verify/bib stdout ('... -> reports/<TOPIC>/evidence/sources.jsonl'), which a compliant run always emits; the stats/verify banners themselves carry no path. Note: if this run dispatches Tier A subagents whose inner tool events do not reach the parent stream, the merge/bib stdout remains the anchor"
     },
     {
       "type": "tool_count",
@@ -49,7 +49,7 @@
       "source": "tool:*",
       "op": "regex",
       "expect": "final_report\\.html",
-      "desc": "deep-research 1.1.1+: HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output (a converter-gap run fails this check by design - the suite mandates uv)"
+      "desc": "deep-research 1.4.0+: HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output (a converter-gap run fails this check by design - the suite mandates uv)"
     }
   ],
   "expectedOutputs": []
