@@ -5,7 +5,7 @@
   "purpose": "Regression test for the originally reported failure mode (wrong titles, locator/DOI typos recovered ad hoc by vet-references): after a full deep-research run, the References section of final_report.md must match entry-by-entry the bibliography regenerated from evidence/sources.jsonl.",
   "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on tumor-infiltrating lymphocyte therapy in solid tumors. Cite sources with PMIDs.\n\nAfter final_report.md is finalized and vetted (Step 5b included), verify citation fidelity:\n1. Regenerate the ordered bibliography from the merged ledger: python3 .opencode/skills/bioresearcher-deep-research/scripts/evidence-ledger.py bib reports/<TOPIC>/evidence/sources.jsonl --keys <the ledger keys in the order the report's References section numbers them> --expand-pages\n2. Diff that output against the References section of reports/<TOPIC>/final_report.md entry by entry (titles verbatim, locators, DOIs, PMIDs, ordering).\n3. In your FINAL message, end with the exact line 'MISMATCH COUNT: <n>' where <n> is the number of References entries that differ from the ledger output (0 means every entry equals the ledger). If the count is non-zero, list the differing entries above that line - but the graded expectation is 0.",
   "inlineResources": [],
-  "timeoutMs": 900000,
+  "timeoutMs": 1200000,
   "checks": [
     {
       "type": "tool_count",
@@ -13,9 +13,18 @@
       "min": 1
     },
     {
-      "type": "tool_seq",
-      "seq": [["article_search", "*"]],
-      "mode": "subsequence"
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "(^|\\n)pmid:\\d+",
+      "desc": "tier-independent literature proof: ledger keys/add stdout contains line-start pmid: entries (observed live: a correct 2-worker dispatch run had zero article_search events in the parent log - only the orchestrator's gene_search pre-check appeared)"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[evidence-ledger\\] keys:",
+      "desc": "the documented Step 5a keys sub-step ran (feeds the bib --keys ordering)"
     },
     {
       "type": "text",

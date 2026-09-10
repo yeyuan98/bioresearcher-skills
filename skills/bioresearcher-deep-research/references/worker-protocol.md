@@ -69,18 +69,31 @@ DESCRIPTION: <ABSTRACT>
 8. Evidence ledger (mandatory): maintain
    `reports/<TOPIC>/evidence/<YOUR-FOCUS>.jsonl` as you search.
    - AFTER EACH biomcp search/get call, append one record per source you
-     might cite, copying fields VERBATIM from the tool result object
-     (`pmid`, `pmcid`, `doi`, `title`, `authors`, `journal`,
-     `publication_date`, `volume`, `issue`, `pages` for articles; the
-     analogous identifier fields for other types). Fields the tool did not
-     provide are `null` - NEVER invent values. Records without titles
-     (e.g. LitSense hint results) are acceptable as-is.
-   - Record shape: `{"schema": "bioresearcher-evidence/1", "key":
-     "pmid:<PMID>" (or the canonical key for the type), "type": "article",
-     "ids": {...}, "title": ..., "authors": [...], "journal": ..., "year":
-     ..., "volume": ..., "issue": ..., "pages": ..., "url": ...,
-     "provenance": [{"aspect": "<YOUR-FOCUS>", "tool": "<tool name>",
-     "args": {...}, "retrieved_at": "<ISO timestamp>"}]}`.
+     might cite, copying fields VERBATIM from the tool result object.
+     Fields the tool did not provide are `null` - NEVER invent values.
+     Records without titles (e.g. LitSense hint results) are acceptable
+     as-is.
+   - Canonical record shapes - one JSON line per source; copy the line for
+     your source type and fill fields verbatim (omit optionals you lack).
+     biomcp-native field spellings (`ids.nct_id`, top-level `phase`/
+     `status`/`sponsor`, ...) are also accepted and normalized
+     automatically, but prefer the canonical forms below:
+
+     ```jsonl
+     {"schema":"bioresearcher-evidence/1","type":"article","ids":{"pmid":"21639808","pmcid":"PMC3549296","doi":"10.1056/nejmoa1103782"},"title":"...","authors":["Chapman Paul B"],"journal":"N Engl J Med","year":"2011","volume":"364","issue":"26","pages":"2507-16","url":"https://pubmed.ncbi.nlm.nih.gov/21639808/","provenance":[{"aspect":"<YOUR-FOCUS>","tool":"article_search","args":{},"retrieved_at":"<ISO>"}]}
+     {"schema":"bioresearcher-evidence/1","type":"trial","ids":{"nct":"NCT04280705"},"title":"Official Title","meta":{"phase":"Phase 2","sponsor":"Pfizer","status":"Completed"},"url":"https://clinicaltrials.gov/study/NCT04280705","provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"patent","ids":{"patent":"US11027025B2"},"title":"Title of invention","meta":{"assignee":"ModernaTx, Inc.","status":"granted"},"url":"https://patents.google.com/patent/US11027025B2","provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"gene","ids":{"ncbi_gene":"673","hgnc":"HGNC:1097"},"title":"B-Raf proto-oncogene, serine/threonine kinase","meta":{"symbol":"BRAF"},"url":"https://www.ncbi.nlm.nih.gov/gene/673","provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"variant","ids":{"clinvar":"13961","rs":"rs113488022"},"title":"NM_004333.6(BRAF):c.1799T>A","meta":{"gene":"BRAF","protein_change":"V600E","significance":"Pathogenic"},"provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"drug","ids":{"chembl":"CHEMBL1229517"},"title":"vemurafenib","meta":{"indication":"BRAF V600E-mutant melanoma","source_section":"FDA label (drug_get safety section)"},"provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"disease","ids":{"mondo":"MONDO:0002025"},"title":"Cutaneous melanoma","url":"https://monarchinitiative.org/MONDO:0002025","provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"dataset","ids":{"geo":"GSE12345"},"title":"Series title","provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"web","ids":{"url":"https://..."},"title":"Page Title","meta":{"organization":"FDA","accessed":"2026-09-10"},"provenance":[...]}
+     {"schema":"bioresearcher-evidence/1","type":"other","ids":{"url":"https://..."},"title":"Any other citable source (FDA page, guideline, ...)","provenance":[...]}
+     ```
+
+     Omit `key` - the ledger derives it from the ids (`pmid:` > `doi:` >
+     `pmcid:` for articles, `nct:` for trials, ...).
    - Title-less records (typical: LitSense hits return only
      `pmid`/`pmcid`/`score`) MUST be enriched via `article_get(pmid)` - one
      sequential, server-paced call - BEFORE they may be cited; on failure

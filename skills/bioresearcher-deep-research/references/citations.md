@@ -51,6 +51,9 @@ Example:
 [2] NCT04280705: A Study of Encorafenib Plus Cetuximab With or Without Nivolumab in Metastatic Colorectal Cancer. Phase 2. Sponsor: Pfizer. Status: Completed. https://clinicaltrials.gov/study/NCT04280705
 ```
 
+Ledger records for trials carry `phase`/`sponsor`/`status` in the `meta`
+object (worker-written top-level fields are folded there automatically).
+
 ### Patents (from patent_search / patent_get)
 
 ```

@@ -13,16 +13,25 @@
       "min": 1
     },
     {
-      "type": "tool_seq",
-      "seq": [["article_search", "*"]],
-      "mode": "subsequence"
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "(^|\\n)pmid:\\d+",
+      "desc": "tier-independent literature proof: ledger keys/add stdout contains line-start pmid: entries (real biomcp evidence in the ledger). Direct article_search tool events are invisible in the parent stream under Tier A/B task dispatch - the ledger stdout is the anchor that works in every tier"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[evidence-ledger\\] keys:",
+      "desc": "the documented Step 5a keys sub-step (or an equivalent keys invocation) ran; under Tier A/B the parent never runs add, so this banner comes from the orchestrator"
     },
     {
       "type": "text",
       "source": "tool:*",
       "op": "regex",
       "expect": "evidence\\/[A-Za-z0-9_.-]+\\.jsonl",
-      "desc": "some tool output references an evidence ledger JSONL path - anchored on the Step 5a merge/verify/bib stdout ('... -> reports/<TOPIC>/evidence/sources.jsonl'), which a compliant run always emits; the stats/verify banners themselves carry no path. Note: if this run dispatches Tier A subagents whose inner tool events do not reach the parent stream, the merge/bib stdout remains the anchor"
+      "desc": "some tool output references an evidence ledger JSONL path - anchored on the Step 5a merge/verify/bib stdout ('... -> reports/<TOPIC>/evidence/sources.jsonl'), which a compliant run always emits"
     },
     {
       "type": "tool_count",

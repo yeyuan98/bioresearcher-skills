@@ -283,6 +283,8 @@ python3 <skill_dir>/scripts/evidence-ledger.py merge \
   -o reports/<TOPIC>/evidence/sources.jsonl 'reports/<TOPIC>/evidence/*.jsonl'
 python3 <skill_dir>/scripts/evidence-ledger.py verify \
   reports/<TOPIC>/evidence/sources.jsonl --apply
+python3 <skill_dir>/scripts/evidence-ledger.py keys \
+  reports/<TOPIC>/evidence/sources.jsonl
 python3 <skill_dir>/scripts/evidence-ledger.py bib \
   reports/<TOPIC>/evidence/sources.jsonl --keys <comma-separated keys in citation order>
 ```
@@ -296,10 +298,11 @@ python3 <skill_dir>/scripts/evidence-ledger.py bib \
   titles on title-less records (e.g. LitSense hints the worker could not
   enrich).
 - Compose the References section of `final_report.md` by copying the `bib`
-  output - do not re-type or paraphrase entries. When the script is
-  unreachable (harnesses without filesystem access to `<skill_dir>`),
-  re-read `reports/<TOPIC>/evidence/sources.jsonl` and transcribe entries
-  from the records directly.
+  output - do not re-type or paraphrase entries. Use the `keys` output (all
+  ledger keys, sorted) to pick the citation-ordered `--keys` list for `bib`.
+  When the script is unreachable (harnesses without filesystem access to
+  `<skill_dir>`), re-read `reports/<TOPIC>/evidence/sources.jsonl` and transcribe
+  entries from the records directly.
 
 ### Step 5b: Vet references (independent NCBI verification)
 
