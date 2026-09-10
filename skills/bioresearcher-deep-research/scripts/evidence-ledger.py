@@ -716,6 +716,14 @@ def _close(s: str) -> str:
     return s if s.endswith(".") else s + "."
 
 
+def _close_title(v) -> str:
+    """Render a title and close with a single period (registry titles often
+    already end with one - never emit 'Title..')."""
+    if v in (None, ""):
+        return f"[MISSING field: title]"
+    return _close(str(v).strip().rstrip("."))
+
+
 def render_article(rec: dict, expand: bool) -> str:
     ids = rec.get("ids") or {}
     title = _close(_need(rec, "title").strip())
@@ -736,7 +744,7 @@ def render_trial(rec: dict) -> str:
     ids = rec.get("ids") or {}
     meta = rec.get("meta") or {}
     nct = ids.get("nct") or "[MISSING field: ids.nct]"
-    out = f"{nct}: {_need(rec, 'title')}."
+    out = f"{nct}: {_close_title(rec.get('title'))}"
     phase = str(meta.get("phase") or "").strip().rstrip(".")
     if phase:
         # Workers copy phase verbatim from biomcp/CTgov ("Phase 2", "PHASE3",
@@ -791,7 +799,7 @@ def render_drug(rec: dict) -> str:
                 "[MISSING field: ids.chembl|chebi|unii]")
     ind = f" Indication: {meta['indication']}." if meta.get("indication") else ""
     url = rec.get("url") or ""
-    return f"{_need(rec, 'title')}.{ind} {dbid}. {url}".strip()
+    return f"{_close_title(rec.get('title'))}{ind} {dbid}. {url}".strip()
 
 
 def render_disease(rec: dict) -> str:
@@ -1667,6 +1675,16 @@ def selftest() -> int:
             assert "Again [2]." in text, "duplicate key not reusing its number"
             assert "[4-6]" in text, f"consecutive run not range-compressed: {text}"
             assert "## References" in text and "[1] vemurafenib." in text and "[2] Chapman PB" in text
+            # registry titles ending in a period never render doubled ("Title.. Status")
+            tdot = d / "tdot.jsonl"
+            tdot.write_text(json.dumps({
+                "key": "nct:NCT01844986", "type": "trial", "ids": {"nct": "NCT01844986"},
+                "title": "Olaparib Maintenance Monotherapy in Patients With BRCA Mutated Ovarian Cancer Following First Line Platinum Based Chemotherapy.",
+                "meta": {"status": "ACTIVE_NOT_RECRUITING"},
+                "provenance": [{"aspect": "a"}]}) + "\n", encoding="utf-8")
+            _, tout = _capture(cmd_bib, argparse.Namespace(file=str(tdot), keys="nct:NCT01844986", expand_pages=False, offset=0))
+            tline = tout.splitlines()[0]
+            assert "Chemotherapy. Status:" in tline and ".." not in tline, f"double period rendered: {tline}"
             assert "[MISSING" not in text
             refs = text.split("## References", 1)[1]
             nums = re.findall(r"(?m)^\[(\d+)\]", refs)
