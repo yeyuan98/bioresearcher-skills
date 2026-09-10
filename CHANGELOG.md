@@ -15,6 +15,8 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-10
+
 ### bioresearcher-deep-research 1.4.0
 
 - Structured evidence ledger for citation integrity: workers append one JSON record per potentially-citable source to `reports/<TOPIC>/evidence/<ASPECT>.jsonl` as they search (fields copied verbatim from biomcp tool output; missing fields null, never invented), and compose bibliographies by re-reading the ledger (worker-protocol rule 8, two-file worker contract).
@@ -30,6 +32,16 @@ when that release PR is cut (the release workflow extracts only the
 ### bioresearcher-onboard 1.1.1
 
 - Pin sweep: vendored biomcp server version bumped from 1.1.1 to 1.4.0 (`scripts/onboard.mjs` install pin and docs), picking up PubMed/EuropePMC citation locator fields (volume/issue/pages), HTML-entity decoding, and honest LitSense hint mapping.
+
+### Packaging & Connectors
+
+- Bump repository product package to v1.9.0 across Claude Code plugin, WorkBuddy connector, OpenCode plugin, and DeepSeek Harness (`dsh`) connector.
+- Ship bioresearcher-deep-research 1.4.0 (evidence ledger) and bioresearcher-onboard 1.1.1 (biomcp 1.4.0 pin) in every distribution bundle.
+
+### Agent-test harness
+
+- Subagent observability in the empirical runner: dispatched worker subagents (invisible to `opencode run`'s parent stream) are now captured read-only from opencode's host session DB — live progress (console lines + `progress.jsonl` + 120 s STALL warnings) during the run, post-run `subagents/` + `timeline.jsonl` + `subagents.json` artifacts, check `scope: parent|subagents|all`, and a `subagent_count` check type; `--extract-subagents <DIR>` re-captures finished runs postmortem. Best-effort by design; hermetic `--list`/`--dry-run` never touch the DB.
+- Manual evidence-ledger ladder `deep-research-q04`–`q07` (wiring, deterministic CLI drill, Step 5a merge pipeline, citation fidelity) — all PASS live; q04/q07 budgets and survey scope recalibrated from captured worker telemetry; worker protocol rule 8 mandates batched ledger appends (one `add --stdin` JSON-array call per search result).
 
 ## [1.8.0] - 2026-09-08
 
