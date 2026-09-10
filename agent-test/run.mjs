@@ -521,6 +521,10 @@ async function extractSubagents(runDir) {
     summary.error = "run dir is not under agent-test/.runs — refusing to read the host opencode DB";
     return summary;
   }
+  if (!fs.existsSync(runDir)) {
+    summary.error = `run dir does not exist: ${path.resolve(runDir)}`;
+    return summary;
+  }
   const open = await openOpencodeDb();
   if (open.error) {
     summary.error = open.error;
