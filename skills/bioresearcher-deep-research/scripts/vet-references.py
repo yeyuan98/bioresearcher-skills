@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Programmatic citation validation and enhancement via NCBI E-utilities.
+"""Two-layer citation validation for rendered research reports.
 
-Reads a research report markdown file, extracts citations in the '## References'
-section, queries NCBI PubMed esummary for PMIDs, validates citation metadata
-(especially Volume, Issue, Pages, DOI), and outputs suggestions or applies
-in-place updates.
+Layer 1 - structural audit (offline, deterministic, hard-fail): the document's
+in-text numbered citations must be exactly [1]..[N] contiguous, numbered by
+order of appearance, matching a References section of exactly N entries, with
+zero unrendered placeholders ([MISSING field: ...], None/undefined values).
+Structural failures exit 1: they are local facts, not network results.
 
-Zero external dependencies (pure Python standard library). Fail-safe: on network
-or API failure, exits 0 with original content preserved.
+Layer 2 - NCBI PubMed esummary cross-check (fail-safe): on timeout, rate
+limiting, or network failure the script exits 0 and preserves pre-vetting
+citations unchanged. Non-PMID citations (clinical trials, patents, genes, web
+URLs) are preserved.
+
+Zero external dependencies (pure Python standard library).
 """
 
 import argparse
@@ -31,6 +36,96 @@ REF_LINE_RE = re.compile(
 )
 PMID_RE = re.compile(r'\bPMID[:\s]+\[?(\d{4,9})\]?', re.IGNORECASE)
 DOI_RE = re.compile(r'(?:DOI[:\s]+|https?://(?:dx\.)?doi\.org/)?\b(10\.\d{4,9}/[^\s\]\)]+)', re.IGNORECASE)
+
+# Structural-audit patterns
+CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
+INTEXT_RE = re.compile(r"\[(\d{1,3}(?:\s*[,\u2013\-]\s*\d{1,3})*)\]")
+PLACEHOLDER_RE = re.compile(r"\[\s*MISSING\b|:\s*(?:None|undefined|null)\b")
+
+
+def strip_code_blocks(text: str) -> str:
+    """Remove fenced code blocks (``` or ~~~) so their brackets are not audited."""
+    return CODE_BLOCK_RE.sub("", text)
+
+
+def _expand_int_group(inner: str) -> list:
+    """'[1, 3-5]' (capture group) -> [1, 3, 4, 5]. Non-numeric parts are skipped."""
+    nums = []
+    for part in inner.split(","):
+        part = part.strip().replace("\u2013", "-")
+        m = re.match(r"^(\d+)-(\d+)$", part)
+        if m:
+            a, b = int(m.group(1)), int(m.group(2))
+            if a <= b and b - a <= 500:
+                nums.extend(range(a, b + 1))
+            else:
+                nums.extend([a, b])
+        elif part.isdigit():
+            nums.append(int(part))
+    return nums
+
+
+def audit_structure(text: str) -> dict:
+    """Offline structural audit of a rendered report. Never touches the network."""
+    sections = list(REF_SECTION_RE.finditer(text))
+    if not sections:
+        return {"ok": False,
+                "errors": ["structural audit: no '## References' section found"],
+                "in_text": 0, "references": 0}
+    errors = []
+    if len(sections) > 1:
+        errors.append(f"structural audit: {len(sections)} References-like sections found (expected exactly 1)")
+
+    ref_span = sections[-1]
+    body = strip_code_blocks(text[:ref_span.start()])
+    refs_text = strip_code_blocks(ref_span.group(1))
+
+    body_nums: list = []
+    for m in INTEXT_RE.finditer(body):
+        body_nums.extend(_expand_int_group(m.group(1)))
+    ref_nums = [int(m.group(2)) for m in REF_LINE_RE.finditer(refs_text)]
+    n_refs = len(ref_nums)
+
+    if sorted(ref_nums) != list(range(1, n_refs + 1)):
+        ref_set = set(ref_nums)
+        missing = [n for n in range(1, n_refs + 1) if n not in ref_set]
+        dups = sorted({n for n in ref_nums if ref_nums.count(n) > 1})
+        details = []
+        if missing:
+            details.append(f"missing numbers {missing[:10]}")
+        if dups:
+            details.append(f"duplicates {dups[:10]}")
+        errors.append(f"structural audit: References entries are not exactly [1]..[{n_refs}] "
+                      f"({'; '.join(details) if details else 'not contiguous'})")
+
+    over = sorted({n for n in body_nums if n > n_refs})
+    if over:
+        errors.append(f"structural audit: in-text citation number(s) {over[:10]} exceed the bibliography "
+                      f"count ({n_refs}) - orphan citations; if the bracket is prose (e.g. a numeric "
+                      f"interval like [140, 155]), rephrase it without square brackets")
+
+    seen: list = []
+    seen_set: set = set()
+    for n in body_nums:
+        if n not in seen_set:
+            seen.append(n)
+            seen_set.add(n)
+    order_bad = next((i for i, n in enumerate(seen, 1) if n != i), None)
+    if order_bad is not None:
+        errors.append(f"structural audit: citations are not numbered by order of appearance - distinct "
+                      f"citation #{order_bad} is [{seen[order_bad - 1]}] (expected [{order_bad}])")
+
+    uncited = sorted(set(range(1, n_refs + 1)) - seen_set)
+    if uncited:
+        errors.append(f"structural audit: reference number(s) {uncited[:10]} never cited in the text")
+
+    placeholders = PLACEHOLDER_RE.findall(strip_code_blocks(text))
+    if placeholders:
+        errors.append(f"structural audit: {len(placeholders)} unrendered placeholder marker(s) present "
+                      f"(first: {placeholders[0].strip()!r}) - [MISSING field: ...] or None/undefined "
+                      f"values must never ship")
+
+    return {"ok": not errors, "errors": errors, "in_text": len(seen_set), "references": n_refs}
 
 
 def build_pub_locator(doc: dict) -> str:
@@ -212,8 +307,46 @@ def vet_references(report_path: Path, apply_changes: bool = False) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Hermetic selftest (CI; no network)
+# ---------------------------------------------------------------------------
+
+def selftest() -> int:
+    ok_doc = (
+        "# T\n\nFirst [1] then [2] and group [1, 2], range [3].\n\n"
+        "## References\n\n[1] Alpha. PMID: 11111111.\n\n[2] Beta. PMID: 22222222.\n\n[3] Gamma. PMID: 33333333.\n"
+    )
+    cases = [
+        ("well-formed doc passes", ok_doc, True),
+        ("citation gap fails", ok_doc.replace("then [2] and group [1, 2], range [3]", "then [1, 3]"), False),
+        ("out-of-range citation fails", ok_doc.replace("range [3]", "range [3] and [5]"), False),
+        ("uncited reference fails", ok_doc.replace("then [2] and group [1, 2], range [3]", "then [2]"), False),
+        ("appearance-order violation fails", ok_doc.replace("First [1] then [2]", "First [2] then [1]"), False),
+        ("multiple References sections fail", ok_doc + "\n## References\n\n[1] Dup.\n", False),
+        ("missing References section fails", "# T\n\nBody [1] only.\n", False),
+        ("MISSING placeholder fails", ok_doc.replace("[2] Beta.", "[2] [MISSING field: title]."), False),
+        ("None value in references fails", ok_doc.replace("[2] Beta. PMID: 22222222.", "[2] Beta. Sponsor: None."), False),
+        ("fenced code blocks ignored", ok_doc.replace("First [1]", "First [1]\n\n```\n[99] and [140, 155]\n```\n"), True),
+        ("prose interval exceeding N is flagged loudly", ok_doc.replace("range [3]", "interval [140, 155]"), False),
+    ]
+    failures = 0
+    for name, doc, expect_ok in cases:
+        got = audit_structure(doc)
+        if got["ok"] != expect_ok:
+            failures += 1
+            print(f"FAIL {name}: expected ok={expect_ok}, got ok={got['ok']} errors={got['errors']}")
+        else:
+            print(f"PASS {name}")
+    print(f"[vet-references] selftest: {len(cases) - failures}/{len(cases)} group(s) passed"
+          + (" — FAILURES PRESENT" if failures else ""))
+    return 1 if failures else 0
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Vet report citations against NCBI PubMed E-utilities.")
+    if len(sys.argv) > 1 and sys.argv[1] == "selftest":
+        sys.exit(selftest())
+
+    parser = argparse.ArgumentParser(description="Vet report citations: structural audit + NCBI PubMed E-utilities.")
     parser.add_argument("report", help="Path to markdown research report (e.g. final_report.md)")
     parser.add_argument("--apply", action="store_true", help="Apply verified citation updates in-place")
     parser.add_argument("--json", action="store_true", help="Output results in structured JSON")
@@ -222,9 +355,24 @@ def main():
 
     report_path = Path(args.report)
     if not report_path.is_file():
-        sys.stderr.write(f"error: file not found: {report_path}\n")
-        sys.exit(0)
+        sys.stderr.write(f"[vet-references] error: report file not found: {report_path}\n")
+        sys.exit(1)
 
+    # Layer 1: structural audit (offline, deterministic). Runs OUTSIDE the
+    # fail-safe exception handling: structural failures must hard-fail.
+    audit = audit_structure(report_path.read_text(encoding="utf-8"))
+    if not audit["ok"]:
+        print(f"[vet-references] Structural audit: FAIL ({audit['in_text']} in-text distinct, "
+              f"{audit['references']} bibliography entries)")
+        for e in audit["errors"]:
+            print(f"  - {e}")
+        if args.json:
+            print(json.dumps({"audit": audit}, indent=2))
+        sys.exit(1)
+    print(f"[vet-references] Structural audit: PASS ({audit['in_text']} in-text distinct citations, "
+          f"{audit['references']} bibliography entries, contiguous [1]..[{audit['references']}])")
+
+    # Layer 2: NCBI metadata cross-check (network fail-safe).
     try:
         res = vet_references(report_path, apply_changes=args.apply)
     except Exception as e:
@@ -232,7 +380,7 @@ def main():
         sys.exit(0)
 
     if args.json:
-        print(json.dumps(res, indent=2))
+        print(json.dumps({"audit": audit, **res}, indent=2))
         return
 
     print(f"[vet-references] Scanned {res.get('total_citations', 0)} citations "
