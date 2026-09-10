@@ -17,12 +17,21 @@
  *      <runDir>/data from the case fixtures/, copy the test's opencode.json
  *      into the run dir BEFORE spawn (generic {env:VAR} substitution), export
  *      AGENT_TEST_DATA, spawn `opencode run --dir <run-dir> --auto <prompt>
- *      --format json [--model ID]`; stdout+stderr appended to log.jsonl.
+ *      --format json`; stdout+stderr appended to log.jsonl.
  *      Timeout: SIGTERM -> 3 s -> SIGKILL -> harness ERROR.
+ *      DELTA 8 during the spawn: a read-only poller of opencode's host
+ *      session DB surfaces worker-subagent progress live (sidecar
+ *      progress.jsonl + console lines + stall warnings) — log.jsonl itself is
+ *      never touched.
  *   4. Parse NDJSON (skip unparseable lines): tool_use events (ignore pending),
  *      assistant text events, terminal step_finish(reason=="stop"), APIError
  *      events -> global stop-loss (remaining tests INTERRUPTED, exit 2).
- *   5. Grade checks (12 types) -> result.json per rep.
+ *      DELTA 8 after the spawn closes: worker-subagent sessions (invisible in
+ *      log.jsonl) are extracted read-only from the same host DB into
+ *      <runDir>/subagents/<sid>.jsonl + timeline.jsonl + subagents.json.
+ *   5. Grade checks (13 types, incl. subagent_count; any check may set
+ *      scope: parent|subagents|all to address the captured subagent streams)
+ *      -> result.json per rep.
  *   6. Report: .runs/summary.json + stdout table; .runs/provenance.json once
  *      per invocation.
  *
@@ -55,6 +64,19 @@
  *      only; it never spawns opencode and does not require it installed (the
  *      source also never spawned on --dry-run; this port additionally reports
  *      injectable-skill and fixture counts and skips nothing else).
+ *   8. SUBAGENT CAPTURE: `opencode run` streams ONLY the top-level session's
+ *      events, so Tier A/B worker subagents (every dispatched article_search,
+ *      ledger append, worker write) are absent from log.jsonl — long
+ *      delegations are minutes of silence. opencode persists all sessions
+ *      (parent-linked, full parts) in its host SQLite DB, so the runner reads
+ *      it READ-ONLY (node:sqlite, WAL-safe): a live progress poller during the
+ *      spawn, a post-run extractor into <runDir>/subagents/ + timeline.jsonl +
+ *      subagents.json, `scope: parent|subagents|all` on checks, and a
+ *      subagent_count check. Best-effort by design: any DB failure degrades to
+ *      a note in result.json and never changes the run outcome; --list and
+ *      --dry-run never touch the DB (lazy import keeps node:sqlite — and its
+ *      ExperimentalWarning — out of hermetic CI). --extract-subagents <DIR>
+ *      re-captures any finished run dir postmortem.
  *
  * Spec-ambiguity resolutions inherited from the source are marked AMBIGUITY:
  * in comments where a normative choice was required.
@@ -62,6 +84,7 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import crypto from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
@@ -77,6 +100,10 @@ const DEFAULT_SKILLS_DIR = path.resolve(AGENT_ROOT, "..", "skills");
 const DEFAULT_TIMEOUT_MS = 300000;
 const TERM_GRACE_MS = 3000;
 const PROVISION_SCRIPT_TIMEOUT_MS = 15 * 60 * 1000;
+// DELTA 8: subagent-capture knobs (live poller of opencode's host session DB).
+const SUBAGENT_POLL_MS = 10000;
+const SUBAGENT_STALL_WARN_MS = 120000;
+const SUBAGENT_STALL_REWARN_MS = 60000;
 
 class UsageError extends Error {}
 class HarnessError extends Error {}
@@ -96,6 +123,7 @@ function parseArgs(argv) {
     dryRun: false,
     list: false,
     help: false,
+    extractSubagents: null, // DELTA 8
   };
   const need = (flag, v) => {
     if (v === undefined) throw new UsageError(`${flag} requires a value`);
@@ -114,6 +142,7 @@ function parseArgs(argv) {
       case "--timeout": a.timeout = Number(need(t, argv[++i])); break;
       case "--dry-run": a.dryRun = true; break;
       case "--list": a.list = true; break;
+      case "--extract-subagents": a.extractSubagents = need(t, argv[++i]); break; // DELTA 8
       case "--help": case "-h": a.help = true; break;
       default: throw new UsageError(`unknown argument: ${t}`);
     }
@@ -136,6 +165,8 @@ function usage() {
     "  --model <ID>        passed to `opencode run --model` (optional)",
     "  --timeout <ms>      per-rep timeout override (default: test timeoutMs else 300000)",
     "  --dry-run           discovery + schema validation + provisioning simulation, never spawn",
+    "  --extract-subagents <DIR>  postmortem: (re)capture subagent streams for a finished",
+    "                      run dir (read-only DB read; prints subagents.json summary), then exit",
     "  --list              print the test index table and exit",
     "exit codes: 0 all PASS/PASS*/SKIP-only; 1 any FAIL; 2 harness ERROR/INTERRUPTED",
   ].join("\n");
@@ -382,6 +413,434 @@ function countFixtureFiles(fixturesDir) {
   return n;
 }
 
+/* ============================================ SECTION: subagent capture (DELTA 8) */
+/*
+ * `opencode run --format json` emits only the top-level session's events, so
+ * dispatched worker subagents are invisible: their tool calls never reach
+ * log.jsonl and long delegations are minutes of log silence. opencode itself
+ * persists EVERY session in its host SQLite DB (session.parent_id links
+ * workers to the parent; part rows carry full tool inputs/outputs, text,
+ * reasoning and per-step tokens; session.directory holds the run dir), so the
+ * runner recovers subagent behavior from there — strictly read-only (WAL-safe
+ * next to live opencode processes), best-effort (failures become notes, never
+ * run-outcome changes), and never on --list/--dry-run (node:sqlite is lazily
+ * imported so hermetic CI never loads it).
+ */
+
+const SESSION_COLS = "id, parent_id, directory, title, agent, time_created, time_updated";
+
+function opencodeDbPath() {
+  const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+  return path.join(dataHome, "opencode", "opencode.db");
+}
+
+async function openOpencodeDb() {
+  const dbPath = opencodeDbPath();
+  if (!fs.existsSync(dbPath)) return { error: `opencode DB not found: ${dbPath}` };
+  let DatabaseSync;
+  try {
+    ({ DatabaseSync } = await import("node:sqlite"));
+  } catch (e) {
+    return { error: `node:sqlite unavailable on this node build: ${e.message}` };
+  }
+  try {
+    return { db: new DatabaseSync(dbPath, { readOnly: true }), dbPath };
+  } catch (e) {
+    return { error: `cannot open ${dbPath} read-only: ${e.message}` };
+  }
+}
+
+/* Privacy guard: only ever read the host DB for per-rep dirs this runner
+ * created under agent-test/.runs — never for arbitrary host directories. */
+function isUnderRunsDir(runDir) {
+  const root = path.resolve(path.join(AGENT_ROOT, ".runs")) + path.sep;
+  return path.resolve(runDir).startsWith(root);
+}
+
+/* "TIL manufacturing biology aspect (@general subagent)" -> "general/TIL manufacturing biology…" */
+function shortSessionLabel(title, agent) {
+  const base = String(title ?? "").replace(/\s*\(@[^)]*\)\s*$/, "").trim() || "subagent";
+  return `${agent ?? "?"}/${base.length > 28 ? base.slice(0, 27) + "…" : base}`;
+}
+
+/* DB part row -> normalized event mirroring the `opencode run --format json`
+ * envelope ({type, timestamp, sessionID, part}) so downstream consumers can
+ * treat parent and subagent streams identically. */
+function subagentPartToEvent(sid, timeCreated, p) {
+  const t = p?.type;
+  const type = t === "tool" ? "tool_use" : t === "step-start" ? "step_start" : t === "step-finish" ? "step_finish" : t;
+  let part = p;
+  if (t === "tool") part = { tool: p.tool, state: p.state ?? {} };
+  else if (t === "step-finish") part = { reason: p.reason, tokens: p.tokens ?? null };
+  else if (t === "text" || t === "reasoning") part = { text: p.text ?? "" };
+  return { type, timestamp: timeCreated, sessionID: sid, origin: "subagent", part };
+}
+
+/* All sessions belonging to a run: roots have directory == runDir; the worker
+ * closure follows parent_id (nested subagents included, any cwd). */
+function collectRunSessions(db, runDir) {
+  const byId = new Map();
+  for (const s of db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE directory = ?`).all(runDir)) byId.set(s.id, s);
+  let frontier = [...byId.keys()];
+  for (let depth = 0; depth < 16 && frontier.length; depth++) {
+    const ph = frontier.map(() => "?").join(",");
+    const children = db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE parent_id IN (${ph})`).all(...frontier);
+    frontier = [];
+    for (const c of children) {
+      if (byId.has(c.id)) continue;
+      byId.set(c.id, c);
+      frontier.push(c.id);
+    }
+  }
+  return [...byId.values()];
+}
+
+function scanLedgerBanners(p, into) {
+  const blobs = [typeof p?.text === "string" ? p.text : null, typeof p?.state?.output === "string" ? p.state.output : null, typeof p?.state?.input === "string" ? p.state.input : null];
+  for (const blob of blobs) {
+    if (!blob) continue;
+    for (const m of blob.matchAll(/^\[evidence-ledger\][^\n]*/gm)) into.add(m[0].slice(0, 120));
+  }
+}
+
+/* Post-run capture: writes <runDir>/subagents/<sid>.jsonl (one normalized
+ * event per line, preceded by a subagent_meta line), <runDir>/timeline.jsonl
+ * (parent log events + subagent events interleaved by timestamp, tool outputs
+ * truncated to keep the file readable), and returns the summary dict stored
+ * as result.json `subagents` (also printed by --extract-subagents). */
+async function extractSubagents(runDir) {
+  const summary = {
+    extractedAt: new Date().toISOString(),
+    runDir: path.resolve(runDir),
+    dbPath: opencodeDbPath(),
+    parentSessions: [],
+    sessions: [],
+    error: null,
+  };
+  if (!isUnderRunsDir(runDir)) {
+    summary.error = "run dir is not under agent-test/.runs — refusing to read the host opencode DB";
+    return summary;
+  }
+  const open = await openOpencodeDb();
+  if (open.error) {
+    summary.error = open.error;
+    return summary;
+  }
+  const { db, dbPath } = open;
+  summary.dbPath = dbPath;
+  try {
+    const sessions = collectRunSessions(db, path.resolve(runDir));
+    summary.parentSessions = sessions.filter((s) => !s.parent_id).map((s) => s.id);
+    const subs = sessions.filter((s) => s.parent_id);
+    const outDir = path.join(runDir, "subagents");
+    fs.mkdirSync(outDir, { recursive: true });
+
+    const timeline = [];
+    const logText = (() => {
+      try {
+        return fs.readFileSync(path.join(runDir, "log.jsonl"), "utf8");
+      } catch {
+        return "";
+      }
+    })();
+    for (const line of logText.split(/\r?\n/)) {
+      const s = line.trim();
+      if (!s) continue;
+      let ev;
+      try {
+        ev = JSON.parse(s);
+      } catch {
+        continue;
+      }
+      timeline.push({ origin: "parent", ...ev });
+    }
+
+    for (const s of subs) {
+      const parts = db.prepare("SELECT time_created, data FROM part WHERE session_id = ? ORDER BY time_created").all(s.id);
+      const messages = db.prepare("SELECT COUNT(*) AS n FROM message WHERE session_id = ?").get(s.id).n;
+      const toolHistogram = {};
+      const banners = new Set();
+      let tokensTotal = 0;
+      let textChars = 0;
+      const fd = fs.openSync(path.join(outDir, `${s.id}.jsonl`), "w");
+      try {
+        fs.writeSync(fd, JSON.stringify({
+          type: "subagent_meta",
+          sessionID: s.id,
+          parentID: s.parent_id,
+          title: s.title ?? null,
+          agent: s.agent ?? null,
+          directory: s.directory ?? null,
+          timeCreated: s.time_created ?? null,
+          timeUpdated: s.time_updated ?? null,
+        }) + "\n");
+        for (const row of parts) {
+          let p;
+          try {
+            p = JSON.parse(row.data);
+          } catch {
+            continue;
+          }
+          const ev = subagentPartToEvent(s.id, row.time_created, p);
+          timeline.push(ev);
+          if (ev.type === "tool_use") {
+            const key = `${ev.part.tool}:${ev.part.state?.status ?? "?"}`;
+            toolHistogram[key] = (toolHistogram[key] ?? 0) + 1;
+          } else if (ev.type === "step_finish" && Number.isFinite(Number(ev.part?.tokens?.total))) {
+            tokensTotal += Number(ev.part.tokens.total);
+          } else if ((ev.type === "text" || ev.type === "reasoning") && typeof ev.part?.text === "string") {
+            textChars += ev.part.text.length;
+          }
+          scanLedgerBanners(p, banners);
+          fs.writeSync(fd, JSON.stringify(ev) + "\n");
+        }
+      } finally {
+        fs.closeSync(fd);
+      }
+      summary.sessions.push({
+        id: s.id,
+        parentID: s.parent_id,
+        agent: s.agent ?? null,
+        title: s.title ?? null,
+        timeCreated: s.time_created ?? null,
+        timeUpdated: s.time_updated ?? null,
+        durationMs: s.time_updated && s.time_created ? s.time_updated - s.time_created : null,
+        messages,
+        parts: parts.length,
+        toolHistogram,
+        tokensTotal,
+        textChars,
+        evidenceLedgerBanners: [...banners].slice(0, 100),
+      });
+    }
+
+    timeline.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+    const tlFd = fs.openSync(path.join(runDir, "timeline.jsonl"), "w");
+    try {
+      for (const ev of timeline) {
+        const out = ev.type === "tool_use" && typeof ev.part?.state?.output === "string" && ev.part.state.output.length > 240
+          ? { ...ev, part: { ...ev.part, state: { ...ev.part.state, output: ev.part.state.output.slice(0, 240) + `… (+${ev.part.state.output.length - 240} chars)` } } }
+          : ev;
+        fs.writeSync(tlFd, JSON.stringify(out) + "\n");
+      }
+    } finally {
+      fs.closeSync(tlFd);
+    }
+    fs.writeFileSync(path.join(runDir, "subagents.json"), JSON.stringify(summary, null, 2) + "\n");
+    try {
+      db.close();
+    } catch {}
+    return summary;
+  } catch (e) {
+    summary.error = `extraction failed: ${e.message}`;
+    try {
+      db.close();
+    } catch {}
+    return summary;
+  }
+}
+
+/* Grader-side loader for the captured streams (same normalization as parseLog:
+ * non-pending tool_use calls, text parts). Returns {available:false, reason}
+ * when no capture exists — scope!=parent checks then FAIL loudly instead of
+ * silently passing against empty streams. */
+function loadSubagentEvents(runDir) {
+  const out = { available: false, reason: null, events: [], toolCalls: [], texts: [], sessions: [] };
+  const dir = path.join(runDir, "subagents");
+  let files = [];
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
+  } catch {
+    out.reason = `no ${path.relative(path.dirname(dir), dir)} capture (absent or extraction failed)`;
+    return out;
+  }
+  if (!files.length) {
+    out.reason = "subagents/ capture is empty";
+    return out;
+  }
+  for (const f of files) {
+    let text = "";
+    try {
+      text = fs.readFileSync(path.join(dir, f), "utf8");
+    } catch {
+      continue;
+    }
+    for (const line of text.split(/\r?\n/)) {
+      const s = line.trim();
+      if (!s) continue;
+      let ev;
+      try {
+        ev = JSON.parse(s);
+      } catch {
+        continue;
+      }
+      if (ev.type === "subagent_meta") {
+        out.sessions.push({ id: ev.sessionID, parentID: ev.parentID, title: ev.title, agent: ev.agent, timeCreated: ev.timeCreated, timeUpdated: ev.timeUpdated });
+        continue;
+      }
+      out.events.push(ev);
+      if (ev.type === "tool_use") {
+        const part = ev.part ?? {};
+        const state = part.state ?? {};
+        if (state.status === "pending") continue;
+        out.toolCalls.push({
+          tool: part.tool,
+          status: state.status ?? null,
+          input: state.input ?? null,
+          output: state.output ?? null,
+          error: state.error ?? null,
+          ts: ev.timestamp ?? null,
+          sessionID: ev.sessionID ?? null,
+        });
+      } else if (ev.type === "text" && typeof ev.part?.text === "string" && ev.part.text) {
+        out.texts.push(ev.part.text);
+      }
+    }
+  }
+  out.sessions.sort((a, b) => (a.timeCreated ?? 0) - (b.timeCreated ?? 0));
+  out.toolCalls.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+  out.available = out.sessions.length > 0 || out.toolCalls.length > 0 || out.texts.length > 0;
+  if (!out.available) out.reason = "subagents/ capture parsed but contains no events";
+  return out;
+}
+
+/* Live progress poller: every SUBAGENT_POLL_MS, read NEW part rows for this
+ * run's sessions from the host DB and (a) append compact records to
+ * <runDir>/progress.jsonl, (b) print one console line per burst of subagent
+ * activity, (c) warn when NOTHING moved (neither DB parts nor parent stdout)
+ * for SUBAGENT_STALL_WARN_MS. Degrades to a recorded note on the first DB
+ * failure; never throws; log.jsonl is not touched. */
+function startSubagentProgressPoller(test, runDir) {
+  const state = {
+    db: null,
+    disabled: false,
+    watermark: 0,
+    known: new Map(),
+    lastActivityAt: Date.now(),
+    lastDesc: "run start",
+    lastStallWarnAt: 0,
+  };
+  let fd;
+  try {
+    fd = fs.openSync(path.join(runDir, "progress.jsonl"), "a");
+  } catch {
+    fd = null;
+  }
+  const record = (msg, extra = {}) => {
+    if (!fd) return;
+    try {
+      fs.writeSync(fd, JSON.stringify({ t: new Date().toISOString(), msg, ...extra }) + "\n");
+    } catch {}
+  };
+  const clock = () => new Date().toISOString().slice(11, 19);
+  const disable = (reason) => {
+    if (state.disabled) return;
+    state.disabled = true;
+    clearInterval(timer);
+    record(`poller disabled: ${reason}`);
+    console.error(`[${test.id}] subagent progress poller disabled: ${reason}`);
+  };
+  const tick = async () => {
+    if (state.disabled) return;
+    try {
+      if (!state.db) {
+        const open = await openOpencodeDb();
+        if (open.error) {
+          disable(open.error);
+          return;
+        }
+        state.db = open.db;
+        record(`poller started (db: ${open.dbPath})`);
+      }
+      const db = state.db;
+      const sessions = db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE directory = ?`).all(path.resolve(runDir));
+      const ids = [];
+      for (const s of sessions) {
+        ids.push(s.id);
+        if (!state.known.has(s.id)) {
+          state.known.set(s.id, s);
+          if (s.parent_id) {
+            const label = shortSessionLabel(s.title, s.agent);
+            record(`subagent session started: ${label}`, { sid: s.id });
+            console.log(`[${test.id}] ${clock()} sub[${label}] session started`);
+          }
+        }
+      }
+      if (!ids.length) return;
+      const ph = ids.map(() => "?").join(",");
+      const rows = db.prepare(`SELECT session_id, time_created, data FROM part WHERE session_id IN (${ph}) AND time_created > ? ORDER BY time_created`).all(...ids, state.watermark);
+      const grouped = new Map();
+      for (const r of rows) {
+        let p;
+        try {
+          p = JSON.parse(r.data);
+        } catch {
+          continue;
+        }
+        if (r.time_created > state.watermark) state.watermark = r.time_created;
+        state.lastActivityAt = Date.now();
+        const meta = state.known.get(r.session_id);
+        if (!meta?.parent_id) continue; // parent stream already lands in log.jsonl
+        const label = shortSessionLabel(meta.title, meta.agent);
+        const kind = p.type === "tool" ? `tool ${p.tool} ${p.state?.status ?? ""}`.trim() : String(p.type ?? "?");
+        state.lastDesc = `sub[${label}] ${kind} @${clock()}`;
+        const g = grouped.get(r.session_id) ?? { label, items: [] };
+        g.items.push({ ts: r.time_created, kind });
+        grouped.set(r.session_id, g);
+      }
+      for (const [, g] of grouped) {
+        record(`subagent activity`, { label: g.label, events: g.items });
+        if (g.items.length <= 6) {
+          for (const it of g.items) console.log(`[${test.id}] ${clock()} sub[${g.label}] ${it.kind}`);
+        } else {
+          console.log(`[${test.id}] ${clock()} sub[${g.label}] +${g.items.length} events (catch-up)`);
+        }
+      }
+      const quiet = Date.now() - state.lastActivityAt;
+      if (quiet > SUBAGENT_STALL_WARN_MS && Date.now() - state.lastStallWarnAt > SUBAGENT_STALL_REWARN_MS) {
+        state.lastStallWarnAt = Date.now();
+        console.error(`[${test.id}] STALL: no parent or subagent activity for ${Math.round(quiet / 1000)}s — last: ${state.lastDesc} (opencode may be hung or retrying; inspect progress.jsonl, timeline, network)`);
+        record(`stall warning: ${Math.round(quiet / 1000)}s quiet, last: ${state.lastDesc}`);
+      }
+    } catch (e) {
+      disable(`poll failed: ${e.message}`);
+    }
+  };
+  const timer = setInterval(() => {
+    void tick();
+  }, SUBAGENT_POLL_MS);
+  if (typeof timer.unref === "function") timer.unref();
+  return {
+    /* Parent-stream output also counts as activity (runSession hooks child
+     * stdout/stderr into this) so the stall detector only fires on TRUE
+     * silence across parent + subagents. */
+    noteActivity() {
+      state.lastActivityAt = Date.now();
+    },
+    stop(reason) {
+      if (state.disabled) {
+        if (fd) {
+          try {
+            fs.closeSync(fd);
+          } catch {}
+        }
+        return;
+      }
+      clearInterval(timer);
+      record(`poller stopped: ${reason}`);
+      if (fd) {
+        try {
+          fs.closeSync(fd);
+        } catch {}
+      }
+      try {
+        state.db?.close();
+      } catch {}
+      state.disabled = true;
+    },
+  };
+}
+
 /* ============================================================ SECTION: session exec */
 
 function timestampDirName() {
@@ -513,6 +972,10 @@ function runSession(test, rep, args, dataRoot, skillsDir) {
     if (args.model) argv.push("--model", args.model);
     const child = spawn("opencode", argv, { cwd: runDir, env: sessionEnv, stdio: ["ignore", "pipe", "pipe"] });
 
+    // DELTA 8: live subagent-progress poller (sidecar progress.jsonl + console
+    // lines + stall warnings). Best-effort; never touches log.jsonl.
+    const poller = startSubagentProgressPoller(test, runDir);
+
     let timedOut = false;
     let settled = false;
     let killTimer;
@@ -527,11 +990,12 @@ function runSession(test, rep, args, dataRoot, skillsDir) {
       settled = true;
       clearTimeout(timer);
       if (killTimer) clearTimeout(killTimer);
+      poller.stop(spawnError ? `spawn failed: ${spawnError?.message ?? "?"}` : timedOut ? "run timed out" : "run finished");
       fs.closeSync(fd);
       resolve({ runDir, logPath, timedOut, spawnError: spawnError ?? null });
     };
-    child.stdout.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} });
-    child.stderr.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} });
+    child.stdout.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} poller.noteActivity(); });
+    child.stderr.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} poller.noteActivity(); });
     child.on("error", (e) => finish(e));
     child.on("close", () => finish(null));
   });
@@ -581,6 +1045,9 @@ function parseLog(text) {
         input: state.input ?? null,
         output: state.output ?? null,
         error: state.error ?? null,
+        /* DELTA 8: event timestamp (ms epoch) — lets scope:"all" interleave
+         * parent and captured subagent tool calls in true execution order. */
+        ts: ev.timestamp ?? null,
       });
     } else if (ev.type === "text" && typeof ev.part?.text === "string") {
       /* AMBIGUITY (inherited): real `opencode run --format json` logs emit
@@ -770,14 +1237,37 @@ function describeCheck(check) {
   return typeof check?.desc === "string" && check.desc ? check.desc : `<${check?.type ?? "?"}>`;
 }
 
-function evalCheck(check, parsed) {
+function evalCheck(check, parsed, subParsed) {
   if (!check || typeof check !== "object" || Array.isArray(check)) {
     return result(check, "error", "check is not an object");
   }
   try {
     const fn = CHECK_TYPES[check.type];
     if (!fn) return result(check, "error", `unknown check type ${JSON.stringify(check.type)}`);
-    return fn(check, parsed);
+    /* DELTA 8: optional check scope. "parent" (default) keeps the legacy
+     * semantics exactly (log.jsonl only); "subagents" addresses the captured
+     * worker streams; "all" merges both (tool calls interleaved by event
+     * timestamp). A non-parent scope without a capture FAILS loudly rather
+     * than silently passing against empty streams. */
+    const scope = check.scope ?? "parent";
+    if (scope !== "parent" && scope !== "subagents" && scope !== "all") {
+      return result(check, "error", `invalid scope ${JSON.stringify(check.scope)} (parent|subagents|all)`);
+    }
+    if (scope === "parent") return fn(check, parsed, subParsed);
+    if (!subParsed?.available) {
+      return result(check, "fail", `scope "${scope}" requires subagent capture, none available (${subParsed?.reason ?? "subagents/ absent"}); run live or use --extract-subagents`);
+    }
+    const eff = scope === "subagents"
+      ? { events: subParsed.events, parsedCount: subParsed.events.length, toolCalls: subParsed.toolCalls, texts: subParsed.texts, endsWithStop: true, apiError: null }
+      : {
+          events: [...parsed.events, ...subParsed.events],
+          parsedCount: parsed.parsedCount + subParsed.events.length,
+          toolCalls: [...parsed.toolCalls, ...subParsed.toolCalls].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
+          texts: [...parsed.texts, ...subParsed.texts],
+          endsWithStop: parsed.endsWithStop,
+          apiError: parsed.apiError,
+        };
+    return fn(check, eff, subParsed);
   } catch (e) {
     return result(check, "error", `grader exception: ${e.message}`);
   }
@@ -827,7 +1317,7 @@ function checkGroup(check, parsed) {
   if (hasAny === hasAll) return result(check, "error", "group requires exactly one of anyOf|allOf (non-empty array)");
   const arms = hasAny ? check.anyOf : check.allOf;
   if (arms.length === 0) return result(check, "error", "group requires a non-empty anyOf/allOf array");
-  const armResults = arms.map((a) => evalCheck(a, parsed));
+  const armResults = arms.map((a) => evalCheck(a, parsed, subParsed));
   const summary = armResults.map((r, i) => `arm${i + 1}[${r.status}]${r.detail ? ` ${r.detail}` : ""}`).join("; ");
   if (hasAny) {
     if (armResults.some((r) => r.status === "pass")) {
@@ -1043,14 +1533,30 @@ function checkStatus(check, parsed) {
   return result(check, ok ? "pass" : "fail", `${g.full}#${g.occ} status ${g.call.status}${ok ? " ==" : " !="} ${check.status}`);
 }
 
+function checkSubagentCount(check, parsed, subParsed) {
+  if (check.min === undefined && check.max === undefined) return result(check, "error", "subagent_count requires min and/or max");
+  for (const k of ["min", "max"]) {
+    if (check[k] !== undefined && !Number.isInteger(check[k])) return result(check, "error", `subagent_count ${k} must be an integer`);
+  }
+  if (check.agent !== undefined && typeof check.agent !== "string") return result(check, "error", "subagent_count agent must be a string");
+  const sessions = subParsed?.available ? subParsed.sessions : [];
+  const sel = check.agent === undefined ? sessions : sessions.filter((s) => s.agent === check.agent);
+  const count = sel.length;
+  const ok = (check.min === undefined || count >= check.min) && (check.max === undefined || count <= check.max);
+  const who = sel.map((s) => `${s.agent ?? "?"}/${String(s.title ?? "").replace(/\s*\(@[^)]*\)\s*$/, "").slice(0, 30)}`).join(", ");
+  return result(check, ok ? "pass" : "fail",
+    `count=${count} of ${check.agent === undefined ? "(any agent)" : JSON.stringify(check.agent)} subagent session(s); bounds [${check.min ?? "-inf"}, ${check.max ?? "inf"}]${who ? `; captured: ${who}` : "; none captured"}`);
+}
+
 function checkRubric(check) {
   if (check.manual !== true) return result(check, "error", "rubric requires manual: true");
   if (typeof check.flag !== "string" || !check.flag) return result(check, "error", "rubric requires string flag");
   return { ...result(check, "manual", `unadjudicated rubric flag: ${check.flag}`), flag: check.flag };
 }
 
-/* 12 check types (the source's "13" counted group.anyOf/group.allOOf as two;
- * they are the two composition modes of a single `group` type). */
+/* 13 check types (the source's "13" counted group.anyOf/group.allOf as two;
+ * they are the two composition modes of a single `group` type). subagent_count
+ * is a DELTA 8 addition. */
 const CHECK_TYPES = {
   tool_seq: checkToolSeq,
   group: checkGroup,
@@ -1063,11 +1569,12 @@ const CHECK_TYPES = {
   tool_count: checkToolCount,
   no_such_tool: checkNoSuchTool,
   status: checkStatus,
+  subagent_count: checkSubagentCount,
   rubric: checkRubric,
 };
 
-function gradeRep(parsed, test) {
-  const results = test.spec.checks.map((c) => evalCheck(c, parsed));
+function gradeRep(parsed, test, subParsed) {
+  const results = test.spec.checks.map((c) => evalCheck(c, parsed, subParsed));
   const rubrics = results.filter((r) => r.status === "manual");
   let outcome;
   let reason = null;
@@ -1087,6 +1594,44 @@ function gradeRep(parsed, test) {
   }
   const failing = results.filter((r) => r.status === "fail" || r.status === "error");
   return { outcome, reason, results, rubrics, failing };
+}
+
+/* DELTA 8: hermetic spec validation (check types, scope values,
+ * subagent_count bounds; group arms validated recursively). Used by --dry-run
+ * and re-checked before a live spawn so malformed specs never spend tokens. */
+function validateSpec(spec) {
+  if (!Array.isArray(spec.checks)) return "checks must be an array";
+  const walk = (check, where) => {
+    if (!check || typeof check !== "object" || Array.isArray(check)) return `${where}: check is not an object`;
+    if (check.scope !== undefined && !["parent", "subagents", "all"].includes(check.scope)) {
+      return `${where}: invalid scope ${JSON.stringify(check.scope)} (parent|subagents|all)`;
+    }
+    if (check.type === "group") {
+      const hasAny = Array.isArray(check.anyOf);
+      const hasAll = Array.isArray(check.allOf);
+      if (hasAny === hasAll) return `${where}: group requires exactly one of anyOf|allOf (non-empty array)`;
+      const arms = hasAny ? check.anyOf : check.allOf;
+      for (let i = 0; i < arms.length; i++) {
+        const e = walk(arms[i], `${where}.arm${i + 1}`);
+        if (e) return e;
+      }
+      return null;
+    }
+    if (!CHECK_TYPES[check.type]) return `${where}: unknown check type ${JSON.stringify(check.type)}`;
+    if (check.type === "subagent_count") {
+      if (check.min === undefined && check.max === undefined) return `${where}: subagent_count requires min and/or max`;
+      for (const k of ["min", "max"]) {
+        if (check[k] !== undefined && !Number.isInteger(check[k])) return `${where}: subagent_count ${k} must be an integer`;
+      }
+      if (check.agent !== undefined && typeof check.agent !== "string") return `${where}: subagent_count agent must be a string`;
+    }
+    return null;
+  };
+  for (let i = 0; i < spec.checks.length; i++) {
+    const e = walk(spec.checks[i], `checks[${i}]`);
+    if (e) return e;
+  }
+  return null;
 }
 
 /* ================================================================ SECTION: report */
@@ -1185,6 +1730,14 @@ async function main() {
     console.log(usage());
     return 0;
   }
+  // DELTA 8: postmortem mode — (re)capture subagent streams for one finished
+  // run dir, print the summary, exit. Never spawns opencode, never discovers
+  // tests, and refuses directories outside agent-test/.runs.
+  if (args.extractSubagents) {
+    const summary = await extractSubagents(args.extractSubagents);
+    console.log(JSON.stringify(summary, null, 2));
+    return summary.error ? 2 : 0;
+  }
   const tests = discoverTests();
   if (args.list) {
     printListTable(tests);
@@ -1235,6 +1788,14 @@ async function main() {
       rows.push({ test: test.id, rep: "-", outcome: "ERROR", detail: prov.reason });
       continue;
     }
+    // DELTA 8: hermetic spec validation shared by --dry-run and live runs —
+    // malformed checks must never reach a token-spawning spawn.
+    const specErr = validateSpec(test.spec);
+    if (specErr) {
+      entry.errorReason = `invalid spec: ${specErr}`;
+      rows.push({ test: test.id, rep: "-", outcome: "ERROR", detail: `invalid spec: ${specErr}` });
+      continue;
+    }
     if (args.dryRun) {
       // DELTA 7: dry-run = discovery + schema validation + provisioning
       // simulation only — never spawns opencode (and does not require it
@@ -1257,6 +1818,7 @@ async function main() {
       let runDir;
       let logPath;
       let reused = false;
+      let timedOut = false;
       const writeResult = (outcome, reason, extra = {}) => {
         const doc = {
           test: test.id,
@@ -1282,19 +1844,33 @@ async function main() {
         const r = await runSession(test, rep, args, dataRoot, skillsDir);
         runDir = r.runDir;
         logPath = r.logPath;
+        timedOut = r.timedOut;
         if (r.spawnError) {
-          writeResult("ERROR", `spawn failed: ${r.spawnError.message}`);
+          writeResult("ERROR", `spawn failed: ${r.spawnError.message}`, { subagents: { note: "spawn failed; no subagent capture attempted" } });
           entry.reps.push({ rep, outcome: "ERROR", runDir, detail: `spawn failed: ${r.spawnError.message}` });
           rows.push({ test: test.id, rep, outcome: "ERROR", detail: `spawn failed: ${r.spawnError.message}` });
           continue;
         }
-        if (r.timedOut) {
-          const reason = `timeout after ${args.timeout ?? test.timeoutMs ?? DEFAULT_TIMEOUT_MS} ms (SIGTERM -> ${TERM_GRACE_MS} ms -> SIGKILL)`;
-          writeResult("ERROR", reason);
-          entry.reps.push({ rep, outcome: "ERROR", runDir, detail: reason });
-          rows.push({ test: test.id, rep, outcome: "ERROR", detail: "timeout (killed)" });
-          continue;
-        }
+      }
+      // DELTA 8: subagent capture (best-effort). Fresh runs capture right
+      // after the spawn closes (also on timeout — that is exactly when the
+      // worker telemetry matters most); resumed runs reuse an existing
+      // capture and only re-extract when the dir predates capture support
+      // (attribution is directory-keyed, so re-extraction is idempotent).
+      let subSummary = null;
+      if (!fs.existsSync(path.join(runDir, "subagents"))) {
+        subSummary = await extractSubagents(runDir);
+      } else {
+        subSummary = { note: "subagents/ already present (capture reused)", runDir: path.resolve(runDir) };
+      }
+      const subParsed = loadSubagentEvents(runDir);
+      if (subSummary.error && !subParsed.available) subParsed.reason = subSummary.error;
+      if (timedOut) {
+        const reason = `timeout after ${args.timeout ?? test.timeoutMs ?? DEFAULT_TIMEOUT_MS} ms (SIGTERM -> ${TERM_GRACE_MS} ms -> SIGKILL)`;
+        writeResult("ERROR", reason, { subagents: subSummary });
+        entry.reps.push({ rep, outcome: "ERROR", runDir, detail: reason });
+        rows.push({ test: test.id, rep, outcome: "ERROR", detail: "timeout (killed)" });
+        continue;
       }
       const parsed = readLogFile(logPath) ?? { events: [], parsedCount: 0, toolCalls: [], texts: [], endsWithStop: false, apiError: null };
       // Stop-loss only when the session never reached a terminal stop: a
@@ -1302,17 +1878,18 @@ async function main() {
       // normally instead of halting the whole run.
       if (parsed.apiError && !parsed.endsWithStop) {
         const detail = `APIError stop-loss: ${JSON.stringify(parsed.apiError).slice(0, 200)}`;
-        writeResult("INTERRUPTED", detail);
+        writeResult("INTERRUPTED", detail, { subagents: subSummary });
         entry.reps.push({ rep, outcome: "INTERRUPTED", runDir, detail });
         rows.push({ test: test.id, rep, outcome: "INTERRUPTED", detail });
         interrupted = true;
         continue;
       }
-      const graded = gradeRep(parsed, test);
+      const graded = gradeRep(parsed, test, subParsed);
       writeResult(graded.outcome, graded.reason, {
         rubricPending: graded.rubrics.length > 0,
         rubricFlags: graded.rubrics.map((r2) => r2.flag),
         checks: graded.results,
+        subagents: subSummary,
       });
       const failDescs = graded.failing.map((f) => describeCheck(f)).join("; ");
       const detailParts = [];

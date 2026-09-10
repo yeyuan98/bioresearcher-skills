@@ -74,9 +74,10 @@ node agent-test/run.mjs --filter 'skills-q*' --reps 2   # glob + repetitions
 Flags: `--only <id>` / `--filter <glob>` (mutually exclusive), `--reps <N>`,
 `--force` (ignore reusable prior reps), `--dry-run` (discovery + schema
 validation + provisioning simulation, never spawns opencode and does not
-require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
-`agent-test/data`), `--skills-dir <DIR>` (default `../skills`), `--model <ID>`,
-`--timeout <ms>`.
+require it installed), `--extract-subagents <DIR>` (postmortem subagent
+re-capture for a finished run dir, then exit), `--data-root <DIR>` (default
+`$AGENT_TEST_DATA` or `agent-test/data`), `--skills-dir <DIR>` (default
+`../skills`), `--model <ID>`, `--timeout <ms>`.
 
 ### Outcome ladder
 
@@ -90,7 +91,9 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 - Exit codes: `0` all selected tests PASS / PASS* / SKIP-only; `1` any FAIL;
   `2` harness ERROR / INTERRUPTED (takes precedence over `1`).
 - Results live in `agent-test/.runs/<TEST>/<YYYYMMDD-HHMMSS>-r<rep>/` with
-  `prompt.txt`, `opencode.json`, `log.jsonl`, `result.json`, plus the injected
+  `prompt.txt`, `opencode.json`, `log.jsonl`, `result.json`, the subagent
+  capture (`subagents/`, `timeline.jsonl`, `subagents.json`, live
+  `progress.jsonl`; see *Subagent observability*), plus the injected
   `.opencode/skills/` and seeded `data/`; `.runs/summary.json` and one
   `.runs/provenance.json` per invocation (git HEAD if available, opencode
   version, global-config hash, host-tool probe, per-skill `SKILL.md` sha256).
@@ -120,7 +123,7 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 | `checks` | yes | Array; every check must hold for a PASS |
 | `expectedOutputs` | | Reference paths under `expected/` for human review |
 
-### Check vocabulary (12 types)
+### Check vocabulary (13 types)
 
 | Type | Key fields | Semantics |
 |------|------------|-----------|
@@ -135,6 +138,7 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 | `tool_count` | `min` and/or `max`, optional `tool` | Bounded call count; without `tool` it counts every non-pending call (MCP and host tools alike) |
 | `no_such_tool` | `tool` (name or array) | Passes only if none of the named tools was ever called |
 | `status` | `tool`, `occurrence`, `status` | Exact terminal status of one call (`completed`, `error`, …) |
+| `subagent_count` | `min` and/or `max`, optional `agent` | Bounded count of captured worker-subagent sessions (see *Subagent observability*); grades the capture, not the parent log |
 | `rubric` | `manual: true`, `flag` | Never machine-graded; marks the rep `PASS*` pending human adjudication |
 
 ### Sources
@@ -159,6 +163,58 @@ Normative notes:
   false, not a harness error.
 - Only `tool_seq` is `biomcp_`-scoped by construction; other checks may
   reference any tool by full name (e.g. the host `skill` tool).
+
+### Check scope (`parent` | `subagents` | `all`)
+
+Any non-`rubric` check may set `scope` (default `parent` = legacy semantics:
+the top-level session's `log.jsonl` only). Because `opencode run` never
+streams worker-subagent events into the parent log, dispatched worker
+behavior (every Tier A/B `article_search`, evidence write, ledger append) is
+only visible through the subagent capture (next section):
+
+- `scope: "subagents"` — the check evaluates over the merged captured worker
+  streams (tool calls in execution order; text sources concatenate worker
+  texts by session start time).
+- `scope: "all"` — parent + captured streams merged, tool calls interleaved
+  by event timestamp.
+- A non-`parent` scope with no capture available **fails loudly** (never
+  silently passes against an empty stream).
+
+## Subagent observability
+
+Dispatched worker subagents are invisible in `log.jsonl` (long delegations
+are minutes of log silence, and none of their tool calls reach the grader).
+opencode persists every session — parent-linked, with full parts — in its
+host SQLite DB (`$XDG_DATA_HOME/opencode/opencode.db`, default
+`~/.local/share/opencode/opencode.db`), so the runner reads that DB
+**read-only** (node:sqlite, WAL-safe next to live opencode processes) and
+produces, per rep dir:
+
+| Artifact | Content |
+|----------|---------|
+| `progress.jsonl` | Live poller trace (written during the run): subagent session starts, bursts of worker activity, poller notes. Console mirrors it one line per burst and prints a `STALL` warning when neither the parent stream nor any subagent produced activity for 120 s. |
+| `subagents/<sid>.jsonl` | One file per worker session: a `subagent_meta` header (id, parent, agent, title, timing) followed by normalized events (tool_use with full input/output, text, reasoning, step_finish with tokens) in the same envelope as `opencode run --format json`. |
+| `timeline.jsonl` | Parent log events + subagent events interleaved by timestamp (`origin: parent\|subagent`); tool outputs truncated to 240 chars for readability — full fidelity lives in `subagents/`. |
+| `subagents.json` / `result.json.subagents` | Summary: per-worker agent/title, duration, message/part counts, tool histogram, token totals, and any `[evidence-ledger] …` banner lines the worker emitted. |
+
+Rules and caveats:
+
+- **Best-effort, never outcome-changing**: any DB failure (missing file,
+  locked, node:sqlite unavailable) degrades to a note in
+  `result.json.subagents`; the run and all `scope: "parent"` checks grade
+  exactly as before.
+- **Privacy**: the DB is host-global (every opencode session on the machine),
+  so the extractor only ever queries sessions for the exact per-rep run dir
+  under `agent-test/.runs/` (plus their `parent_id` closure) and refuses
+  other directories.
+- **Hermetic CI stays hermetic**: `--list` and `--dry-run` never touch the
+  DB; `node:sqlite` is imported lazily so its one-time ExperimentalWarning
+  appears only in live/postmortem invocations.
+- **Postmortem re-capture**: `node agent-test/run.mjs --extract-subagents
+  <run-dir>` (re)builds the capture for any finished run dir and prints the
+  summary — sessions persist in the DB, so pre-capture runs can be
+  retrofitted. Resume reuses an existing `subagents/` capture and only
+  re-extracts when the dir predates capture support.
 
 ## Skill injection (hermeticity)
 
@@ -246,9 +302,16 @@ in `fixtures/` + archived in `resources.tar.bz2`, `—` = none.
    still exported as `AGENT_TEST_DATA` for `{env:}` substitution.
 5. **`{DATA_DIR}`** resolves to the per-rep `<runDir>/data` seeded from the
    case's `fixtures/` (the source pointed it at the shared data root).
+6. **Subagent observability**: `opencode run` streams only the top-level
+   session, so worker subagents are captured separately (live progress
+   poller + post-run extraction from opencode's host session DB, read-only);
+   checks gained `scope: parent|subagents|all` and a `subagent_count` type;
+   `--extract-subagents <DIR>` re-captures a finished run dir. See
+   *Subagent observability*.
 
-The grader (all 12 check types), NDJSON parsing, stop-loss, resume, artifacts,
-and exit-code semantics are ported unchanged.
+The grader core (the 12 ported check types), NDJSON parsing, stop-loss,
+resume, artifacts, and exit-code semantics are ported unchanged; the 13th
+check type and `scope` are additive and default to the legacy behavior.
 
 ## Adding a new test
 
