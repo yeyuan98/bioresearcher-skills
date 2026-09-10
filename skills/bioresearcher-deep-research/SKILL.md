@@ -209,7 +209,6 @@ Write the durable research plan to `reports/<TOPIC>/plan.md` (aspect list,
 each aspect's ABSTRACT with inclusion/exclusion boundaries, research items) -
 this is the post-feedback snapshot the question UI never needs to carry. The
 write tool auto-creates parent directories - do NOT use bash mkdir for this.
-A `.gitkeep` is unnecessary; `plan.md` anchors the directory.
 
 ### Step 4: Research each aspect
 

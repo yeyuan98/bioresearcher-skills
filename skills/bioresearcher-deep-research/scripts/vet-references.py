@@ -40,12 +40,20 @@ DOI_RE = re.compile(r'(?:DOI[:\s]+|https?://(?:dx\.)?doi\.org/)?\b(10\.\d{4,9}/[
 # Structural-audit patterns
 CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
 INTEXT_RE = re.compile(r"\[(\d{1,3}(?:\s*[,\u2013\-]\s*\d{1,3})*)\]")
-PLACEHOLDER_RE = re.compile(r"\[\s*MISSING\b|:\s*(?:None|undefined|null)\b")
+# Placeholders: [MISSING ...] anywhere, or a bare None/undefined/null VALUE in
+# a reference entry ("Sponsor: None.") - never prose like "None of the studies".
+PLACEHOLDER_RE = re.compile(r"\[\s*MISSING\b|:\s*(?:None|undefined|null)(?=\s*(?:[\],.;:)}\-]|$))")
 
 
 def strip_code_blocks(text: str) -> str:
     """Remove fenced code blocks (``` or ~~~) so their brackets are not audited."""
     return CODE_BLOCK_RE.sub("", text)
+
+
+def mask_code_blocks(text: str) -> str:
+    """Fenced code blocks -> same-length newline filler (offsets preserved), so
+    section detection never matches a fenced '## References' example."""
+    return CODE_BLOCK_RE.sub(lambda m: "\n" * (m.end() - m.start()), text)
 
 
 def _expand_int_group(inner: str) -> list:
@@ -56,7 +64,8 @@ def _expand_int_group(inner: str) -> list:
         m = re.match(r"^(\d+)-(\d+)$", part)
         if m:
             a, b = int(m.group(1)), int(m.group(2))
-            if a <= b and b - a <= 500:
+            # INTEXT_RE bounds tokens to 3 digits, so expansion stays <= 999
+            if a <= b and b - a <= 999:
                 nums.extend(range(a, b + 1))
             else:
                 nums.extend([a, b])
@@ -67,7 +76,8 @@ def _expand_int_group(inner: str) -> list:
 
 def audit_structure(text: str) -> dict:
     """Offline structural audit of a rendered report. Never touches the network."""
-    sections = list(REF_SECTION_RE.finditer(text))
+    masked = mask_code_blocks(text)
+    sections = list(REF_SECTION_RE.finditer(masked))
     if not sections:
         return {"ok": False,
                 "errors": ["structural audit: no '## References' section found"],
@@ -77,8 +87,10 @@ def audit_structure(text: str) -> dict:
         errors.append(f"structural audit: {len(sections)} References-like sections found (expected exactly 1)")
 
     ref_span = sections[-1]
-    body = strip_code_blocks(text[:ref_span.start()])
-    refs_text = strip_code_blocks(ref_span.group(1))
+    # Audit in-text brackets on BOTH sides of the References section (an
+    # appendix after it must not smuggle uncited/orphan numbers past the gate).
+    body = strip_code_blocks(text[:ref_span.start()] + text[ref_span.end():])
+    refs_text = strip_code_blocks(text[ref_span.start():ref_span.end()])
 
     body_nums: list = []
     for m in INTEXT_RE.finditer(body):
@@ -328,6 +340,12 @@ def selftest() -> int:
         ("None value in references fails", ok_doc.replace("[2] Beta. PMID: 22222222.", "[2] Beta. Sponsor: None."), False),
         ("fenced code blocks ignored", ok_doc.replace("First [1]", "First [1]\n\n```\n[99] and [140, 155]\n```\n"), True),
         ("prose interval exceeding N is flagged loudly", ok_doc.replace("range [3]", "interval [140, 155]"), False),
+        ("fenced References example not counted as a section", ok_doc.replace(
+            "## References",
+            "```\n## References\n[1] fenced example.\n```\n\nText [1, 2] before the real section.\n\n## References"), True),
+        ("prose 'None of the studies' is not a placeholder", ok_doc.replace(
+            "First [1]", "Limitations: None of the studies [1] reported blinding"), True),
+        ("citations after the References section are audited", ok_doc + "\n# Appendix\n\nExtra claims [4].\n", False),
     ]
     failures = 0
     for name, doc, expect_ok in cases:
@@ -360,7 +378,12 @@ def main():
 
     # Layer 1: structural audit (offline, deterministic). Runs OUTSIDE the
     # fail-safe exception handling: structural failures must hard-fail.
-    audit = audit_structure(report_path.read_text(encoding="utf-8"))
+    try:
+        text = report_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        sys.stderr.write(f"[vet-references] error: report is not valid UTF-8: {e}\n")
+        sys.exit(1)
+    audit = audit_structure(text)
     if not audit["ok"]:
         print(f"[vet-references] Structural audit: FAIL ({audit['in_text']} in-text distinct, "
               f"{audit['references']} bibliography entries)")

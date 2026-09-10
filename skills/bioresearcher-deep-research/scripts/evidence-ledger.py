@@ -962,6 +962,15 @@ REFS_STRIP_RE = re.compile(
     r".*?(?=\n#{1,6}[ \t]*\S|\Z)"
 )
 
+CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
+
+
+def mask_code_blocks(text: str) -> str:
+    """Fenced code blocks -> same-length newline filler (offsets preserved), so
+    section detection and marker scans never fire on example/documentation
+    content inside fences."""
+    return CODE_BLOCK_RE.sub(lambda m: "\n" * (m.end() - m.start()), text)
+
 
 def classify_token(token: str):
     """Classify a marker token: ('cite', ns, value) | ('shape', ns, value) | ('plain', tok, None)."""
@@ -1025,23 +1034,40 @@ def cmd_render(args) -> int:
     text = Path(args.draft).read_text(encoding="utf-8-sig")
     out_path = Path(args.out)
 
-    stripped = REFS_STRIP_RE.findall(text)
-    had_entries = any(re.search(r"(?m)^\s*[-*]?\s*\[\d+\]", s or "") for s in stripped)
-    body = REFS_STRIP_RE.sub("", text).rstrip() + "\n"
+    # Strip pre-existing References-like sections, fence-aware: detect on a
+    # code-block-masked copy (offsets preserved), cut from the real text in
+    # reverse so earlier spans stay valid.
+    masked = mask_code_blocks(text)
+    had_entries = False
+    for m in reversed(list(REFS_STRIP_RE.finditer(masked))):
+        chunk = text[m.start():m.end()]
+        if re.search(r"(?m)^\s*[-*]?\s*\[\d+\]", chunk):
+            had_entries = True
+        if "[@" in chunk:
+            warn("a pre-existing References-like section contained [@key] marker(s); "
+                 "the section was stripped - cite those sources in the body instead")
+        text = text[:m.start()] + text[m.end():]
+    body = text.rstrip() + "\n"
 
     failures: list = []
     numbers: dict = {}
     order: list = []
 
-    def render_marker(m) -> str:
-        tokens = [t for t in m.group(1).split(";") if t.strip()]
+    def render_marker(bracket: str) -> str:
+        inner = bracket[2:-1] if bracket.endswith("]") else bracket[2:]
+        tokens = [t for t in inner.split(";") if t.strip()]
         kinds = [classify_token(t) for t in tokens]
         cites = [k for k in kinds if k[0] == "cite"]
-        if not tokens or not cites or any(k[0] != "cite" for k in kinds):
+        if not tokens or not cites:
             for kind, ns, _ in kinds:
                 if kind == "shape":
-                    warn(f"bracket {m.group(0)!r} uses the {ns}: namespace but its value is not shape-valid; left verbatim")
-            return m.group(0)
+                    warn(f"bracket {bracket!r} uses the {ns}: namespace but its value is not shape-valid; left verbatim")
+            return bracket
+        if any(k[0] != "cite" for k in kinds):
+            # A group with at least one real cite-key must not silently drop
+            # its non-citation tokens - that would lose citations quietly.
+            failures.append(f"mixed citation group {bracket!r}: every token must be a cite-key")
+            return bracket
         keys = []
         for _, ns, value in cites:
             key = resolve_key(led, ns, value)
@@ -1054,14 +1080,24 @@ def cmd_render(args) -> int:
                 continue
             keys.append(key)
         if failures:
-            return m.group(0)
+            return bracket
         for key in keys:
             if key not in numbers:
                 numbers[key] = len(numbers) + 1
                 order.append(key)
         return "[" + _compress_numbers([numbers[k] for k in keys]) + "]"
 
-    rendered_body = MARKER_RE.sub(render_marker, body)
+    # Marker substitution, fence-aware: scan the masked copy (offsets equal),
+    # splice replacements into the real body.
+    masked_body = mask_code_blocks(body)
+    parts: list = []
+    last = 0
+    for m in MARKER_RE.finditer(masked_body):
+        parts.append(body[last:m.start()])
+        parts.append(render_marker(body[m.start():m.end()]))
+        last = m.end()
+    parts.append(body[last:])
+    rendered_body = "".join(parts)
 
     # Double-render guard: an already-rendered document has no markers left.
     if not order and had_entries:
@@ -1658,7 +1694,6 @@ def selftest() -> int:
             _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(tonly), stdin=False, aspect=None))
             tkey = next(k for k in read_ledger(f).by_key if k.startswith("title:"))
             miss = d / "miss.draft.md"
-            miss.write_text(f"Degraded [{tkey.replace('title:', '@title:')}] cite.\n".replace("[@", "[@").replace("@title:", "@title:"), encoding="utf-8")
             miss.write_text(f"Degraded [@{tkey}] cite.\n", encoding="utf-8")
             miss_out = d / "miss.md"
             rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(miss), out=str(miss_out), expand_pages=False))
@@ -1667,6 +1702,30 @@ def selftest() -> int:
             rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(out), out=str(d / "double.md"), expand_pages=False))
             assert rc != 0, "double-render must fail (no markers, References present)"
             assert not (d / "double.md").exists()
+            # fence-awareness: a fenced example References section / marker is
+            # never stripped and never numbered
+            fence_draft = d / "fence.draft.md"
+            fence_draft.write_text(
+                "# F\n\nReal cite [@pmid:21639808].\n\nExample (do not touch):\n\n```\n"
+                "## References\n\n[1] example entry.\n\nCite like [@pmid:21639808].\n```\n\nTail kept.\n",
+                encoding="utf-8",
+            )
+            fence_out = d / "fence.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(fence_draft), out=str(fence_out), expand_pages=False))
+            ftext = fence_out.read_text(encoding="utf-8")
+            assert rc == 0, "fenced content must not break render"
+            assert "## References\n\n[1] example entry." in ftext, "fenced References example was stripped"
+            assert "[@pmid:21639808]" in ftext, "marker inside a fence was rewritten"
+            assert "Tail kept." in ftext, "content after a fenced References example was truncated"
+            assert "Real cite [1]." in ftext and ftext.rstrip().endswith("[1] Chapman PB, Hauschild A, Robert C, et al Improved survival with vemurafenib in melanoma with BRAF V600E mutation. N Engl J Med. 2011;364(26):2507-16. DOI: 10.1056/nejmoa1103782. PMID: 21639808."), \
+                f"real marker/References wrong:\n{ftext}"
+            # mixed citation group: at least one cite-key + a non-citation token
+            # must hard-fail (never silently drop the citation)
+            mix = d / "mix.draft.md"
+            mix.write_text("Mixed [@pmid:21639808; see note] group.\n", encoding="utf-8")
+            mix_out = d / "mix.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(mix), out=str(mix_out), expand_pages=False))
+            assert rc != 0 and not mix_out.exists(), "mixed citation group must exit 1 without writing output"
         check("render", st_render)
 
         # ---- check: worker validity gate -----------------------------------
