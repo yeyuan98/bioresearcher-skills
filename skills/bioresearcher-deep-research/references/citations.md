@@ -33,9 +33,11 @@ Example:
 ```
 
 When PMID is unavailable, use DOI: `DOI: 10.xxxx/xxxxx`. Both may be given.
-Online ahead of print records may omit Volume(Issue):Pages until assigned;
-`scripts/vet-references.py` automatically resolves and backfills these fields
-via NCBI PubMed E-utilities.
+Online ahead of print records legitimately carry no Volume(Issue):Pages - not
+even NCBI has them until assigned; render them locator-less
+(`Journal. Year. DOI: .... PMID: ....`). Locator fields are backfilled once
+NCBI assigns them (Step 5a `evidence-ledger.py verify`; the Step 5b
+`vet-references.py` run is the final safety net).
 
 ### Clinical trials (from trial_search / trial_get)
 
@@ -48,6 +50,9 @@ Example:
 ```
 [2] NCT04280705: A Study of Encorafenib Plus Cetuximab With or Without Nivolumab in Metastatic Colorectal Cancer. Phase 2. Sponsor: Pfizer. Status: Completed. https://clinicaltrials.gov/study/NCT04280705
 ```
+
+Ledger records for trials carry `phase`/`sponsor`/`status` in the `meta`
+object (worker-written top-level fields are folded there automatically).
 
 ### Patents (from patent_search / patent_get)
 
@@ -144,6 +149,13 @@ Example:
    NCT ID, or accession.
 2. Cite primary sources over reviews when both are available.
 3. Quote accurately; do not overstate findings beyond what the source says.
-4. Per-aspect files keep their own [1..N]; the orchestrator re-numers all
+4. Per-aspect files keep their own [1..N]; the orchestrator re-numbers all
    citations into one bibliography for final_report.md.
 5. Access dates only for web sources (tools log their own query date).
+6. Ledger-first: bibliography entries are COPIED from evidence-ledger
+   records (`evidence/<ASPECT>.jsonl`, merged at Step 5a into
+   `evidence/sources.jsonl`). Titles are verbatim; locator fields come only
+   from ledger data (tool output or NCBI-verified backfill). No bibliography
+   entry may contain any field absent from the ledger - if a field is
+   missing, render the ledger's `[MISSING field: ...]` marker rather than
+   composing one from memory.

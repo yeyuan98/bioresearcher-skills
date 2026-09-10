@@ -30,7 +30,7 @@ node agent-test/run.mjs --dry-run  # discovery + schema validation + provisionin
   1.18.x). The runner spawns `opencode run --dir <run-dir> --auto <prompt>
   --format json` per rep.
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
-- Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.1.1
+- Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.4.0
   biomcp`, keyless — no credentials anywhere; exact pin avoids npm range
   revalidation delays so startup completes well within opencode's 30s
   MCP connection window). Works through proxies honoring HTTP(S)_PROXY via
@@ -74,9 +74,10 @@ node agent-test/run.mjs --filter 'skills-q*' --reps 2   # glob + repetitions
 Flags: `--only <id>` / `--filter <glob>` (mutually exclusive), `--reps <N>`,
 `--force` (ignore reusable prior reps), `--dry-run` (discovery + schema
 validation + provisioning simulation, never spawns opencode and does not
-require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
-`agent-test/data`), `--skills-dir <DIR>` (default `../skills`), `--model <ID>`,
-`--timeout <ms>`.
+require it installed), `--extract-subagents <DIR>` (postmortem subagent
+re-capture for a finished run dir, then exit), `--data-root <DIR>` (default
+`$AGENT_TEST_DATA` or `agent-test/data`), `--skills-dir <DIR>` (default
+`../skills`), `--model <ID>`, `--timeout <ms>`.
 
 ### Outcome ladder
 
@@ -90,7 +91,9 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 - Exit codes: `0` all selected tests PASS / PASS* / SKIP-only; `1` any FAIL;
   `2` harness ERROR / INTERRUPTED (takes precedence over `1`).
 - Results live in `agent-test/.runs/<TEST>/<YYYYMMDD-HHMMSS>-r<rep>/` with
-  `prompt.txt`, `opencode.json`, `log.jsonl`, `result.json`, plus the injected
+  `prompt.txt`, `opencode.json`, `log.jsonl`, `result.json`, the subagent
+  capture (`subagents/`, `timeline.jsonl`, `subagents.json`, live
+  `progress.jsonl`; see *Subagent observability*), plus the injected
   `.opencode/skills/` and seeded `data/`; `.runs/summary.json` and one
   `.runs/provenance.json` per invocation (git HEAD if available, opencode
   version, global-config hash, host-tool probe, per-skill `SKILL.md` sha256).
@@ -120,7 +123,7 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 | `checks` | yes | Array; every check must hold for a PASS |
 | `expectedOutputs` | | Reference paths under `expected/` for human review |
 
-### Check vocabulary (12 types)
+### Check vocabulary (13 types)
 
 | Type | Key fields | Semantics |
 |------|------------|-----------|
@@ -135,6 +138,7 @@ require it installed), `--data-root <DIR>` (default `$AGENT_TEST_DATA` or
 | `tool_count` | `min` and/or `max`, optional `tool` | Bounded call count; without `tool` it counts every non-pending call (MCP and host tools alike) |
 | `no_such_tool` | `tool` (name or array) | Passes only if none of the named tools was ever called |
 | `status` | `tool`, `occurrence`, `status` | Exact terminal status of one call (`completed`, `error`, …) |
+| `subagent_count` | `min` and/or `max`, optional `agent` | Bounded count of captured worker-subagent sessions (see *Subagent observability*); grades the capture, not the parent log |
 | `rubric` | `manual: true`, `flag` | Never machine-graded; marks the rep `PASS*` pending human adjudication |
 
 ### Sources
@@ -160,6 +164,67 @@ Normative notes:
 - Only `tool_seq` is `biomcp_`-scoped by construction; other checks may
   reference any tool by full name (e.g. the host `skill` tool).
 
+### Check scope (`parent` | `subagents` | `all`)
+
+Any non-`rubric` check may set `scope` (default `parent` = legacy semantics:
+the top-level session's `log.jsonl` only). Because `opencode run` never
+streams worker-subagent events into the parent log, dispatched worker
+behavior (every Tier A/B `article_search`, evidence write, ledger append) is
+only visible through the subagent capture (next section):
+
+- `scope: "subagents"` — the check evaluates over the merged captured worker
+  streams (tool calls in execution order; text sources concatenate worker
+  texts by session start time).
+- `scope: "all"` — parent + captured streams merged, tool calls interleaved
+  by event timestamp.
+- A non-`parent` scope with no capture available **fails loudly** (never
+  silently passes against an empty stream).
+
+## Subagent observability
+
+Dispatched worker subagents are invisible in `log.jsonl` (long delegations
+are minutes of log silence, and none of their tool calls reach the grader).
+opencode persists every session — parent-linked, with full parts — in its
+host SQLite DB (`$XDG_DATA_HOME/opencode/opencode.db`, default
+`~/.local/share/opencode/opencode.db`), so the runner reads that DB
+**read-only** (node:sqlite, WAL-safe next to live opencode processes) and
+produces, per rep dir:
+
+| Artifact | Content |
+|----------|---------|
+| `progress.jsonl` | Live poller trace (written during the run): subagent session starts, bursts of worker activity, poller notes. Console mirrors it (one line per event for small bursts, a `+N events` catch-up line for larger ones) and prints a `STALL` warning when neither the parent stream nor any subagent produced activity for 120 s. |
+| `subagents/<sid>.jsonl` | One file per worker session: a `subagent_meta` header (id, parent, agent, title, timing) followed by normalized events (tool_use with full input/output, text, reasoning, step_finish with tokens) in the same envelope as `opencode run --format json`. |
+| `timeline.jsonl` | Parent log events + subagent events interleaved by timestamp (`origin: parent\|subagent`); tool outputs truncated to 240 chars for readability — full fidelity lives in `subagents/`. |
+| `subagents.json` / `result.json.subagents` | Summary: per-worker agent/title, duration, message/part counts, tool histogram, token totals, and any `[evidence-ledger] …` banner lines the worker emitted. |
+
+Rules and caveats:
+
+- **Best-effort, never outcome-changing**: any DB failure (missing file,
+  locked, node:sqlite unavailable) degrades to a note in
+  `result.json.subagents`; the run and all `scope: "parent"` checks grade
+  exactly as before.
+- **Privacy**: the DB is host-global (every opencode session on the machine),
+  so the extractor only ever queries sessions for the exact per-rep run dir
+  under `agent-test/.runs/` (plus their `parent_id` closure) and refuses
+  other directories.
+- **Hermetic CI stays hermetic**: `--list` and `--dry-run` never touch the
+  DB; `node:sqlite` is imported lazily so its one-time ExperimentalWarning
+  appears only in live/postmortem invocations.
+- **Postmortem re-capture**: `node agent-test/run.mjs --extract-subagents
+  <run-dir>` (re)builds the capture for any finished run dir and prints the
+  summary — sessions persist in the DB, so pre-capture runs can be
+  retrofitted. Resume reuses an existing `subagents/` capture and only
+  re-extracts when the dir predates capture support.
+- **STALL semantics (diagnostic, not a failure)**: the warning fires on 120s
+  with no new *and* no updated parts across parent + workers. It correctly
+  flags hung networks but can also fire on legitimately slow single LLM
+  turns (observed: 119-164s parent synthesis turns on large post-worker
+  contexts). The `last:` label names the most recent event of any session.
+- **Live poller coverage**: the poller queries sessions by
+  `directory == runDir`; a nested subagent whose cwd differs from the run
+  dir is invisible live but IS captured post-run via the extractor's
+  `parent_id` closure.
+
 ## Skill injection (hermeticity)
 
 Before spawn, the runner copies every directory under the skills root
@@ -179,7 +244,7 @@ the bare schema; MCP cases wire servers explicitly, e.g. the keyless biomcp
 server:
 
 ```json
-{"$schema":"https://opencode.ai/config.json","mcp":{"biomcp":{"type":"local","command":["npx","-y","-p","biomcp@1.1.1","biomcp"]}}}
+{"$schema":"https://opencode.ai/config.json","mcp":{"biomcp":{"type":"local","command":["npx","-y","-p","biomcp@1.4.0","biomcp"]}}}
 ```
 
 - Never rename it to `opencode.jsonc` — root `.gitignore` patterns commonly
@@ -218,6 +283,10 @@ server:
 | `deep-research-q01-light` | L2 | deep-research skill + keyless biomcp MCP: BRCA1 survey citing PMIDs (+ default-on HTML artifact) | MCP | manual-run |
 | `deep-research-q02-interview` | L2 | deep-research interview precedence: clarifying questions fire (no report) in non-interactive auto mode | — | manual-run |
 | `deep-research-q03-plan-review` | L2 | deep-research plan review precedence: 2–5 research aspects proposed for feedback before subagents fire | — | manual-run |
+| `deep-research-q04-evidence-ledger` | L2 | evidence-ledger light happy path: worker ledger written, `evidence-ledger.py` stats + dry-run verify run, tier-independent pmid-keys anchor + banners reported | MCP | manual-run |
+| `deep-research-q05-ledger-merge` | L3 | Step 5a pipeline end-to-end: per-aspect ledgers merge → verify --apply → keys → bib, References from `bib` output; checks anchored on ledger stdout (dispatch-proof) | MCP | manual-run |
+| `deep-research-q06-ledger-drill` | L2 | deterministic CLI feature drill: secondary-id dedupe + key promotion, quarantine, `[MISSING record]` non-zero exit, `--expand-pages`, epub rendering, Vancouver initials | — | manual-run |
+| `deep-research-q07-citation-fidelity` | L3 | citation-fidelity regression: References section must equal the ledger `bib` output (`MISMATCH COUNT: 0`); tier-independent anchors | MCP | manual-run |
 | `pubmed-weekly-q01-parse` | L1 | Parse trimmed updatefiles sample into combined.xlsx via the skill | fixture | manual-run (PASS*, rubric) |
 | `python-setup-uv-q01` | L1 | Create uv-managed `.venv` in the disposable run dir via the skill | — | manual-run (PASS*, rubric; mutates run dir only) |
 | `onboard-q01-bootstrap` | L1 | Bootstrap project-local BioMCP runtime in run dir via skill | — | manual-run (PASS*, rubric; mutates run dir only) |
@@ -242,9 +311,16 @@ in `fixtures/` + archived in `resources.tar.bz2`, `—` = none.
    still exported as `AGENT_TEST_DATA` for `{env:}` substitution.
 5. **`{DATA_DIR}`** resolves to the per-rep `<runDir>/data` seeded from the
    case's `fixtures/` (the source pointed it at the shared data root).
+6. **Subagent observability**: `opencode run` streams only the top-level
+   session, so worker subagents are captured separately (live progress
+   poller + post-run extraction from opencode's host session DB, read-only);
+   checks gained `scope: parent|subagents|all` and a `subagent_count` type;
+   `--extract-subagents <DIR>` re-captures a finished run dir. See
+   *Subagent observability*.
 
-The grader (all 12 check types), NDJSON parsing, stop-loss, resume, artifacts,
-and exit-code semantics are ported unchanged.
+The grader core (the 12 ported check types), NDJSON parsing, stop-loss,
+resume, artifacts, and exit-code semantics are ported unchanged; the 13th
+check type and `scope` are additive and default to the legacy behavior.
 
 ## Adding a new test
 

@@ -1,7 +1,7 @@
 # biomcp-ts MCP setup
 
 These skills run against the [biomcp-ts](https://github.com/yeyuan98/biomcp-ts)
-MCP server (npm package `biomcp`, tested against **1.1.1**). This page gives
+MCP server (npm package `biomcp`, tested against **1.4.0**). This page gives
 the minimal wiring for common agents. See the server's
 `docs/AGENT-INSTALL.md` for the full matrix.
 
@@ -26,9 +26,9 @@ registers the server in your harness config.
 
   | Variant | Command array |
   |---|---|
-  | All features (db + R analysis) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-  | Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.1.1","-p","webr@0.6","biomcp"]` |
-  | Core only | `["npx","-y","-p","biomcp@1.1.1","biomcp"]` |
+  | All features (db + R analysis) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+  | Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","biomcp"]` |
+  | Core only | `["npx","-y","-p","biomcp@1.4.0","biomcp"]` |
 
 - Diagnostics (never starts the server):
   `npx -y biomcp doctor --client opencode` (also `claude-code`, `codex`, ...).
@@ -43,7 +43,7 @@ registers the server in your harness config.
   "mcp": {
     "biomcp": {
       "type": "local",
-      "command": ["npx", "-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "command": ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"],
       "environment": { "NCBI_API_KEY": "..." }
     }
   }
@@ -73,7 +73,7 @@ add to the project root (or `~/.claude.json` for user scope):
     "biomcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"],
       "timeout": 120000
     }
   }

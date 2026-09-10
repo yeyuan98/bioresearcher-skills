@@ -34,7 +34,7 @@ node agent-test/claude-plugin-specific/run.mjs --dry-run  # discovery + schema +
   - or run `claude` once interactively inside a kept config dir
     (`--keep-config`, see below).
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
-- Network: the bundled server runs `npx -y -p biomcp@1.1.1 biomcp` (keyless;
+- Network: the bundled server runs `npx -y -p biomcp@1.4.0 biomcp` (keyless;
   first tool call pays the npx download).
 
 ## Isolation model
@@ -140,6 +140,7 @@ path, or source **fails** the check (it is false, not an error).
 | `plugin-l0-marketplace-install` | L0 | install | local marketplace add + install; components present without `--plugin-dir` | ~$0.1 |
 | `plugin-l1-mcp-call` | L1 | session | keyless `article_search` through the bundled server, zero denials | ~$0.3 |
 | `plugin-l2-dr-light` | L2 | session | light-research via the plugin skill; Tier A/B dispatch (anyOf + rubric), reports under the project dir | ~$1-2 |
+| `plugin-l2-dr-ledger` | L2 | session | Tier A dr-worker raw-JSONL evidence ledger via Write (no worker shell); `reports/**/evidence/*.jsonl` exists + ledger-discipline rubric | ~$1-2 |
 | `plugin-l2-manual-mode-grants` | L2 | session | manual+`--permission-prompts none` canary (Skill pre-allowed so the skill's turn actually starts): allowed-tools turn grant observed NOT to cover plugin MCP calls (rubric counts mcp__plugin denials) | ~$0.3 |
 
 The dispatch `anyOf` in `plugin-l2-dr-light` is intentionally easy to pass

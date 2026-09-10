@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -48,16 +48,16 @@ full workflow - answer directly with the matching biomcp tool using
 
 The biomcp MCP server (npm package [`biomcp`](https://www.npmjs.com/package/biomcp),
 canonical source [yeyuan98/biomcp-ts](https://github.com/yeyuan98/biomcp-ts) pinned to
-`biomcp@1.1.1`) connected to the harness. For automated zero-dependency local
+`biomcp@1.4.0`) connected to the harness. For automated zero-dependency local
 setup, run the `bioresearcher-onboard` skill.
 
 Recommended client command (all features):
 
 ```json
-["npx", "-y", "-p", "biomcp@1.1.1", "-p", "webr@0.6", "-p", "mysql2@3", "biomcp"]
+["npx", "-y", "-p", "biomcp@1.4.0", "-p", "webr@0.6", "-p", "mysql2@3", "biomcp"]
 ```
 
-Requires Node.js >= 22.13. Verify with `npx -y biomcp@1.1.1 doctor` (exit 0 =
+Requires Node.js >= 22.13. Verify with `npx -y biomcp@1.4.0 doctor` (exit 0 =
 healthy). API keys are optional except where noted in
 `references/rate-limiting-auth.md`.
 
@@ -240,10 +240,10 @@ workers as needed (retry <= 3 per worker).
 
 Process aspects one at a time in the main conversation. For each aspect, apply
 the same worker rules from `references/worker-protocol.md` (tool selection per
-`references/tool-selection.md`, citation discipline per
-`references/citations.md`, retry <= 3, no re-delegation) and write the same
-per-aspect file. State which aspect is being worked on before starting each
-one.
+`references/tool-selection.md`, citation discipline and the evidence ledger per
+`references/citations.md` and worker-protocol rule 8, retry <= 3, no
+re-delegation) and write the same per-aspect files (report + ledger). State
+which aspect is being worked on before starting each one.
 
 **All tiers, per aspect:**
 
@@ -253,8 +253,16 @@ one.
 - Collect identifiers for every source used: PMIDs/PMCIDs/DOIs (articles),
   NCT IDs (trials), patent IDs, accessions (GEO/SRA), database IDs
   (genes/drugs/variants).
+- Maintain the evidence ledger `reports/<TOPIC>/evidence/<ASPECT>.jsonl` per
+  `references/worker-protocol.md` rule 8: after EACH biomcp call, append one
+  record per potentially-citable source with fields copied verbatim from the
+  tool result, batching all records from one tool result into a single
+  `evidence-ledger.py add` call (never one call per record, never per-record
+  scratch files); title-less records (LitSense hints) are enriched via
+  `article_get(pmid)` before citing.
 - Write findings to `reports/<TOPIC>/<ASPECT>.md` (underscore-separated
-  ASPECT name) with in-text citations [1], [2], ... and a bibliography.
+  ASPECT name) with in-text citations [1], [2], ... and a bibliography whose
+  entries are copied from the ledger.
 
 ### Step 5: Synthesize
 
@@ -266,11 +274,43 @@ bibliography. Reconcile conflicting findings across aspects explicitly rather
 than silently dropping one side. Write the synthesized draft to
 `reports/<TOPIC>/final_report.md`.
 
+### Step 5a: Merge + verify the evidence ledger
+
+Before composing the References section of `final_report.md`, consolidate
+and verify the per-aspect ledgers with the evidence-ledger script (fail-safe: network failure never
+blocks the report):
+
+```bash
+python3 <skill_dir>/scripts/evidence-ledger.py merge \
+  -o reports/<TOPIC>/evidence/sources.jsonl 'reports/<TOPIC>/evidence/*.jsonl'
+python3 <skill_dir>/scripts/evidence-ledger.py verify \
+  reports/<TOPIC>/evidence/sources.jsonl --apply
+python3 <skill_dir>/scripts/evidence-ledger.py keys \
+  reports/<TOPIC>/evidence/sources.jsonl
+python3 <skill_dir>/scripts/evidence-ledger.py bib \
+  reports/<TOPIC>/evidence/sources.jsonl --keys <comma-separated keys in citation order>
+```
+
+- `merge` unions the per-aspect JSONLs (its own output and `_`-prefixed
+  quarantine files are excluded automatically; malformed lines are
+  quarantined to `evidence/_invalid.jsonl`).
+- `verify` cross-checks article records against NCBI esummary and backfills
+  ONLY missing fields (epub-ahead-of-print records legitimately stay
+  locator-less - render them without a volume/pages slot). It also sets
+  titles on title-less records (e.g. LitSense hints the worker could not
+  enrich).
+- Compose the References section of `final_report.md` by copying the `bib`
+  output - do not re-type or paraphrase entries. Use the `keys` output (all
+  ledger keys, sorted) to pick the citation-ordered `--keys` list for `bib`.
+  When the script is unreachable (harnesses without filesystem access to
+  `<skill_dir>`), re-read `reports/<TOPIC>/evidence/sources.jsonl` and transcribe
+  entries from the records directly.
+
 ### Step 5b: Vet references (independent NCBI verification)
 
 After synthesizing `reports/<TOPIC>/final_report.md`, run the independent
-reference vetting script to programmatically validate citations against NCBI
-PubMed E-utilities and backfill volume, issue, and page numbers:
+reference vetting script as the FINAL safety net - after the Step 5a ledger
+verification it is expected to be a near-no-op, but still run it:
 
 ```bash
 python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --apply
@@ -330,6 +370,12 @@ python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --
 ```
 reports/<TOPIC>/
 ├── .gitkeep
+├── evidence/
+│   ├── <aspect_1>.jsonl    # per-aspect evidence ledger (worker-written)
+│   ├── <aspect_2>.jsonl
+│   ├── ...
+│   ├── _invalid.jsonl      # merge quarantine (only when malformed lines occur)
+│   └── sources.jsonl       # merged + verified ledger (Step 5a output)
 ├── <aspect_1>.md          # per-aspect research notes + citations
 ├── <aspect_2>.md
 ├── ...

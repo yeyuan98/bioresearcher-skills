@@ -15,6 +15,34 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-10
+
+### bioresearcher-deep-research 1.4.0
+
+- Structured evidence ledger for citation integrity: workers append one JSON record per potentially-citable source to `reports/<TOPIC>/evidence/<ASPECT>.jsonl` as they search (fields copied verbatim from biomcp tool output; missing fields null, never invented), and compose bibliographies by re-reading the ledger (worker-protocol rule 8, two-file worker contract).
+- Batched ledger appends (worker-protocol rule 8): all records from one biomcp result go into a single `evidence-ledger.py add --stdin` / `@file` JSON-array call; per-record `add` calls and per-record scratch files are explicit anti-patterns. Each append is a tool call (an LLM turn, ~10 s wall) - live-run telemetry showed the per-record pattern costing two turns per source and stretching dispatched workers past a 600 s budget that only a lucky Tier-C (non-dispatched) run had ever met.
+- Ledger flexibility (input-relaxation schema, contract unchanged at `bioresearcher-evidence/1`): biomcp-native id field aliases normalized centrally (`ids.nct_id` -> `ids.nct`, `entrez_id` -> `ncbi_gene`, ...); worker-written top-level trial/drug/patent/gene/variant fields folded into `meta` (fill-only, canonical-wins, idempotent); registry-driven type specs (`TYPE_SPECS` with `key_from`/`key_fn`) auto-derive keys for every type; `other` escape-hatch type for any citable source (FDA pages, guidelines); `title:` fallback keys for id-less records of key-derived and `other` types (`web`/`dataset` keep hard identity requirements — url / GEO-SRA-GenBank accession — and reject title-only input; articles keep their hard pmid/doi/pmcid requirement, and explicit `title:` keys cannot bypass it); verification gated per type (article/NCBI esummary now; all other types accepted, rendered, and explicitly skipped with a banner count); meta-aware twin merging unions complementary worker fields.
+- New `scripts/evidence-ledger.py` (zero-dep, fail-safe): `add` (validate + normalize + primary/secondary-id merge-fill dedupe), `merge` (per-aspect union; own output and `_`-prefixed quarantine files excluded), `verify` (NCBI esummary audit + fill-missing-only backfill; title backfill for LitSense hint records; epub records legitimately stay locator-less), `keys` (sorted ledger keys — feeds `bib --keys` ordering), `bib` (numbered Vancouver bibliography with computed initials, epub locator-less rendering, optional `--expand-pages`, loud `[MISSING field]`/`[MISSING record]`), `get`/`keys`/`stats`, and a hermetic `selftest` feature matrix (11 groups).
+- New shared `scripts/ncbi_esummary.py` module; `vet-references.py` now imports the esummary client from it (behavior unchanged, DRY).
+- Orchestrator Step 5a (merge -> verify -> bib; References section composed from `bib` output) added before the vet-references safety net; output layout gains the `evidence/` subtree.
+- LitSense hint enrichment duty: title-less records must be enriched via `article_get(pmid)` before citing (standard retry ladder, then Step 5a backfill).
+- Docs: citations.md integrity rule 6 (ledger-first) + epub rendering rule; article-literature.md biomcp >= 1.4.0 field contract and backend locator coverage; best-practices.md "Store first, cite later"; report-template.md checklist.
+- Requires the biomcp 1.4.0 server pin (locator fields, entity decoding, honest LitSense mapping); tolerates older pins via Step 5a backfill.
+
+### bioresearcher-onboard 1.1.1
+
+- Pin sweep: vendored biomcp server version bumped from 1.1.1 to 1.4.0 (`scripts/onboard.mjs` install pin and docs), picking up PubMed/EuropePMC citation locator fields (volume/issue/pages), HTML-entity decoding, and honest LitSense hint mapping.
+
+### Packaging & Connectors
+
+- Bump repository product package to v1.9.0 across Claude Code plugin, WorkBuddy connector, OpenCode plugin, and DeepSeek Harness (`dsh`) connector.
+- Ship bioresearcher-deep-research 1.4.0 (evidence ledger) and bioresearcher-onboard 1.1.1 (biomcp 1.4.0 pin) in every distribution bundle.
+
+### Agent-test harness
+
+- Subagent observability in the empirical runner: dispatched worker subagents (invisible to `opencode run`'s parent stream) are now captured read-only from opencode's host session DB — live progress (console lines + `progress.jsonl` + 120 s STALL warnings) during the run, post-run `subagents/` + `timeline.jsonl` + `subagents.json` artifacts, check `scope: parent|subagents|all`, and a `subagent_count` check type; `--extract-subagents <DIR>` re-captures finished runs postmortem. Best-effort by design; hermetic `--list`/`--dry-run` never touch the DB.
+- Manual evidence-ledger ladder `deep-research-q04`–`q07` (wiring, deterministic CLI drill, Step 5a merge pipeline, citation fidelity) — all PASS live; q04/q07 budgets and survey scope recalibrated from captured worker telemetry; worker protocol rule 8 mandates batched ledger appends (one `add --stdin` JSON-array call per search result).
+
 ## [1.8.0] - 2026-09-08
 
 ### bioresearcher-deep-research 1.3.0

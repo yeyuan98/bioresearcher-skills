@@ -1,6 +1,6 @@
 {
-  "biomcp_ts_version": "1.1.1",
-  "pinned_at": "2026-09-04",
+  "biomcp_ts_version": "1.4.0",
+  "pinned_at": "2026-09-10",
   "source": "https://github.com/yeyuan98/biomcp-ts src/server/tools (local verification)",
   "core": [
     "gene_search", "gene_get", "gene_diseases", "gene_drugs", "gene_trials", "gene_articles", "gene_enrich",

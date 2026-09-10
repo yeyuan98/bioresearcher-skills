@@ -86,7 +86,22 @@ failures.
 - genbank sequence_text is truncated at 200k chars by design - do not re-fetch
   whole records trying to defeat the guard; use regions.
 
-## 8. Data validation before writing
+## 8. Store first, cite later (evidence ledger)
+
+Citation fields must never live only in model memory - long multi-search
+sessions rot the context and garble titles, years, and locators.
+
+- After EACH biomcp search/get call, append one ledger record per
+  potentially-citable source to `reports/<TOPIC>/evidence/<ASPECT>.jsonl`
+  with fields copied VERBATIM from the tool result (worker-protocol rule 8;
+  missing fields are null, never invented).
+- Title-less hint records (LitSense) get enriched via `article_get(pmid)`
+  before they may be cited.
+- Write the bibliography by RE-READING the ledger and copying fields - the
+  ledger is the single source of truth for every References entry; the
+  orchestrator merges + verifies it at Step 5a before the final report.
+
+## 9. Data validation before writing
 
 Before a finding enters a report: identifiers well-formed (PMID numeric; NCT
 followed by 8 digits; GSE/GSM/GPL, SRP/SRX/SRR/SRS, DOID/MONDO/OMIM prefixes
@@ -99,4 +114,5 @@ correct), arrays non-empty, dates plausible, and values in sane ranges.
 - [ ] IDs chained via tool cross-links, not re-searched
 - [ ] Calls sequential; no sleep timers (except HPA/GEO-download exceptions)
 - [ ] Retries capped at 3; gaps recorded
+- [ ] Evidence ledger updated after each call; bibliography copied from it
 - [ ] Findings + identifiers written to the aspect file

@@ -110,7 +110,7 @@ Check a feature's parameters in detail:
 
 - Smoke-test sequence for a fresh setup: `biomcp_configure` with `{}` ->
   confirm expected features `running_now` -> one cheap domain call.
-- `doctor` CLI complements this: `npx -y biomcp@1.1 doctor` (exit 0 = clear);
+- `doctor` CLI complements this: `npx -y biomcp@1.4 doctor` (exit 0 = clear);
   `--client opencode` emits a paste-ready client entry.
 - Multi-entity literature pulls (e.g. 10 PMIDs from article_search) belong in
   ONE `batch_get` call, not 10 article_get calls.

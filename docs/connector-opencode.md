@@ -6,7 +6,7 @@ automatic plugin and connector bundle for the [OpenCode AI coding agent](https:/
 
 ## Bundle contents
 
-A single `biomcp` stdio MCP server (pinned `biomcp@1.1.1`, 120 s connection
+A single `biomcp` stdio MCP server (pinned `biomcp@1.4.0`, 120 s connection
 timeout, automatic China mirror fallback) plus four bundled skills and the
 `bioresearcher-dr-worker` subagent:
 
@@ -29,7 +29,7 @@ The plugin entry point (`index.js`) exports an OpenCode `Plugin` factory functio
 On startup, OpenCode executes its `config` lifecycle hook:
 
 1. **Automatic MCP Server Registration**: Injects `mcp.biomcp` into OpenCode's
-   active configuration (`type: "local"`, command `npx -y -p biomcp@1.1.1 biomcp`,
+   active configuration (`type: "local"`, command `npx -y -p biomcp@1.4.0 biomcp`,
    timeout 120000 ms). OpenCode spawns the server, completes the MCP handshake,
    and exposes its 41 tools under the `biomcp_<tool>` namespace. Existing
    user-configured `biomcp` servers are respected and not overwritten.

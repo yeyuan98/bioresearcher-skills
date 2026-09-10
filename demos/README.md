@@ -21,7 +21,7 @@ Bilingual partner-publication pack for the BioResearcher skills package:
 | Document | 中文 | English |
 |---|---|---|
 | Agent (skills, plugin, connector) | [agent.zh.md](./docs/agent.zh.md) | [agent.en.md](./docs/agent.en.md) |
-| MCP (biomcp-ts server, pinned 1.1.1) | [mcp.zh.md](./docs/mcp.zh.md) | [mcp.en.md](./docs/mcp.en.md) |
+| MCP (biomcp-ts server, pinned 1.4.0) | [mcp.zh.md](./docs/mcp.zh.md) | [mcp.en.md](./docs/mcp.en.md) |
 | Glossary / 术语表 | [glossary.md](./docs/glossary.md) | — |
 
 ### Partner-requirements matrix / 合作方需求覆盖矩阵
@@ -97,7 +97,7 @@ demos/
 ├── run-demo.mjs     # runner + 12-check grader (vendored port of agent-test/run.mjs)
 ├── check-demos.mjs  # CI-safe gate for this pack
 ├── lib/             # mcp-probe.mjs (stdio JSON-RPC client), publish.mjs (curator),
-│                    # biomcp-tools@1.1.1.json (vendored registry, CI-diffed), screenshot.sh
+│                    # biomcp-tools@1.4.0.json (vendored registry, CI-diffed), screenshot.sh
 ├── scenarios/       # 7 scenario manifests (+ fixtures; kind: agent | mcp-probe)
 ├── artifacts/       # committed true-run outputs (curated; log.jsonl never committed)
 ├── docs/            # the four partner documents + glossary
@@ -106,10 +106,10 @@ demos/
 
 Self-containment: `demos/` executes no file outside itself at runtime except
 its declared subject — `../skills` (repo-relative; sha256-pinned in every
-provenance) and `biomcp@1.1.1` from npm. No runtime read of `agent-test/`,
+provenance) and `biomcp@1.4.0` from npm. No runtime read of `agent-test/`,
 `scripts/ci/`, or `docs/` (CI-time registry diffing by `check-demos.mjs`
 excepted). / 自包含：运行时除被演示对象（`../skills` 与 npm 的
-`biomcp@1.1.1`）外不读取 `demos/` 之外的任何文件（CI 时点由
+`biomcp@1.4.0`）外不读取 `demos/` 之外的任何文件（CI 时点由
 `check-demos.mjs` 做注册表一致性比对除外）。
 
 ## Notes / 说明

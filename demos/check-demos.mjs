@@ -16,7 +16,7 @@
  *                   — this closes that gap; mirrors
  *                   scripts/ci/check-tool-names.mjs and
  *                   check-legacy-names.sh semantics.)
- *  4. registry    — demos/lib/biomcp-tools@1.1.1.json is byte-equal (after
+ *  4. registry    — demos/lib/biomcp-tools@1.4.0.json is byte-equal (after
  *                   JSON normalization) to scripts/ci/biomcp-tools.json, so
  *                   the vendored copy can never drift.
  *  5. scenarios   — scenario.json schema: id == dirname, kind, prompt/checks
@@ -174,7 +174,7 @@ const LEGACY = [
   "biomcp_variant_getter", "biomcp_drug_getter", "biomcp_openfda_adverse_searcher", "biomcp_openfda_label_searcher",
   "biomcp_openfda_approval_searcher", "biomcp_search", "biomcp_fetch", "biomcp_tool",
 ];
-const scanFiles = walk(DEMOS, [], (p) => /\.(md|json)$/.test(p) && !p.endsWith("biomcp-tools@1.1.1.json"));
+const scanFiles = walk(DEMOS, [], (p) => /\.(md|json)$/.test(p) && !p.endsWith("biomcp-tools@1.4.0.json"));
 let refs = 0;
 for (const file of scanFiles) {
   const rel = relative(REPO, file);
@@ -203,14 +203,14 @@ else if (!failures) ok("tools", `${refs} biomcp tool references match pinned reg
 
 /* --------------------------------------------------- gate 4: vendored registry */
 
-const vendoredPath = join(DEMOS, "lib", "biomcp-tools@1.1.1.json");
+const vendoredPath = join(DEMOS, "lib", "biomcp-tools@1.4.0.json");
 if (!existsSync(vendoredPath)) {
-  fail("registry", "demos/lib/biomcp-tools@1.1.1.json missing");
+  fail("registry", "demos/lib/biomcp-tools@1.4.0.json missing");
 } else {
   const a = JSON.parse(readFileSync(vendoredPath, "utf8"));
   const b = registry;
   const norm = (x) => JSON.stringify(x);
-  if (norm(a) !== norm(b)) fail("registry", "vendored biomcp-tools@1.1.1.json differs from scripts/ci/biomcp-tools.json — re-vendor it");
+  if (norm(a) !== norm(b)) fail("registry", "vendored biomcp-tools@1.4.0.json differs from scripts/ci/biomcp-tools.json — re-vendor it");
   else ok("registry", `vendored registry byte-matches scripts/ci/biomcp-tools.json (biomcp ${b.biomcp_ts_version})`);
 }
 

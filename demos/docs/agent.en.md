@@ -17,7 +17,7 @@ clinical-trial / gene / variant / drug / disease / patent retrieval,
 publication-grade plotting, PubMed weekly processing, Python environment
 bootstrapping, and automated MCP runtime onboarding.
 
-Current release: repo v1.8.0 with five independently versioned skills:
+Current release: repo v1.9.0 with five independently versioned skills:
 
 | Skill | Version | What it does |
 |---|---|---|
@@ -77,7 +77,7 @@ documented separately in the [MCP doc](./mcp.en.md).
 │  └────────────────────────┬─────────────────────────────────┘  │
 │                           │ MCP protocol (stdio JSON-RPC)       │
 │  ┌────────────────────────▼─────────────────────────────────┐  │
-│  │ biomcp-ts MCP server (npm `biomcp`, pinned 1.1.1; 41 core │  │
+│  │ biomcp-ts MCP server (npm `biomcp`, pinned 1.4.0; 41 core │  │
 │  │ + 15 optional tools: articles/trials/genes/variants/       │  │
 │  │ drugs/diseases/patents/omics/…)                            │  │
 │  └──────────────────────────────────────────────────────────┘  │

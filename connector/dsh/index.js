@@ -71,7 +71,7 @@ export async function apply(ctx, config = {}) {
       transport: "stdio",
       serverName: "biomcp",
       command: npxCmd,
-      args: ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      args: ["-y", "-p", "biomcp@1.4.0", "biomcp"],
       env: {
         ...(npmRegistry ? { npm_config_registry: npmRegistry } : {}),
       },

@@ -3,7 +3,7 @@
     "biomcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "-p", "biomcp@1.1.1", "biomcp"],
+      "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"],
       "timeout": 120000
     }
   }

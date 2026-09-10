@@ -10,7 +10,7 @@ BioResearcher 双语文档共享术语锚点。中文译名以 WorkBuddy 连接�
 | skill (SKILL.md) | 技能（SKILL.md 契约文件） | strict-6 frontmatter：name/description/license/compatibility/metadata/allowed-tools |
 | harness | 宿主 / 运行环境 | opencode、Claude Code、Codex、Cursor、Gemini CLI、WorkBuddy 等 |
 | MCP (Model Context Protocol) | MCP（模型上下文协议） | 本项目使用 stdio JSON-RPC 传输 |
-| biomcp-ts / biomcp | biomcp-ts MCP 服务 / biomcp 包 | npm 包名 `biomcp`，本仓库钉扎 `1.1.1` |
+| biomcp-ts / biomcp | biomcp-ts MCP 服务 / biomcp 包 | npm 包名 `biomcp`，本仓库钉扎 `1.4.0` |
 | deep research | 深度研究 | `bioresearcher-deep-research` 技能：访谈→方案对齐→分解→并行调研→引用报告 |
 | aspect (research aspect) | 研究侧面（连接器文案作「研究方面」） | 深度研究把主题拆成 2–5 个独立侧面，每侧面一个 worker |
 | fan-out / sequential fallback | 并行扇出 / 顺序回退 | 有子代理（Task）工具时并行；否则顺序执行 |

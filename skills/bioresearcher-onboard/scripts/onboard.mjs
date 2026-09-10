@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Stage 1 Onboarding Engine for bioresearcher-onboard.
- * Installs biomcp@1.1.1 into .bioresearcher-runtime/node_modules, configures
+ * Installs biomcp@1.4.0 into .bioresearcher-runtime/node_modules, configures
  * optional features via .biomcp.json, non-destructively merges harness
  * configuration files, and runs pre-flight doctor verification.
  */
@@ -63,7 +63,7 @@ if (!fs.existsSync(runtimePkgJson)) {
 }
 
 // 4. Determine packages to install
-const packagesToInstall = ["biomcp@1.1.1"];
+const packagesToInstall = ["biomcp@1.4.0"];
 if (options.withR) packagesToInstall.push("webr@0.6");
 if (options.withMysql) packagesToInstall.push("mysql2@3");
 

@@ -54,6 +54,9 @@ jobs:
       - name: Marketplace validation
         run: node scripts/ci/check-marketplace.mjs
 
+      - name: Skill python-script health gate
+        run: node scripts/ci/check-skill-scripts.mjs
+
       - name: WorkBuddy connector build smoke
         run: |
           OUT="$(mktemp -d)"
@@ -125,6 +128,8 @@ jobs:
         run: |
           python3 -m py_compile skills/bioresearcher-deep-research/scripts/markdown-to-html.py \
             skills/bioresearcher-deep-research/scripts/vet-references.py \
+            skills/bioresearcher-deep-research/scripts/ncbi_esummary.py \
+            skills/bioresearcher-deep-research/scripts/evidence-ledger.py \
             skills/bioresearcher-pubmed-weekly/scripts/parse_updatefiles.py \
             skills/bioresearcher-pubmed-weekly/scripts/pubmed_weekly.py \
             skills/bioresearcher-plot-making/scripts/plot_helpers.py \
