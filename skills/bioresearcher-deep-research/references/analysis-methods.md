@@ -68,17 +68,55 @@ or unverifiable claims. If only tier-3 material exists, mark the finding as
 4. Record the query provenance in each aspect file: tool + key arguments
    (e.g. `trial_search(query="melanoma", phase="Phase 3")`).
 
+## Evidence verification discipline
+
+Applies to every claim a worker or the orchestrator writes. Each rule guards
+a distinct general LLM failure mode. Topic-specific inclusion/exclusion
+boundaries are authored per-run by the orchestrator into each aspect
+ABSTRACT; these rules govern how workers apply any such criteria.
+
+1. Direction of causality: keyword overlap is not direction. Verify the
+   cited source shows the direction asserted (causes vs prevents/attenuates
+   vs merely correlates / serves as a marker) before using it for a causal
+   claim - protective and causal findings share vocabulary.
+2. Quantitative fidelity: tie every number (effect size, rate, count,
+   percent) to its specific source record at capture time, keyed by its
+   ledger key; never transcribe a value for one entity from prose about a
+   related entity - dense multi-entity summaries invite cross-contamination.
+3. Criterion vs keyword: matching the search terms is not satisfying the
+   research criterion. Check the source shows the entity meets the aspect's
+   inclusion definition; exclusion criteria in the plan are binding, and
+   keyword-matching candidates that fail them are noted as excluded, never
+   admitted to boost yield.
+4. Axis discipline: when the plan classifies findings along an axis, every
+   admitted finding must genuinely instantiate that axis; observations of a
+   different kind attach as secondary attributes, never as improvised
+   categories (e.g. an organism-level endpoint vs a molecular mechanism in
+   a mechanistic survey, or a legal-claim scope vs a technical feature in a
+   patent analysis). New categories are a plan change (orchestrator +
+   user), not a per-finding decision.
+5. Primary vs downstream: when attributing an effect to a mechanism, verify
+   the source establishes it as the initiating/primary cause rather than a
+   downstream consequence or a late-stage marker of an upstream process -
+   cascades share endpoints, so late-stage observations do not localize
+   origins.
+
 ## Synthesis rules (orchestrator)
 
 1. Read ALL aspect files before writing the final report.
 2. Structure findings by research question, not by aspect file order, when
    the aspects overlap.
-3. Re-number citations across aspects into one bibliography for
-   final_report.md.
+3. Cite with the workers' semantic cite-key markers in
+   `final_report.draft.md`; numbering and the bibliography come from
+   `render` (SKILL.md Step 5b) - never hand-number.
 4. Contradictions between aspects: present both with sources and, if
    unresolvable, list under Limitations.
 5. Confidence marking: state High/Medium/Low confidence per key finding
    based on source count and tier.
+6. Apply the evidence-verification discipline at merge time: rules 3-5 gate
+   framework adherence (unplaceable findings go to Limitations, never into
+   improvised categories); re-check rules 1-2 whenever synthesis rewords a
+   claim or transcribes a number from an aspect report.
 
 ## Failure modes
 
