@@ -68,11 +68,14 @@ DESCRIPTION: <ABSTRACT>
 7. Writing: succinct, accurate, professional - academic standard.
 8. Evidence ledger (mandatory): maintain
    `reports/<TOPIC>/evidence/<YOUR-FOCUS>.jsonl` as you search.
-   - AFTER EACH biomcp search/get call, append one record per source you
-     might cite, copying fields VERBATIM from the tool result object.
-     Fields the tool did not provide are `null` - NEVER invent values.
-     Records without titles (e.g. LitSense hint results) are acceptable
-     as-is.
+    - AFTER EACH biomcp search/get call, append one record per source you
+      might cite, copying fields VERBATIM from the tool result object -
+      batched: ALL records from one tool result go into ONE `add` call
+      (see below). Fields the tool did not provide are `null` - NEVER invent
+      values. Records without titles (e.g. LitSense hint results) are
+      acceptable as-is. Never hold more than one tool result's worth of
+      un-appended records, and never stage records in per-record scratch
+      files - compose the batch array directly in the append call.
    - Canonical record shapes - one JSON line per source; copy the line for
      your source type and fill fields verbatim (omit optionals you lack).
      biomcp-native field spellings (`ids.nct_id`, top-level `phase`/
@@ -100,10 +103,16 @@ DESCRIPTION: <ABSTRACT>
      take the standard retry ladder (rule 6), then leave the record in the
      ledger with a gap note in the aspect file - the orchestrator's verify
      step backfills what it can.
-   - With Bash available: use
-     `python3 <skill_dir>/scripts/evidence-ledger.py add <file> '<record JSON>'`
-     for validation and normalization. Without Bash: write raw JSONL lines
-     with the Write tool; the orchestrator's merge validates them.
+    - With Bash available: append with
+      `python3 <skill_dir>/scripts/evidence-ledger.py add <file> --stdin`,
+      passing a JSON ARRAY of the batch's records (a heredoc works well), or
+      equivalently `add <file> @<batch.json>` with an array file. Both
+      validate, normalize, and accept every record in one call. A single
+      inline `'<record JSON>'` argument remains fine for one-off records.
+      Do NOT issue one `add` per record and do NOT write per-record scratch
+      files first - every append is a tool call (an LLM turn), so batch per
+      search result. Without Bash: write raw JSONL lines with the Write
+      tool; the orchestrator's merge validates them.
    - BEFORE writing the bibliography, RE-READ your ledger file; compose
      every References entry by COPYING ledger fields. A bibliography entry
      must not contain any field absent from the ledger.

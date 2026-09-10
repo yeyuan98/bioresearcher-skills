@@ -256,7 +256,9 @@ which aspect is being worked on before starting each one.
 - Maintain the evidence ledger `reports/<TOPIC>/evidence/<ASPECT>.jsonl` per
   `references/worker-protocol.md` rule 8: after EACH biomcp call, append one
   record per potentially-citable source with fields copied verbatim from the
-  tool result; title-less records (LitSense hints) are enriched via
+  tool result, batching all records from one tool result into a single
+  `evidence-ledger.py add` call (never one call per record, never per-record
+  scratch files); title-less records (LitSense hints) are enriched via
   `article_get(pmid)` before citing.
 - Write findings to `reports/<TOPIC>/<ASPECT>.md` (underscore-separated
   ASPECT name) with in-text citations [1], [2], ... and a bibliography whose
