@@ -662,6 +662,10 @@ function loadSubagentEvents(runDir) {
     out.reason = "subagents/ capture is empty";
     return out;
   }
+  /* Text events are collected with their session's start time so the merged
+   * text sources concatenate by session start (documented semantics), not by
+   * lexicographic file name. */
+  const textEntries = [];
   for (const f of files) {
     let text = "";
     try {
@@ -669,6 +673,7 @@ function loadSubagentEvents(runDir) {
     } catch {
       continue;
     }
+    let sessStart = null;
     for (const line of text.split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
@@ -679,7 +684,9 @@ function loadSubagentEvents(runDir) {
         continue;
       }
       if (ev.type === "subagent_meta") {
-        out.sessions.push({ id: ev.sessionID, parentID: ev.parentID, title: ev.title, agent: ev.agent, timeCreated: ev.timeCreated, timeUpdated: ev.timeUpdated });
+        const meta = { id: ev.sessionID, parentID: ev.parentID, title: ev.title, agent: ev.agent, timeCreated: ev.timeCreated, timeUpdated: ev.timeUpdated };
+        out.sessions.push(meta);
+        sessStart = meta.timeCreated ?? null;
         continue;
       }
       out.events.push(ev);
@@ -697,12 +704,14 @@ function loadSubagentEvents(runDir) {
           sessionID: ev.sessionID ?? null,
         });
       } else if (ev.type === "text" && typeof ev.part?.text === "string" && ev.part.text) {
-        out.texts.push(ev.part.text);
+        textEntries.push({ text: ev.part.text, sessStart: sessStart ?? 0, ts: ev.timestamp ?? 0 });
       }
     }
   }
   out.sessions.sort((a, b) => (a.timeCreated ?? 0) - (b.timeCreated ?? 0));
   out.toolCalls.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+  textEntries.sort((a, b) => (a.sessStart - b.sessStart) || (a.ts - b.ts));
+  out.texts = textEntries.map((e) => e.text);
   out.available = out.sessions.length > 0 || out.toolCalls.length > 0 || out.texts.length > 0;
   if (!out.available) out.reason = "subagents/ capture parsed but contains no events";
   return out;
@@ -719,6 +728,7 @@ function startSubagentProgressPoller(test, runDir) {
     db: null,
     disabled: false,
     watermark: 0,
+    updatedWatermark: 0,
     known: new Map(),
     lastActivityAt: Date.now(),
     lastDesc: "run start",
@@ -741,6 +751,10 @@ function startSubagentProgressPoller(test, runDir) {
     if (state.disabled) return;
     state.disabled = true;
     clearInterval(timer);
+    try {
+      state.db?.close();
+    } catch {}
+    state.db = null;
     record(`poller disabled: ${reason}`);
     console.error(`[${test.id}] subagent progress poller disabled: ${reason}`);
   };
@@ -749,6 +763,13 @@ function startSubagentProgressPoller(test, runDir) {
     try {
       if (!state.db) {
         const open = await openOpencodeDb();
+        if (state.disabled) {
+          // stop() raced the async DB open: close what we just opened.
+          try {
+            open.db?.close();
+          } catch {}
+          return;
+        }
         if (open.error) {
           disable(open.error);
           return;
@@ -772,27 +793,36 @@ function startSubagentProgressPoller(test, runDir) {
       }
       if (!ids.length) return;
       const ph = ids.map(() => "?").join(",");
-      const rows = db.prepare(`SELECT session_id, time_created, data FROM part WHERE session_id IN (${ph}) AND time_created > ? ORDER BY time_created`).all(...ids, state.watermark);
+      /* Activity = new parts OR updated parts (a long-running tool call
+       * transitions pending -> running -> completed via row updates that
+       * never bump time_created). Reporting still keys on time_created so a
+       * part is printed once. */
+      const createdBefore = state.watermark;
+      const rows = db.prepare(`SELECT session_id, time_created, time_updated, data FROM part WHERE session_id IN (${ph}) AND (time_created > ? OR time_updated > ?) ORDER BY time_created`).all(...ids, state.watermark, state.updatedWatermark);
       const grouped = new Map();
       for (const r of rows) {
+        if (r.time_created > state.watermark) state.watermark = r.time_created;
+        if ((r.time_updated ?? 0) > state.updatedWatermark) state.updatedWatermark = r.time_updated;
+        state.lastActivityAt = Date.now();
         let p;
         try {
           p = JSON.parse(r.data);
         } catch {
           continue;
         }
-        if (r.time_created > state.watermark) state.watermark = r.time_created;
-        state.lastActivityAt = Date.now();
         const meta = state.known.get(r.session_id);
-        if (!meta?.parent_id) continue; // parent stream already lands in log.jsonl
-        const label = shortSessionLabel(meta.title, meta.agent);
         const kind = p.type === "tool" ? `tool ${p.tool} ${p.state?.status ?? ""}`.trim() : String(p.type ?? "?");
-        state.lastDesc = `sub[${label}] ${kind} @${clock()}`;
+        const label = meta ? shortSessionLabel(meta.title, meta.agent) : r.session_id.slice(-6);
+        /* lastDesc covers parent AND subagent activity so the stall banner
+         * names the true last event, not just the last subagent one. */
+        state.lastDesc = `${meta?.parent_id ? `sub[${label}]` : "parent"} ${kind} @${clock()}`;
+        if (!meta?.parent_id) continue; // parent stream already lands in log.jsonl
+        if (r.time_created <= createdBefore) continue; // update-only re-report guard
         const g = grouped.get(r.session_id) ?? { label, items: [] };
         g.items.push({ ts: r.time_created, kind });
         grouped.set(r.session_id, g);
       }
-      for (const [, g] of grouped) {
+      for (const [sid, g] of grouped) {
         record(`subagent activity`, { label: g.label, events: g.items });
         if (g.items.length <= 6) {
           for (const it of g.items) console.log(`[${test.id}] ${clock()} sub[${g.label}] ${it.kind}`);
@@ -1315,7 +1345,7 @@ function checkToolSeq(check, parsed) {
        : `tool_seq ${mode} not matched; biomcp stream: ${streamStr}`);
 }
 
-function checkGroup(check, parsed) {
+function checkGroup(check, parsed, subParsed) {
   const hasAny = Array.isArray(check.anyOf);
   const hasAll = Array.isArray(check.allOf);
   if (hasAny === hasAll) return result(check, "error", "group requires exactly one of anyOf|allOf (non-empty array)");
@@ -1543,7 +1573,13 @@ function checkSubagentCount(check, parsed, subParsed) {
     if (check[k] !== undefined && !Number.isInteger(check[k])) return result(check, "error", `subagent_count ${k} must be an integer`);
   }
   if (check.agent !== undefined && typeof check.agent !== "string") return result(check, "error", "subagent_count agent must be a string");
-  const sessions = subParsed?.available ? subParsed.sessions : [];
+  /* Without a capture, count=0 is indistinguishable from "no capture" — fail
+   * loudly like every other subagent-addressed check (never vacuously pass a
+   * max-only bound against nothing). */
+  if (!subParsed?.available) {
+    return result(check, "fail", `subagent_count requires subagent capture, none available (${subParsed?.reason ?? "subagents/ absent"}); run live or use --extract-subagents`);
+  }
+  const sessions = subParsed.sessions;
   const sel = check.agent === undefined ? sessions : sessions.filter((s) => s.agent === check.agent);
   const count = sel.length;
   const ok = (check.min === undefined || count >= check.min) && (check.max === undefined || count <= check.max);

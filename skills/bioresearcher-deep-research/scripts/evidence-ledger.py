@@ -122,8 +122,6 @@ def normalize_ids(ids_raw: dict) -> dict:
         v = _strip_id_prefix(v)
         if not v:
             continue
-        if k in ids and ids[k] == _canonicalize_id_value(k, v):
-            continue
         ids[k] = _canonicalize_id_value(k, v)
         # disease_id values carry their ontology in the prefix: sniff it
         if k == "disease_id":
@@ -264,6 +262,10 @@ def canonical_key(raw_key, rtype: str, ids: dict, title=None) -> str:
         k = str(raw_key).strip()
         ns = k.split(":", 1)[0]
         if ns in KEY_NAMESPACES and ":" in k:
+            # An explicit title: key must not bypass the hard-id requirement of
+            # verify-gated types (a title-only article could never verify).
+            if ns == "title" and (TYPE_SPECS.get(rtype) or {}).get("verify"):
+                raise ValueError(f"{rtype} record keeps its hard id requirement; explicit title: keys are not accepted")
             return k
         raise ValueError(f"malformed key {raw_key!r}")
 
@@ -410,7 +412,7 @@ def read_ledger(path: Path) -> Ledger:
             continue
         try:
             led.upsert(normalize_record(json.loads(s)))
-        except (json.JSONDecodeError, ValueError) as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
             led.quarantined.append({"file": str(path), "line": lineno, "record": s, "error": str(e)})
     return led
 
@@ -454,11 +456,16 @@ def _parse_incoming(args) -> list:
 def cmd_add(args) -> int:
     path = Path(args.file)
     led = read_ledger(path)
+    # add rewrites the file: pre-existing malformed lines would be silently
+    # dropped — quarantine them loudly instead (same file merge uses).
+    if led.quarantined:
+        qpath = append_quarantine(path, led.quarantined)
+        warn(f"{len(led.quarantined)} pre-existing malformed line(s) quarantined to {qpath} (excluded from rewrite)")
     accepted = rejected = 0
     for raw in _parse_incoming(args):
         try:
             led.upsert(normalize_record(raw, require_provenance_aspect=args.aspect))
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             rejected += 1
             warn(f"rejected record ({e}): {json.dumps(raw, ensure_ascii=False)[:200]}")
             continue
@@ -584,11 +591,14 @@ def cmd_verify(args) -> int:
             clean += 1
     if args.apply:
         led.write(path)
+        if led.quarantined:
+            qpath = append_quarantine(path, led.quarantined)
+            warn(f"{len(led.quarantined)} pre-existing malformed line(s) quarantined to {qpath} (excluded from rewrite)")
     banner(
         "verify",
         f"{len(docs)} PubMed record(s) checked; {filled} backfilled, {title_fixed} title(s) set, "
         f"{clean} verified clean, {unreachable} unreachable (fail-safe, left unverified); "
-        f"{skipped} non-article record(s) skipped (no verifier configured)"
+        f"{skipped} record(s) of unverified type(s) skipped (no verifier configured)"
         + ("; --apply written" if args.apply else " (dry-run, no changes written)"),
     )
     return 0
@@ -707,8 +717,11 @@ def render_trial(rec: dict) -> str:
     meta = rec.get("meta") or {}
     nct = ids.get("nct") or "[MISSING field: ids.nct]"
     out = f"{nct}: {_need(rec, 'title')}."
-    if meta.get("phase"):
-        out += f" Phase {meta['phase']}."
+    phase = str(meta.get("phase") or "").strip().rstrip(".")
+    if phase:
+        # Workers copy phase verbatim from biomcp/CTgov ("Phase 2", "PHASE3",
+        # "2"): never double the prefix.
+        out += f" {phase}." if phase.lower().startswith("phase") else f" Phase {phase}."
     if meta.get("sponsor"):
         out += f" Sponsor: {meta['sponsor']}."
     if meta.get("status"):
@@ -819,6 +832,9 @@ TYPE_SPECS = {
     "disease": {"key_from": [("mondo", "mondo"), ("doid", "doid"), ("omim", "omim"), ("efo", "efo")], "verify": False, "render": lambda r, e: render_disease(r)},
     "dataset": {"key_fn": derive_dataset_key, "verify": False, "render": lambda r, e: render_dataset(r)},
     "web":     {"key_fn": derive_web_key, "verify": False, "render": lambda r, e: render_web(r)},
+    # NOTE: web and other share the url: key namespace (by design: same URL =
+    # same source); same-URL records of the two types therefore merge into one
+    # record on add/merge, fill-only, with both provenance chains preserved.
     "other":   {"key_fn": derive_other_key, "verify": False, "render": lambda r, e: render_other(r)},
 }
 
@@ -1186,7 +1202,7 @@ def selftest() -> int:
             _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(full), stdin=False, aspect=None))
             _, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="nct:NCT04280705", expand_pages=False, offset=0))
             line = out.splitlines()[0]
-            assert "Phase Phase 2." in line and "Sponsor: Pfizer." in line and "Status: Completed." in line, f"full trial render wrong: {line}"
+            assert "Phase Phase" not in line and "Phase 2." in line and "Sponsor: Pfizer." in line and "Status: Completed." in line, f"full trial render wrong: {line}"
         check("folding", st_folding)
 
         # ---- auto-key derivation + title round-trip ---------------------------
@@ -1241,7 +1257,7 @@ def selftest() -> int:
                 _, out = _capture(cmd_verify, argparse.Namespace(file=str(f), apply=False, timeout=0.2))
             finally:
                 ne.NCBI_ESUMMARY_URL, ne.time.sleep = old_url, old_sleep
-            assert "1 non-article record(s) skipped (no verifier configured)" in out, f"skip accounting wrong: {out}"
+            assert "1 record(s) of unverified type(s) skipped (no verifier configured)" in out, f"skip accounting wrong: {out}"
             # article-only ledger keeps deterministic wording (0 skipped) for graders
             f2 = d / "ot2.jsonl"
             _capture(cmd_add, argparse.Namespace(file=str(f2), record=json.dumps(article), stdin=False, aspect=None))
@@ -1267,10 +1283,67 @@ def selftest() -> int:
                 f"complementary meta fields did not union: {meta}"
             _, rendered = _capture(cmd_bib, argparse.Namespace(file=str(out), keys="nct:NCT09876543", expand_pages=False, offset=0))
             line = rendered.splitlines()[0]
-            assert "Phase Phase 3." in line and "Sponsor: NCI." in line and "Status: Recruiting." in line, f"merged render wrong: {line}"
+            assert "Phase Phase" not in line and "Phase 3." in line and "Sponsor: NCI." in line and "Status: Recruiting." in line, f"merged render wrong: {line}"
             aspects = {p["aspect"] for p in led.by_key["nct:NCT09876543"]["provenance"]}
             assert aspects == {"worker_a", "worker_b"}, f"provenance aspects lost: {aspects}"
         check("meta-merge", st_meta_merge)
+
+        # ---- batch appends, title-key rules, rewrite quarantine, BOM --------
+        def st_batch_and_title_rules():
+            def add_stdin(f, payload):
+                old_stdin, sys.stdin = sys.stdin, io.StringIO(payload)
+                try:
+                    return _capture(cmd_add, argparse.Namespace(file=str(f), record=None, stdin=True, aspect=None))
+                finally:
+                    sys.stdin = old_stdin
+            f = d / "bt.jsonl"
+            # --stdin JSON-array batch (the worker-protocol rule-8 shape)
+            batch = [_fixture_article(pmid="10000001", doi="10.1000/b1", title="Batch one", ids={"pmid": "10000001", "doi": "10.1000/b1", "pmcid": "PMC1000001"}),
+                     _fixture_article(pmid="10000002", doi="10.1000/b2", title="Batch two", ids={"pmid": "10000002", "doi": "10.1000/b2", "pmcid": "PMC1000002"})]
+            rc, out = add_stdin(f, json.dumps(batch))
+            assert rc == 0 and "add: 2 record(s) accepted, 0 rejected" in out, f"stdin batch failed: {out}"
+            # @array-file batch
+            bf = d / "bt-batch.json"
+            bf.write_text(json.dumps([_fixture_article(pmid="10000003", doi="10.1000/b3", title="Batch three", ids={"pmid": "10000003", "doi": "10.1000/b3", "pmcid": "PMC1000003"}),
+                                      _fixture_article(pmid="10000004", doi="10.1000/b4", title="Batch four", ids={"pmid": "10000004", "doi": "10.1000/b4", "pmcid": "PMC1000004"})]) + "\n", encoding="utf-8")
+            rc, out = _capture(cmd_add, argparse.Namespace(file=str(f), record="@" + str(bf), stdin=False, aspect=None))
+            assert rc == 0 and "add: 2 record(s) accepted" in out, f"@file batch failed: {out}"
+            assert len(read_ledger(f).by_key) == 4, f"batch appends lost records: {sorted(read_ledger(f).by_key)}"
+            # mixed batch: valid accepted, invalid rejected loudly, rc 0
+            mixed = [_fixture_article(pmid="10000005", doi="10.1000/b5", title="Batch five", ids={"pmid": "10000005", "doi": "10.1000/b5", "pmcid": "PMC1000005"}),
+                     {"type": "article", "title": "no ids", "ids": {}}]
+            rc, out = add_stdin(f, json.dumps(mixed))
+            assert rc == 0 and "1 record(s) accepted, 1 rejected" in out, f"mixed batch accounting wrong: {out}"
+            # title-key rules: web/dataset keep hard identity fields; article
+            # rejects title-only input AND explicit title: keys; other falls
+            # back to a title: key.
+            before = len(read_ledger(f).by_key)
+            for bad in ('{"type": "web", "title": "Just a page", "ids": {}}',
+                        '{"type": "dataset", "title": "Just a series", "ids": {}}',
+                        '{"type": "article", "title": "x", "ids": {}}',
+                        '{"type": "article", "key": "title:abc123", "title": "Bypass", "ids": {}}',
+                        '{"type": ["article"], "title": "unhashable", "ids": {}}'):
+                rc, out = _capture(cmd_add, argparse.Namespace(file=str(f), record=bad, stdin=False, aspect=None))
+                assert rc == 0 and "0 record(s) accepted, 1 rejected" in out, f"should have been rejected: {bad}: {out}"
+            assert len(read_ledger(f).by_key) == before, "rejected records must not be written"
+            other = {"type": "other", "title": "Guideline page", "ids": {},
+                     "provenance": [{"aspect": "a"}]}
+            rc, out = _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(other), stdin=False, aspect=None))
+            assert rc == 0 and "add: 1 record(s) accepted" in out, f"other title-only rejected: {out}"
+            assert any(k.startswith("title:") for k in read_ledger(f).by_key), "other title: key not derived"
+            # pre-existing malformed line: add quarantines loudly, keeps good lines
+            f2 = d / "bt2.jsonl"
+            f2.write_text(json.dumps(_fixture_article(pmid="10000009", doi="10.1000/b9", title="Keep me", ids={"pmid": "10000009", "doi": "10.1000/b9", "pmcid": "PMC1000009"})) + "\nnot json\n", encoding="utf-8")
+            rc, out = _capture(cmd_add, argparse.Namespace(file=str(f2), record=json.dumps(_fixture_article(pmid="10000010", doi="10.1000/b10", title="Add me", ids={"pmid": "10000010", "doi": "10.1000/b10", "pmcid": "PMC1000010"})), stdin=False, aspect=None))
+            led2 = read_ledger(f2)
+            assert rc == 0 and len(led2.by_key) == 2, f"rewrite kept wrong records: {sorted(led2.by_key)}"
+            assert (f2.parent / "_invalid.jsonl").is_file(), "quarantine file not written by add"
+            # BOM tolerance: re-read a BOM-prefixed file cleanly
+            f3 = d / "bt3.jsonl"
+            f3.write_bytes(b"\xef\xbb\xbf" + (json.dumps(_fixture_article(pmid="10000011", doi="10.1000/b11", title="Bom", ids={"pmid": "10000011", "doi": "10.1000/b11", "pmcid": "PMC1000011"})) + "\n").encode("utf-8"))
+            led3 = read_ledger(f3)
+            assert len(led3.by_key) == 1 and not led3.quarantined, f"BOM re-read failed: {led3.quarantined}"
+        check("batch/title-rules", st_batch_and_title_rules)
 
     failed = [r for r in results if r[1] is not None]
     for name, err in results:

@@ -192,7 +192,7 @@ produces, per rep dir:
 
 | Artifact | Content |
 |----------|---------|
-| `progress.jsonl` | Live poller trace (written during the run): subagent session starts, bursts of worker activity, poller notes. Console mirrors it one line per burst and prints a `STALL` warning when neither the parent stream nor any subagent produced activity for 120 s. |
+| `progress.jsonl` | Live poller trace (written during the run): subagent session starts, bursts of worker activity, poller notes. Console mirrors it (one line per event for small bursts, a `+N events` catch-up line for larger ones) and prints a `STALL` warning when neither the parent stream nor any subagent produced activity for 120 s. |
 | `subagents/<sid>.jsonl` | One file per worker session: a `subagent_meta` header (id, parent, agent, title, timing) followed by normalized events (tool_use with full input/output, text, reasoning, step_finish with tokens) in the same envelope as `opencode run --format json`. |
 | `timeline.jsonl` | Parent log events + subagent events interleaved by timestamp (`origin: parent\|subagent`); tool outputs truncated to 240 chars for readability — full fidelity lives in `subagents/`. |
 | `subagents.json` / `result.json.subagents` | Summary: per-worker agent/title, duration, message/part counts, tool histogram, token totals, and any `[evidence-ledger] …` banner lines the worker emitted. |
@@ -215,6 +215,15 @@ Rules and caveats:
   summary — sessions persist in the DB, so pre-capture runs can be
   retrofitted. Resume reuses an existing `subagents/` capture and only
   re-extracts when the dir predates capture support.
+- **STALL semantics (diagnostic, not a failure)**: the warning fires on 120s
+  with no new *and* no updated parts across parent + workers. It correctly
+  flags hung networks but can also fire on legitimately slow single LLM
+  turns (observed: 119-164s parent synthesis turns on large post-worker
+  contexts). The `last:` label names the most recent event of any session.
+- **Live poller coverage**: the poller queries sessions by
+  `directory == runDir`; a nested subagent whose cwd differs from the run
+  dir is invisible live but IS captured post-run via the extractor's
+  `parent_id` closure.
 
 ## Skill injection (hermeticity)
 
