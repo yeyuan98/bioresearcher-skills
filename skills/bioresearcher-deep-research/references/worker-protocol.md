@@ -22,7 +22,8 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
 
 - ABSTRACT: <200 words describing the exact focus, a list of detailed
   research items to investigate, and the aspect's inclusion definition +
-  binding exclusion criteria (negative examples welcome).
+  binding exclusion criteria (negative examples welcome). Numeric caps
+  inside it (source limits, call budgets) are binding on the worker.
 - Tier B (generic subagent): the orchestrator should ALSO inline into the
   prompt the Worker Rules below, the per-domain tool cheatsheet from
   `references/tool-selection.md`, the cite-key marker summary from
@@ -116,24 +117,51 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       step backfills what it can.
     - With Bash available (the orchestrator provides `SKILL_DIR` in the
       prompt): append with
-      `python3 $SKILL_DIR/scripts/evidence-ledger.py add <file> --stdin`,
-      passing a JSON ARRAY of the batch's records (a heredoc works well), or
-      equivalently `add <file> @<batch.json>` with an array file. Both
-      validate, normalize, and accept every record in one call, and the
-      banner echoes the derived canonical keys - cite those keys. Do NOT
-      issue one `add` per record and do NOT write per-record scratch files
-      first - every append is a tool call (an LLM turn), so batch per search
-      result. Without Bash ONLY (e.g. the Claude plugin worker): write raw
-      JSONL lines with the Write tool; the orchestrator's merge validates
-      them.
+      `python3 <SKILL_DIR>/scripts/evidence-ledger.py add <file> --stdin`,
+      substituting the SKILL_DIR value from your prompt LITERALLY - it is a
+      path string, NOT an environment variable (`$SKILL_DIR` in a shell
+      resolves to nothing and breaks the call). Pass a JSON ARRAY of the
+      batch's records (a heredoc works well), or equivalently
+      `add <file> @<batch.json>` with an array file. Both validate,
+      normalize, and accept every record in one call, and the banner echoes
+      the derived canonical keys - cite those keys. Re-adding the same key
+      MERGES fill-only (never overwrites a non-null value): later adds for
+      the same source are safe and expected (e.g. enriching a record after a
+      `_get` call), and a key that lives only in another aspect's ledger is
+      remedied by re-adding the record to your OWN ledger. Do NOT issue one
+      `add` per record and do NOT write per-record scratch files first -
+      every append is a tool call (an LLM turn), so batch per search result.
+      `retrieved_at` carries the real UTC time of the call (e.g.
+      `date -u +%Y-%m-%dT%H:%M:%SZ`) - never a rounded or placeholder
+      timestamp. Fields the tool did not return stay null; values inferred
+      from your own query parameters (e.g. a phase filter) may enter `meta`
+      ONLY with the filter captured in `provenance.args` and the inference
+      disclosed in the report. Without Bash ONLY (e.g. the Claude plugin
+      worker): write raw JSONL lines with the Write tool; the orchestrator's
+      merge validates them.
     - BEFORE reporting completion, run
-      `python3 $SKILL_DIR/scripts/evidence-ledger.py check <file>` - it must
-      exit 0 (no quarantined lines) and list a record for every source you
-      cited. Without Bash, re-read the ledger file and confirm the same.
+      `python3 <SKILL_DIR>/scripts/evidence-ledger.py check <file> --markers <YOUR-FOCUS>.md` -
+      it must exit 0: no quarantined lines, and every `[@key]` marker in
+      your aspect file resolves to a ledger record (markers are ONLY for
+      resolvable cited sources - a mention-by-id in prose stays plain text,
+      e.g. "the pivotal trial, NCT02435849, was not found"). Without Bash,
+      re-read the ledger and match the markers manually.
 9. Evidence quality: apply the evidence-verification discipline
    (`references/analysis-methods.md`) to every claim - direction of
    causality, quantitative fidelity, criterion vs keyword, axis discipline,
    primary vs downstream.
+
+## Restart / gap top-up (orchestrator-dispatched)
+
+Aspect-file ownership is SERIALIZED, never concurrent: a top-up worker
+adopts the original worker's contract only after that worker has terminated.
+The orchestrator dispatches it with the prior worker's evidence-gaps list:
+
+- Append to the SAME per-aspect ledger via `add` (upsert merge is safe).
+- Update the SAME aspect .md via read-then-targeted edits confined to the
+  gap sections - never rewrite unrelated content, other aspects, or the
+  orchestrator's draft.
+- End with `check <file> --markers <aspect>.md` (exit 0) before reporting.
 
 ## Retry ladder (per query)
 

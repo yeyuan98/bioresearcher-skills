@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -242,19 +242,23 @@ Prompt template (Tiers A and B):
 TOPIC: <TOPIC>
 YOUR RESEARCH FOCUS: <RESEARCH-ASPECT>
 DESCRIPTION: <ABSTRACT>
-SKILL_DIR: <absolute path to this skill's directory>  # Tier B only: script path for ledger appends
+SKILL_DIR: <absolute path to this skill's directory>  # Tier B only; a literal path string workers substitute into commands - NOT an env var
 ```
 
-ABSTRACT is <200 words describing the exact focus, a list of detailed research
-items, and the aspect's inclusion definition + binding exclusion criteria
-(negative examples welcome). Resolve `<skill_dir>`/`SKILL_DIR` to the absolute
-path before dispatch - a path the worker cannot resolve is a tool the worker
-does not have.
+ABSTRACT is <200 words describing the exact focus, a list of detailed
+research items, and the aspect's inclusion definition + binding exclusion
+criteria (negative examples welcome). Resolve `<skill_dir>`/`SKILL_DIR` to
+the absolute path before dispatch, substituting it into every inlined
+`<SKILL_DIR>` so Tier B workers never see a placeholder (both spellings
+denote the same path; a path the worker cannot resolve is a tool the worker
+does not have). Relay numeric caps from the user or plan into worker prompts
+VERBATIM - they are binding, never loosened in translation.
 
 Record finished workers via the todo list. If subagents are stuck without
 progress for too long, prompt the user: "If subagents are stuck without
 progress for too long, interrupt and ask me to resume work." Restart failed
-workers as needed (retry <= 3 per worker).
+workers as needed (retry <= 3 per worker); gap top-ups follow the serialized
+ownership-transfer protocol in `references/worker-protocol.md`.
 
 **Tier C - sequential (no subagent tool):**
 

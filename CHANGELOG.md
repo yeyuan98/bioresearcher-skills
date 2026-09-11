@@ -15,6 +15,19 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+### bioresearcher-deep-research 1.6.0
+
+Worker-friction fixes from live-run transcript forensics (three glm-5.3-flash agent tests; every fix traces to an observed failure):
+
+- `check --markers <md...>`: worker self-gate closing the unbacked-marker hole (a negative-example `[@pmid:...]` cited in an aspect file without a ledger record passed `check` and nearly reached `render`). Mirrors render's group semantics exactly (all-cite groups must resolve via direct key or sec_index twin; mixed cite+non-cite groups fail; shape-kind tokens warn only; prose brackets and fenced examples ignored); missing marker files exit 1 (never a vacuous pass through the fail-safe catch); without `--markers` behavior is byte-identical.
+- `render` warns (non-fatal) on hand-typed numeric citation brackets in the DRAFT - the observed `trials [1] [1-5]` leak class; link/wikilink/reference-def-safe pattern; fenced code excluded; render owns numbering.
+- `verify` banner appends `; N already verified (not rechecked)` so dry-runs after `--apply` no longer read as "nothing checked".
+- SKILL_DIR papercut fixed (4/6 dispatched workers failed their FIRST ledger command on `$SKILL_DIR` resolving to nothing): worker-protocol examples use the `<SKILL_DIR>` placeholder with "literal path string, NOT an environment variable" wording, and Tier B orchestrators substitute the resolved absolute path into every inlined `<SKILL_DIR>` so workers never see a placeholder.
+- Worker protocol: re-add-is-safe upsert note (upsert merges fill-only - workers no longer grep the script source to trust re-adds, and cross-aspect keys are remedied by re-adding to the own ledger); `retrieved_at` must be the real UTC call time (`date -u`), never rounded/placeholder; query-parameter-derived values (e.g. a phase filter) may enter `meta` only with the filter captured in `provenance.args` and disclosed; markers are only for resolvable cited sources (mention-by-id stays plain text); end-of-aspect gate is now `check <file> --markers <aspect>.md`.
+- New "Restart / gap top-up" protocol (serialized ownership transfer): codifies the observed-safe pattern of a top-up worker adopting a terminated worker's aspect - same ledger via `add`, targeted report edits, `check --markers`, never other aspects or the draft.
+- Orchestrator duty: numeric caps from the user/plan are relayed to worker prompts VERBATIM (a live run's "at most 10 calls" became "roughly 8-14" and the worker made 24, causing a timeout).
+- clinical-trials.md: CT.gov v2 status-filter enum documented (single value, any case, commas AND spaces fail with HTTP 400 - hit in three live runs).
+
 ### bioresearcher-deep-research 1.5.0
 
 Citation-pipeline revamp: citations are key-based end-to-end and numbered nowhere until rendered - the ledger is the single source of truth and hand-assembled citations/bibliographies are structurally impossible instead of merely discouraged.
