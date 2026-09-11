@@ -130,15 +130,26 @@ for (const file of mdFiles) {
         // Same-repo absolute links: at least the path portion must exist in
         // the current tree (catches stale-tree permalinks 404ing by path).
         // Bare tree/<sha> links (no path) skip the path check but still
-        // contribute their SHA to the permalink-existence gate below.
-        const gm = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/([0-9a-f]{7,40})(?:\/(.+?))?(?:\/?#|$)/);
+        // contribute their SHA to the permalink-existence gate below. The
+        // greedy [^?#]+ path group plus the trailing (?:[\/?#].*)? tail
+        // tolerates query strings (blob/<sha>/path?plain=1), fragments, and
+        // trailing slashes without swallowing them into the path.
+        const gm = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/([0-9a-f]{7,40})(?:\/([^?#]+))?(?:[\/?#].*)?$/);
         if (gm) {
           linkCount++;
           permalinkShas.add(gm[1]);
-          if (gm[2]) {
-            const target = join(REPO, decodeURIComponent(gm[2].split("#")[0]));
+          const ghPath = (gm[2] ?? "").replace(/\/+$/, "");
+          if (ghPath) {
+            const target = join(REPO, decodeURIComponent(ghPath.split("#")[0]));
             if (!existsSync(target)) fail("links", `${rel}: same-repo permalink path does not exist in this tree: ${href}`);
           }
+        } else {
+          // Same-repo links with FLOATING refs (branch names, "main", HEAD)
+          // or non-canonical (e.g. uppercase) SHAs are not stable permalinks
+          // — they silently drift as history moves. Pack policy: pin
+          // lowercase commit SHAs.
+          const floating = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/[^/]+/);
+          if (floating) fail("links", `${rel}: same-repo link uses a floating or non-canonical ref (pin a lowercase commit SHA): ${href}`);
         }
         continue;
       }
@@ -160,18 +171,38 @@ if (mdFiles.length) ok("links", `${mdFiles.length} md file(s), ${linkCount} rela
 /* ------------------------------------------------- gate 9: permalink commit SHAs */
 /* A permalink whose commit SHA is absent from the repository 404s on GitHub
  * even though the path exists in the current tree (e.g. after a rebase
- * rewrote the pack commit). Verify each referenced SHA resolves to a commit;
- * skip gracefully outside a git checkout (tarball builds). */
+ * rewrote the pack commit). Verify each referenced SHA resolves to a commit.
+ * Shallow clones cannot answer the question:
+ *   - in CI (CI=true) that is a checkout misconfiguration, and the gate
+ *     FAILS CLOSED (ci.yml must keep fetch-depth: 0);
+ *   - elsewhere (local shallow clones, tarballs with a partial .git) the
+ *     gate skips with an explicit line instead of failing misleadingly.
+ * Skipped gracefully when there is no .git directory at all. */
 {
   const shas = [...permalinkShas];
   if (shas.length && existsSync(join(REPO, ".git"))) {
-    let verified = 0;
-    for (const sha of shas) {
-      const r = spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO, timeout: 15000 });
-      if (r.status === 0) verified++;
-      else fail("permalinks", `same-repo permalink commit ${sha} does not exist in this repository (rebased away? point the permalinks at a commit that is merged)`);
+    let shallow = false;
+    try {
+      const r = spawnSync("git", ["rev-parse", "--is-shallow-repository"], { cwd: REPO, encoding: "utf8", timeout: 15000 });
+      shallow = r.status === 0 && (r.stdout ?? "").trim() === "true";
+    } catch {}
+    if (shallow) {
+      const msg = `shallow clone — ${shas.length} permalink SHA(s) not verifiable`;
+      if (process.env.CI === "true") {
+        fail("permalinks", `${msg}; ci.yml checkout must keep fetch-depth: 0 for this gate`);
+      } else {
+        ok("permalinks", `skipped (${msg}; full-history check runs in CI)`);
+      }
+    } else {
+      let verified = 0;
+      for (const sha of shas) {
+        const r = spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO, timeout: 15000 });
+        if (r.status === 0) verified++;
+        else if (r.error || r.status === null) fail("permalinks", `cannot verify permalink commit ${sha}: git unavailable or timed out`);
+        else fail("permalinks", `same-repo permalink commit ${sha} does not exist in this repository (rebased away? point the permalinks at a commit that is merged)`);
+      }
+      if (verified) ok("permalinks", `${verified}/${shas.length} distinct permalink commit SHA(s) resolve in this repository`);
     }
-    if (verified) ok("permalinks", `${verified}/${shas.length} distinct permalink commit SHA(s) resolve in this repository`);
   } else if (shas.length) {
     ok("permalinks", `skipped (${shas.length} SHA(s); no .git directory)`);
   }

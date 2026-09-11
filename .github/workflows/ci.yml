@@ -16,7 +16,13 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 — demos/check-demos.mjs gate 9 verifies that same-repo
+      # permalink commit SHAs exist in this repository; the default shallow
+      # checkout (pull_request merges refs) cannot resolve them. The gate
+      # fails closed in CI if it ever sees a shallow clone again.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:

@@ -41,11 +41,14 @@ Refresh the true-run demo pack to the current skill generation (deep-research
   interview turn).
 - `demos/check-demos.mjs`: three new gates — agent check-spec validation
   against the 13-type grader contract (mirror of the runner validator),
-  artifact `scenarioSha256` == current `scenarios/<id>/scenario.json` sha256
-  (stale-by-definition artifacts fail; this caught 6 committed artifacts
-  whose manifests had drifted post-capture), and same-repo permalink commit
-  SHAs must resolve in the repository (`git cat-file`, skipped outside a
-  checkout).
+  artifact `scenarioSha256` == sha256 of the current
+  `scenarios/<id>/scenario.json` (stale-by-definition artifacts fail; this
+  caught 6 committed artifacts whose manifests had drifted post-capture), and
+  same-repo permalink commit SHAs must resolve in the repository (`git
+  cat-file`, including bare `tree/<sha>` links; floating refs like
+  `blob/main/...` are rejected as non-permalinks; the gate fails closed in CI
+  on shallow clones and skips with a notice elsewhere — `ci.yml` therefore
+  checks out with `fetch-depth: 0`).
 - True-run refresh (2026-09-11, opencode 1.18.30, repo `d818c85`): re-ran
   `mcp-tool-tour-en/zh` against biomcp@1.4.0 (the committed captures were
   still 1.1.1 responses behind the 1.4.0 docs claims), `agent-interview-en`,
