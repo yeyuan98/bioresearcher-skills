@@ -16,6 +16,7 @@ Zero external dependencies (pure Python standard library).
 """
 
 import argparse
+import difflib
 import html
 import json
 import os
@@ -36,6 +37,26 @@ REF_LINE_RE = re.compile(
 )
 PMID_RE = re.compile(r'\bPMID[:\s]+\[?(\d{4,9})\]?', re.IGNORECASE)
 DOI_RE = re.compile(r'(?:DOI[:\s]+|https?://(?:dx\.)?doi\.org/)?\b(10\.\d{4,9}/[^\s\]\)]+)', re.IGNORECASE)
+
+TAIL_TOKEN_RE = re.compile(
+    r'(?:'
+    r'\[?\b(?:DOI|PMID|PMCID)\s*[:=\s]\s*[^\]\s]+\]?'
+    r'|https?://(?:dx\.)?doi\.org/\S+'
+    r'|https?://pubmed\.ncbi\.nlm\.nih\.gov/\d+/?'
+    r')\.?',
+    re.IGNORECASE,
+)
+
+LOCATOR_AT_END_RE = re.compile(
+    r'(?<=\.\s)'
+    r'('
+      r'\b(?:19\d\d|20\d\d)\b'
+      r'(?:\s+[A-Za-z]{3,9}(?:\s+\d{1,2})?)?'
+      r'(?:;\s*[\w\s\(\)\:\.\-\[\]\/]+)?'
+    r')'
+    r'\.?\s*$',
+    re.IGNORECASE,
+)
 
 # Structural-audit patterns
 CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
@@ -186,6 +207,44 @@ def compute_token_overlap(t1: str, t2: str) -> float:
     return len(toks1 & toks2) / min(len(toks1), len(toks2))
 
 
+def split_citation_tail(text: str) -> tuple[str, str]:
+    """Split citation into (pre_tail, tail) anchoring on trailing identifier tokens."""
+    matches = list(TAIL_TOKEN_RE.finditer(text))
+    if not matches:
+        return text.rstrip(), ""
+    tail_start = len(text)
+    for m in reversed(matches):
+        intervening = text[m.end():tail_start].strip(". \t\\[\\]\\(\\);,")
+        if intervening:
+            break
+        tail_start = m.start()
+    if tail_start >= len(text):
+        return text.rstrip(), ""
+    return text[:tail_start].rstrip(), text[tail_start:].strip()
+
+
+def validate_citation_invariants(original: str, enhanced: str) -> None:
+    """Assert invariants to prevent locator/DOI corruption or deletion."""
+    m_orig_pmid = PMID_RE.search(original)
+    m_enh_pmid = PMID_RE.search(enhanced)
+    if m_orig_pmid:
+        assert m_enh_pmid and m_enh_pmid.group(1) == m_orig_pmid.group(1), (
+            f"PMID corrupted or deleted: {m_orig_pmid.group(1)} vs {m_enh_pmid.group(1) if m_enh_pmid else 'None'}"
+        )
+    m_orig_doi = DOI_RE.search(original)
+    m_enh_doi = DOI_RE.search(enhanced)
+    if m_orig_doi:
+        orig_doi = m_orig_doi.group(1).lower().rstrip('.')
+        assert m_enh_doi, f"Original DOI lost: {orig_doi}"
+        enh_doi = m_enh_doi.group(1).lower().rstrip('.')
+        assert orig_doi == enh_doi, f"Original DOI mutated: {orig_doi} -> {enh_doi}"
+    if m_enh_doi:
+        doi_val = m_enh_doi.group(1).rstrip(';.,')
+        assert not re.search(r'\(\d+\):', doi_val), f"DOI corrupted with issue/page locator: {doi_val}"
+        assert re.match(r'^10\.\d{4,9}/[^\s\]\)]+$', doi_val), f"DOI token structurally invalid: {doi_val}"
+    assert ".." not in enhanced.replace("...", ""), f"Double period introduced: {enhanced}"
+
+
 def enhance_citation(original_text: str, doc: dict) -> tuple[str, list[str]]:
     """Compare and enhance citation string against NCBI document summary."""
     changes: list[str] = []
@@ -197,8 +256,6 @@ def enhance_citation(original_text: str, doc: dict) -> tuple[str, list[str]]:
     if overlap < 0.30 and len(ncbi_title) > 20:
         return original_text, [f"WARNING: Title mismatch (overlap {overlap:.2f}). Expected '{ncbi_title[:40]}...'"]
 
-    updated = original_text.strip()
-
     # Extract DOI from NCBI
     ncbi_doi = ""
     for aid in doc.get("articleids", []):
@@ -206,27 +263,36 @@ def enhance_citation(original_text: str, doc: dict) -> tuple[str, list[str]]:
             ncbi_doi = str(aid.get("value", "")).strip().rstrip('.')
             break
 
-    # Locate publication locator immediately preceding PMID:
-    # Target: Year. or Year;Vol(Iss):Pages. preceding PMID:
+    pre_tail, tail = split_citation_tail(original_text.strip())
+
+    # Update publication locator strictly in pre_tail (preceding DOI/PMID)
     if pub_loc:
-        loc_pattern = re.compile(
-            r'(\b(?:19\d\d|20\d\d)\b(?:\s*;\s*[\w\(\)\:\.\-\s]+?)?)\.?(\s+PMID:)',
-            re.IGNORECASE,
-        )
-        m = loc_pattern.search(updated)
+        m = LOCATOR_AT_END_RE.search(pre_tail)
         if m:
-            current_loc = m.group(1).strip()
-            pmid_lead = m.group(2)
+            current_loc = m.group(1).rstrip('. \t')
             if current_loc != pub_loc:
-                updated = updated[:m.start(1)] + pub_loc + "." + pmid_lead + updated[m.end():]
+                pre_tail = pre_tail[:m.start(1)] + pub_loc + "."
                 changes.append(f"Updated publication info -> '{pub_loc}'")
+        else:
+            pre_tail = pre_tail.rstrip('.') + f". {pub_loc}."
+            changes.append(f"Added publication info -> '{pub_loc}'")
 
     # Add missing DOI if available from NCBI and not present in citation
-    if ncbi_doi and ncbi_doi.lower() not in updated.lower() and not DOI_RE.search(updated):
-        if not updated.endswith('.'):
-            updated += "."
-        updated += f" DOI: {ncbi_doi}."
+    full_current = f"{pre_tail} {tail}".strip()
+    if ncbi_doi and ncbi_doi.lower() not in full_current.lower() and not DOI_RE.search(full_current):
+        doi_part = f"DOI: {ncbi_doi}."
+        if tail:
+            tail = f"{doi_part} {tail}"
+        else:
+            tail = doi_part
         changes.append(f"Added DOI -> '{ncbi_doi}'")
+
+    updated = f"{pre_tail} {tail}".strip() if tail else pre_tail.strip()
+
+    try:
+        validate_citation_invariants(original_text, updated)
+    except AssertionError as e:
+        return original_text, [f"WARNING: Invariant violation: {e}"]
 
     return updated, changes
 
@@ -302,8 +368,24 @@ def vet_references(report_path: Path, apply_changes: bool = False) -> dict:
                 "suggested": enhanced_body,
             })
 
+    new_text = text
     if apply_changes and total_updated > 0:
         new_text = text[:sec_match.start(1)] + new_section_text + text[sec_match.end(1):]
+        # Layer 2 invariant: assert structural integrity before disk write
+        post_audit = audit_structure(new_text)
+        if not post_audit["ok"]:
+            return {
+                "status": "error",
+                "message": f"Post-apply structural audit failed: {'; '.join(post_audit['errors'])}",
+                "total_citations": len(citations),
+                "pmid_citations": len(pmids_to_fetch),
+                "updated_count": 0,
+                "suggestions": [],
+                "warnings": list(reversed(warnings)),
+                "applied": False,
+                "original_text": text,
+                "new_text": text,
+            }
         tmp_path = report_path.with_suffix(".tmp")
         tmp_path.write_text(new_text, encoding="utf-8")
         os.replace(tmp_path, report_path)
@@ -316,6 +398,8 @@ def vet_references(report_path: Path, apply_changes: bool = False) -> dict:
         "suggestions": list(reversed(suggestions)),
         "warnings": list(reversed(warnings)),
         "applied": apply_changes and total_updated > 0,
+        "original_text": text,
+        "new_text": new_text,
     }
 
 
@@ -355,7 +439,59 @@ def selftest() -> int:
             print(f"FAIL {name}: expected ok={expect_ok}, got ok={got['ok']} errors={got['errors']}")
         else:
             print(f"PASS {name}")
-    print(f"[vet-references] selftest: {len(cases) - failures}/{len(cases)} group(s) passed"
+
+    # ---- Unit tests: enhance_citation & locator/tail isolation ----
+    mock_doc = {
+        "title": "Synthesis of conotoxin peptides and derivatives.",
+        "pubdate": "1979 Aug",
+        "volume": "27",
+        "issue": "8",
+        "pages": "1942-4",
+        "articleids": [{"idtype": "doi", "value": "10.1248/cpb.27.1942"}],
+    }
+
+    # Test 1: Repro defect - DOI ending in year-like digits (1942) must NEVER be spliced
+    repro_orig = "Takahashi M. Synthesis of conotoxin peptides. Chem Pharm Bull (Tokyo). 1979. DOI: 10.1248/cpb.27.1942. PMID: 540362."
+    repro_enh, repro_changes = enhance_citation(repro_orig, mock_doc)
+    if "10.1248/cpb.27.1942." not in repro_enh or "1979;27(8):1942-4." not in repro_enh:
+        failures += 1
+        print(f"FAIL repro-doi-tail-splicing: expected clean DOI preservation and locator update, got: {repro_enh}")
+    elif ";27(8):1942-4." in repro_enh.split("DOI:")[1]:
+        failures += 1
+        print(f"FAIL repro-doi-tail-splicing: locator was spliced into DOI! {repro_enh}")
+    else:
+        print("PASS repro-doi-tail-splicing: DOI preserved verbatim, locator updated before DOI")
+
+    # Test 2: Locator with internal whitespace (must not splice into 4-digit page numbers)
+    space_orig = "Takahashi M. Synthesis of conotoxin peptides. Chem Pharm Bull (Tokyo). 1979; 27(8): 1942-1944. DOI: 10.1248/cpb.27.1942. PMID: 540362."
+    space_enh, _ = enhance_citation(space_orig, mock_doc)
+    if "10.1248/cpb.27.1942." not in space_enh or "1942-1979" in space_enh:
+        failures += 1
+        print(f"FAIL locator-whitespace-handling: corrupted page/locator: {space_enh}")
+    else:
+        print("PASS locator-whitespace-handling: internal spaces handled cleanly")
+
+    # Test 3: Citation without DOI gets DOI added before PMID
+    no_doi_orig = "Takahashi M. Synthesis of conotoxin peptides. Chem Pharm Bull (Tokyo). 1979;27(8):1942-4. PMID: 540362."
+    no_doi_enh, no_doi_chg = enhance_citation(no_doi_orig, mock_doc)
+    if "DOI: 10.1248/cpb.27.1942. PMID: 540362." not in no_doi_enh:
+        failures += 1
+        print(f"FAIL add-missing-doi-before-pmid: got {no_doi_enh}")
+    else:
+        print("PASS add-missing-doi-before-pmid: DOI inserted before PMID")
+
+    # Test 4: Invariant enforcement rejects corrupted DOI modification
+    inv_orig = "Takahashi M. Title. Journal. 2020. DOI: 10.1000/182. PMID: 12345."
+    inv_bad = "Takahashi M. Title. Journal. 2020;1(2):3. DOI: 10.1000/182;1(2):3. PMID: 12345."
+    try:
+        validate_citation_invariants(inv_orig, inv_bad)
+        failures += 1
+        print("FAIL invariant-validation: failed to catch corrupted DOI with semicolon")
+    except AssertionError:
+        print("PASS invariant-validation: correctly caught corrupted DOI")
+
+    total_groups = len(cases) + 4
+    print(f"[vet-references] selftest: {total_groups - failures}/{total_groups} group(s) passed"
           + (" — FAILURES PRESENT" if failures else ""))
     return 1 if failures else 0
 
@@ -368,6 +504,7 @@ def main():
     parser.add_argument("report", help="Path to markdown research report (e.g. final_report.md)")
     parser.add_argument("--apply", action="store_true", help="Apply verified citation updates in-place")
     parser.add_argument("--json", action="store_true", help="Output results in structured JSON")
+    parser.add_argument("--diff", action="store_true", help="Print unified diff of applied changes to stdout")
     parser.add_argument("--timeout", type=float, default=15.0, help="HTTP timeout in seconds (default 15)")
     args = parser.parse_args()
 
@@ -402,7 +539,20 @@ def main():
         sys.stderr.write(f"[vet-references] Unexpected failure: {e}. Preserving original citations.\n")
         sys.exit(0)
 
+    if res.get("status") == "error":
+        sys.stderr.write(f"[vet-references] error: {res.get('message', 'Unknown vetting error')}\n")
+        if args.json:
+            print(json.dumps({"audit": audit, **res}, indent=2))
+        sys.exit(1)
+
     if args.json:
+        if args.diff and res.get("applied"):
+            res["diff"] = "".join(difflib.unified_diff(
+                res["original_text"].splitlines(keepends=True),
+                res["new_text"].splitlines(keepends=True),
+                fromfile=f"{report_path} (original)",
+                tofile=f"{report_path} (vetted)",
+            ))
         print(json.dumps({"audit": audit, **res}, indent=2))
         return
 
@@ -420,8 +570,21 @@ def main():
         for s in res.get("suggestions", []):
             chg = ", ".join(s["changes"])
             print(f"  - [{s['index']}] PMID {s['pmid']}: {chg}")
-            if not args.apply:
+            if args.apply:
+                print(f"    - OLD: {s['original']}")
+                print(f"    + NEW: {s['suggested']}")
+            else:
                 print(f"    Suggested: {s['suggested']}")
+        if args.diff and res.get("applied"):
+            diff_lines = list(difflib.unified_diff(
+                res["original_text"].splitlines(keepends=True),
+                res["new_text"].splitlines(keepends=True),
+                fromfile=f"{report_path} (original)",
+                tofile=f"{report_path} (vetted)",
+            ))
+            if diff_lines:
+                print("[vet-references] Unified diff:")
+                sys.stdout.writelines(diff_lines)
     elif res.get("warnings"):
         print("[vet-references] Citations processed with warnings; check mismatched records above.")
     else:

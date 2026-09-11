@@ -23,8 +23,8 @@ Multiple:  Several studies confirm the association [@pmid:21639808; @nct:NCT0428
 - Keys are the ledger's derived canonical keys (the `add` banner echoes
   them): `pmid:` > `doi:` > `pmcid:` for articles, `nct:` for trials,
   `patent:`, `gene:`, `clinvar:`, `chembl:`/`chebi:`/`unii:` for drugs,
-  ontology ids for diseases, accessions for datasets, `url:`/`title:` for
-  web/other. A `doi:`/`pmcid:` marker whose record was promoted to a `pmid:`
+  ontology ids for diseases, accessions/PDB for datasets (`geo:`, `sra:`, `gb:`, `pdb:`),
+  `url:`/`title:` for web/other. A `doi:`/`pmcid:` marker whose record was promoted to a `pmid:`
   key by merge still resolves.
 - A bracket whose tokens are not namespace+shape-valid cite-keys (prose like
   `[@home]`, pandoc-style `[@Chapman2011]`) is left verbatim.
@@ -136,9 +136,10 @@ Example:
 [7] Cutaneous melanoma. MONDO:0002025. https://monarchinitiative.org/MONDO:0002025
 ```
 
-### Datasets / sequences (geo_get / sra_get / genbank_get)
+### Datasets / structures / sequences (pdb / geo_get / sra_get / genbank_get)
 
 ```
+[N] PDB structure [PDB_ID]: [title]. [[method]] Resolution: [res]. https://www.rcsb.org/structure/[PDB_ID]
 [N] GEO series GSEXXXXXX: [title]. [organism]. https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSEXXXXXX
 [N] SRA run SRRXXXXXXX: [experiment description]. https://trace.ncbi.nlm.nih.gov/Traces/?run=SRRXXXXXXX
 [N] GenBank accession XXXXXXXX.X: [definition]. https://www.ncbi.nlm.nih.gov/nuccore/XXXXXXXX.X

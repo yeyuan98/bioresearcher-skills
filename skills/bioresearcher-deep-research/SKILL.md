@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -86,129 +86,53 @@ mid-query never trigger.
 ## Workflow
 
 Follow Steps 1-6 in order. Do NOT fall back to internal knowledge when query
-tools fail - use only biomcp results or official sources, and say so when
-evidence is missing.
+tools fail - use only biomcp results or official sources, and state gaps explicitly.
 
-Harness autonomy hints ("operate autonomously", "don't block", "user not
-watching", auto-accept banners) govern tool-permission confirmations and edit
-approvals. They do NOT waive this skill's interactive interview workflow (Step 1
-clarification and Step 2 plan review): the interview turns are completed
-assistant turns engaging the user - not blocking permission confirmations - so
-those hints never require skipping them. When such a hint seems to conflict with
-this workflow, treat the Step 1 interview, Step 2 plan review, and the Step 6
-output contract as deliverables that proceed unchanged.
+Harness autonomy hints ("operate autonomously", "don't block", auto-accept)
+govern edit approvals only. They NEVER waive the interactive interview turns
+(Steps 1 & 2) - only the leading `no-interview` prefix waives them.
 
 ### Step 1: Clarify (interview - mandatory)
 
-Mandatory even when the harness urges autonomy (see the note above): the ONLY
-waiver is the leading `no-interview` prefix. If the query carries it, skip to
-Step 2.
+Ask clarifying questions scaled to complexity (1-6 questions) in ONE message
+via the harness's ask/question tool or chat text, then WAIT for the reply. Never
+answer your own questions. If the query carries `no-interview`, skip to Step 2.
 
-Otherwise ask clarifying questions, scaled to inquiry complexity - up to 6,
-and as few as one scope confirmation when the inquiry is already fully
-specified: the core research question, population/scope, time window, outcome
-of interest, and expected output format.
-
-- Ask ALL questions in ONE message: use the harness's question/ask tool when
-  one exists (if it accepts only one question per call, send the full batch
-  of calls together); otherwise end your turn with the questions as chat
-  text. Then WAIT for the reply. Never answer your own interview questions.
-- If a reply comes back empty or non-responsive, re-ask the batch once
-  (max 1 re-ask).
-- Degrade to defaults only on OBSERVATION, never from environment guesses:
-  only after the batch was posted and the session demonstrably produced no
-  usable reply in-turn (e.g. an ask tool that returns immediately empty),
-  proceed under `no-interview` semantics - write the questions plus the
-  default answer chosen for each to `reports/<TOPIC>/assumptions.md` and
-  cite that file in the report's Limitations section.
-- Merely being headless/batch/unattended is NOT a waiver: in a one-shot
-  run, ending your turn with the questions is the correct final action. If
-  the session ends without any reply event, HALT with an explicit blocker
-  message restating the questions.
-
-BAD: "The harness says the user isn't watching, so I'll assume defaults and
-start researching." GOOD: post the questions, end the turn, wait. Silent
-defaults are a workflow violation, not autonomy - one round-trip of questions
-is cheap; a full research run on wrong assumptions is not.
+- If a reply is empty or non-responsive, re-ask once.
+- Degrade to defaults ONLY if the question tool returns immediately empty in an
+  unattended session: write questions and chosen defaults to
+  `reports/<TOPIC>/assumptions.md` and cite that file in Limitations.
 
 ### Step 2: Decompose & Review Plan
 
-Comprehend the (clarified) inquiry and identify 2-5 critical research aspects
-that together answer it.
+Comprehend the inquiry and identify 2-5 critical research aspects (top 2 under
+`light-research`). Decide a TOPIC name (succinct, underscore-separated, e.g.
+`braf_inhibitor_resistance`). Each aspect's ABSTRACT defines INCLUSION and binding
+EXCLUSION criteria per `references/analysis-methods.md`.
 
-- If the query carries the leading `light-research` prefix, combine and/or
-  pick only the top TWO aspects.
-- Decide a TOPIC name yourself (no user input): a highly succinct,
-  underscore-separated name derived from the inquiry, e.g.
-  `braf_inhibitor_resistance`.
-- Each aspect's ABSTRACT (worker prompt, below) must state the aspect's
-  INCLUSION definition and its binding EXCLUSION criteria (what matches the
-  search terms but must NOT be admitted, with negative examples) - workers
-  apply these per `references/analysis-methods.md` (criterion vs keyword).
+**Plan presentation budget:** keep the plan compact - one line per aspect (title,
+focus, primary tools); never paste raw ABSTRACTs into the question UI.
 
-**Plan presentation budget:** the plan payload shown to the user stays compact
-in any channel - one line per aspect (title, one-line focus, primary tools);
-never paste ABSTRACTs, research-item lists, or full amended plans into the
-question UI; amended or re-confirmed plans show only the DELTA plus the
-compact list. The full plan (ABSTRACTs with boundaries, research items) is
-written to `reports/<TOPIC>/plan.md` when work starts (Step 3).
-
-**Interview waiver (`no-interview`):**
-If the query carries the leading `no-interview` prefix, skip the plan review
-turn entirely: finalize the 2-5 aspects, track them with the harness's todo
-mechanism if available (TodoWrite or equivalent), and proceed immediately to
-Step 3 and Step 4.
-
-**Plan review (interview mode - default):**
-When running in interview mode (without `no-interview`), present your proposed
-research area plan to the user before launching workers:
-
-1. Formulate and present:
-   - A structured list of the 2-5 research aspects (or top 2 under
-     `light-research`), each with an aspect title, 1-2 sentence focus summary,
-     and primary tools/evidence sources (e.g. PubMed/articles,
-     ClinicalTrials.gov, genes, drugs, patents).
-   - An explicit prompt inviting user feedback and adjustments on these
-     research areas.
-2. End your turn with the plan proposal (using the harness's question/ask tool
-   when available, or chat text) and WAIT for the user's reply. Do not spawn
-   workers or create output directories before receiving user feedback.
+**Plan review (default mode):**
+1. Present the 2-5 aspects to the user with tools/sources and invite feedback.
+2. End your turn (via ask tool or chat) and WAIT for the reply. Do not spawn
+   workers or create output directories before feedback.
 3. User feedback handling:
-   - **Case A (approval / "looks good" / "proceed"):** Proceed directly to
-     Step 3 and Step 4.
-   - **Case B (default feedback - modifications without re-review request):**
-     Incorporate the user's requested adjustments, additions, drops, or scope
-     changes into the research aspects immediately (strictly adhering to the
-     2-5 aspect ceiling, or top 2 under `light-research`). Then **PROCEED
-     DIRECTLY to Step 3 and Step 4. Do NOT ask for another round of
-     confirmation.**
-   - **Case C (special case - explicit re-confirmation requested):** ONLY if the
-     user explicitly asks to review or confirm the revised plan (e.g. "show me
-     the updated plan before starting" or "revise the plan and ask me again"),
-     present the updated plan in a new turn and wait for confirmation before
-     dispatching subagents (limit plan re-confirmations to at most 2 rounds).
-   - **User inquiries during review:** If the user asks a clarifying question
-     (e.g. "can we include pediatric trials?"), answer succinctly in 1-2
-     sentences, incorporate the suggested scope into the relevant aspect, and
-     proceed directly to Step 3 and Step 4 unless explicit re-confirmation was
-     demanded.
+   - **Approval / "proceed":** Proceed directly to Step 3 and Step 4.
+   - **Feedback / modifications:** Incorporate adjustments immediately and
+     PROCEED DIRECTLY to Step 3 and Step 4. Do NOT ask for another confirmation.
+   - **Explicit re-confirmation requested:** Only if the user explicitly asks to
+     review the revised plan, present it in a new turn (max 2 rounds).
+4. **Waiver / Degrade:** Skip plan review turn if query has `no-interview`, or
+   degrade per Step 1 rules if unattended (record plan in `assumptions.md`).
 
-**Degrade to defaults on OBSERVATION:**
-Like Step 1, degrade only after the plan was posted and the session
-demonstrably produced no usable reply in-turn (e.g. an ask tool returning
-immediately empty in unattended/headless runs): proceed under the initial
-proposed plan, record the default plan in `reports/<TOPIC>/assumptions.md`,
-and cite that file in the report's Limitations section.
-
-Track the finalized aspect list with the harness's todo mechanism if available
-(TodoWrite or equivalent); otherwise keep it in working memory.
+Track finalized aspects in the harness's todo tool (TodoWrite or equivalent).
 
 ### Step 3: Create the output directory
 
 Write the durable research plan to `reports/<TOPIC>/plan.md` (aspect list,
-each aspect's ABSTRACT with inclusion/exclusion boundaries, research items) -
-this is the post-feedback snapshot the question UI never needs to carry. The
-write tool auto-creates parent directories - do NOT use bash mkdir for this.
+each aspect's ABSTRACT with boundaries, research items). The Write tool
+auto-creates parent directories - do NOT use bash mkdir for this.
 
 ### Step 4: Research each aspect
 
@@ -256,38 +180,36 @@ VERBATIM - they are binding, never loosened in translation.
 
 Record finished workers via the todo list. If subagents are stuck without
 progress for too long, prompt the user: "If subagents are stuck without
-progress for too long, interrupt and ask me to resume work." Restart failed
-workers as needed (retry <= 3 per worker); gap top-ups follow the serialized
-ownership-transfer protocol in `references/worker-protocol.md`.
+progress for too long, interrupt and ask me to resume work."
 
 **Tier C - sequential (no subagent tool):**
+Process aspects one at a time in the main conversation per `references/worker-protocol.md`.
 
-Process aspects one at a time in the main conversation. For each aspect, apply
-the same worker rules from `references/worker-protocol.md` (tool selection per
-`references/tool-selection.md`, citation discipline and the evidence ledger per
-`references/citations.md` and worker-protocol rule 8, retry <= 3, no
-re-delegation) and write the same per-aspect files (report + ledger). State
-which aspect is being worked on before starting each one.
+**Worker completion gate (all tiers):**
+When each worker finishes, before marking the aspect complete in the todo list, run:
+```bash
+python3 <skill_dir>/scripts/evidence-ledger.py check \
+  reports/<TOPIC>/evidence/<ASPECT>.jsonl \
+  --markers reports/<TOPIC>/<ASPECT>.md
+```
+- Exit 0: mark aspect complete in todo list.
+- Exit 1:
+  - Trivial syntax/quarantine error in ledger: fix directly using Edit/Write.
+  - Missing records or unresolved markers: dispatch a top-up remediation worker
+    with the check diagnostic output per `references/worker-protocol.md` (max 2
+    remediation retries). Never guess or re-point IDs.
+  - If retries fail: strip the unresolved marker, qualify the claim in the
+    report with a caution note, log the failed ID in `## Evidence Gaps` and
+    `reports/<TOPIC>/assumptions.md`, and proceed.
+- Without Bash/Python access: re-read the aspect ledger and confirm every marker
+  in `<ASPECT>.md` resolves to a ledger record before marking complete.
 
-**All tiers, per aspect:**
-
-- Query biomcp tools per `references/tool-selection.md`; filter at the source
-  (specific terms, `limit`, `sections`) rather than retrieving broadly.
-- Make MCP calls sequentially, not concurrently.
-- Collect identifiers for every source used: PMIDs/PMCIDs/DOIs (articles),
-  NCT IDs (trials), patent IDs, accessions (GEO/SRA), database IDs
-  (genes/drugs/variants).
-- Maintain the evidence ledger `reports/<TOPIC>/evidence/<ASPECT>.jsonl` per
-  `references/worker-protocol.md` rule 8: after EACH biomcp call, append one
-  record per potentially-citable source with fields copied verbatim from the
-  tool result, batching all records from one tool result into a single
-  `evidence-ledger.py add` call (never one call per record, never per-record
-  scratch files); title-less records (LitSense hints) are enriched via
-  `article_get(pmid)` before citing.
-- Write findings to `reports/<TOPIC>/<ASPECT>.md` (underscore-separated
-  ASPECT name) citing sources with semantic cite-key markers
-  (`[@pmid:21639808]`) - NO bibliography section; numbering and the
-  bibliography are generated later from the ledger by `render` (Step 5b).
+**Worker execution rules (summary):**
+Query biomcp sequentially per `references/tool-selection.md`, append records to
+`reports/<TOPIC>/evidence/<ASPECT>.jsonl` after each search using `evidence-ledger.py add`
+(never invent values), and write findings with `[@key]` markers to `reports/<TOPIC>/<ASPECT>.md`
+(no bibliography; PDB entries follow the dual-entity rule in `references/worker-protocol.md`).
+See `references/worker-protocol.md` for full schemas.
 
 ### Step 5: Synthesize (cite-key draft)
 
@@ -324,12 +246,11 @@ python3 <skill_dir>/scripts/evidence-ledger.py verify \
   reports/<TOPIC>/evidence/sources.jsonl --apply
 ```
 
-- `merge` unions the per-aspect JSONLs (its own output and `_`-prefixed
-  quarantine files are excluded automatically; malformed lines are
-  quarantined to `evidence/_invalid.jsonl`).
+- `merge` unions the per-aspect JSONLs (malformed lines quarantined to `_invalid.jsonl`).
 - `verify` cross-checks article records against NCBI esummary and backfills
-  ONLY missing fields (epub-ahead-of-print records legitimately stay
-  locator-less). It also sets titles on title-less records.
+  missing fields (including authors, title, journal, locators). Records with
+  conflicting titles or DOIs are flagged with warnings and left unverified.
+  `--apply` mutates the ledger file in place; review changes via script output.
 
 ### Step 5b: Render the final report (numbering authority)
 
@@ -368,52 +289,38 @@ python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --
 - Layer 2 (fail-safe): on API timeout, rate-limiting, or network failure the
   script exits 0 and keeps pre-vetting citations unchanged. Non-PMID
   citations (clinical trials, patents, genes, web URLs) are preserved.
-- Exit 1 means STOP: repair the draft or ledger, re-render, and re-vet - never
-  proceed to Step 6 with a failing audit. Review printed warnings even on
-  exit 0 (e.g. PMID/title mismatches).
+- Exit 1 means STOP: repair the draft or ledger, re-render, and re-vet.
+- Warning disposition: every warning emitted during `verify` or `vet-references`
+  must be resolved (fixed in draft/ledger and re-rendered) or explicitly
+  justified in Limitations before Step 6.
+- `--apply` mutates `final_report.md` in place; review printed `- OLD:` / `+ NEW:`
+  updates (or use `--diff` for unified diffs).
 - If the script is unreachable, proceed to Step 6 with the rendered report and
   state the gap in the final summary.
 
 ### Step 6: Write final report + HTML
 
 - Ensure `reports/<TOPIC>/final_report.md` is finalized and vetted.
-- Then render `reports/<TOPIC>/final_report.html` - ALWAYS by default,
-  unless the query carries the leading `no-html` prefix or the user
-  explicitly declined HTML. The markdown report is the complete deliverable;
-  HTML is only a rendering, so never block finishing the session on it.
+- Then render `reports/<TOPIC>/final_report.html` (always by default, unless
+  `no-html` prefix was passed or user explicitly declined HTML).
+  The markdown report is the deliverable; HTML is only a rendering.
 
-  Replace `<skill_dir>` with the full path to this skill's directory
-  (`${CLAUDE_PLUGIN_ROOT}/skills/bioresearcher-deep-research` on Claude Code
-  plugin installs; in harnesses that inject SKILL.md without filesystem
-  access the script is unreachable - go straight to the gap step below).
-  Run from the working directory containing `reports/<TOPIC>/` and anchor
-  the output path to the `final_report.md` location:
+  Anchor the output path to the `final_report.md` location:
 
   ```bash
   uv run --with markdown python <skill_dir>/scripts/markdown-to-html.py \
     reports/<TOPIC>/final_report.md -o reports/<TOPIC>/final_report.html
   ```
 
-  Conversion ladder - attempt in order; a rung fails if its tool is missing,
-  its command exits non-zero, or execution is denied; one attempt per rung,
-  then fall through:
-
+  Conversion ladder (attempt in order; fall through on failure):
   1. `uv` on PATH: the command above.
-  2. `python3 -c "import markdown"` succeeds: run
-     `python3 <skill_dir>/scripts/markdown-to-html.py` with the same args.
-  3. `pandoc` on PATH: `pandoc reports/<TOPIC>/final_report.md -o
-     reports/<TOPIC>/final_report.html --standalone` (its styling differs
-     from the script's GitHub-like CSS - that is not a failure).
-  4. No rung succeeded: keep markdown-only and state the gap explicitly in
-     the final summary (the reason + the `bioresearcher-python-setup-uv`
-     skill as remediation).
+  2. `python3 -c "import markdown"` succeeds: run `python3 <skill_dir>/scripts/markdown-to-html.py reports/<TOPIC>/final_report.md -o reports/<TOPIC>/final_report.html`.
+  3. `pandoc` on PATH: `pandoc reports/<TOPIC>/final_report.md -o reports/<TOPIC>/final_report.html --standalone`.
+  4. None succeeded: keep markdown-only; state reason in summary and Limitations.
 
-  Never install converters into the environment (no apt/pip/npm installs);
-  `uv run --with` ephemeral overlays are the sanctioned exception. After a
-  successful rung, verify `final_report.html` exists and is non-empty before
-  declaring success. Do NOT read the full markdown into memory for the
-  conversion - pass the file path. The final summary must name which
-  artifacts exist and, when HTML is absent, why.
+  Never run apt/pip/npm installs; `uv run --with` ephemeral overlays are the
+  sanctioned exception. Verify `final_report.html` exists and is non-empty before
+  declaring success.
 
 ## Output layout
 

@@ -46,7 +46,7 @@ LEDGER_TYPES = {
     "drug", "disease", "dataset", "web", "other",
 }
 KEY_NAMESPACES = (
-    "pmid", "doi", "pmcid", "nct", "patent", "geo", "sra", "gb",
+    "pmid", "doi", "pmcid", "nct", "patent", "geo", "sra", "gb", "pdb",
     "gene", "clinvar", "chembl", "chebi", "unii",
     "mondo", "doid", "omim", "efo", "url", "title",
 )
@@ -70,6 +70,8 @@ ID_ALIASES = {
     "geo_id": "geo",
     "sra_id": "sra",
     "gb_acc": "genbank",
+    "pdb_id": "pdb",                      # biomcp pdb
+    "rcsb_id": "pdb",
     "disease_id": None,                   # context-dependent: prefix-sniffed below
 }
 
@@ -81,6 +83,7 @@ FOLD_FIELDS = {
     "patent": ["assignee", "status"],
     "gene": ["symbol", "full_name"],
     "variant": ["gene", "protein_change", "significance"],
+    "dataset": ["method", "experimental_method", "resolution"],
 }
 
 
@@ -112,7 +115,7 @@ def _canonicalize_id_value(key: str, value: str) -> str:
         if not value.isdigit():
             raise ValueError(f"pmid must be digits, got {value!r}")
         return value.lstrip("0") or "0"
-    if key in ("pmcid", "nct", "patent"):
+    if key in ("pmcid", "nct", "patent", "pdb"):
         return value.upper()
     return value
 
@@ -232,6 +235,11 @@ def _title_key(rtype: str, title) -> str:
 
 
 def derive_dataset_key(ids: dict, title) -> str:
+    if ids.get("pdb"):
+        return f"pdb:{ids['pdb'].upper()}"
+    for k, v in ids.items():
+        if (k or "").lower() in ("pdb", "pdb_id"):
+            return f"pdb:{str(v).upper()}"
     for v in ids.values():
         v = str(v)
         if v.upper().startswith("GSE"):
@@ -245,7 +253,7 @@ def derive_dataset_key(ids: dict, title) -> str:
     for k, v in ids.items():
         if (k or "").lower() in ("genbank", "gb", "accession"):
             return f"gb:{v}"
-    raise ValueError("dataset record needs a geo (GSE/GDS), sra (SRR/SRP), or genbank accession id")
+    raise ValueError("dataset record needs a pdb, geo (GSE/GDS), sra (SRR/SRP), or genbank accession id")
 
 
 def derive_web_key(ids: dict, title) -> str:
@@ -532,14 +540,27 @@ def cmd_merge(args) -> int:
     return 0
 
 
+def _token_overlap(t1: str, t2: str) -> float:
+    toks1 = set(re.findall(r"[a-z0-9]{3,}", (t1 or "").lower()))
+    toks2 = set(re.findall(r"[a-z0-9]{3,}", (t2 or "").lower()))
+    if not toks1 or not toks2:
+        return 1.0
+    return len(toks1 & toks2) / min(len(toks1), len(toks2))
+
+
 def _esummary_locator(doc: dict) -> dict:
     m = re.search(r"\b(19\d\d|20\d\d)\b", str(doc.get("pubdate", "")))
     year = m.group(1) if m else str(doc.get("sortpubdate") or "")[:4]
+    pages = str(doc.get("pages", "")).strip() or None
+    if not pages:
+        eloc = str(doc.get("elocationid", "")).strip()
+        if eloc and not eloc.lower().startswith("doi:"):
+            pages = re.sub(r"^(?:pii|articleno|article):\s*", "", eloc, flags=re.IGNORECASE) or None
     return {
         "year": year or None,
         "volume": str(doc.get("volume", "")).strip() or None,
         "issue": str(doc.get("issue", "")).strip() or None,
-        "pages": str(doc.get("pages", "")).strip() or None,
+        "pages": pages,
     }
 
 
@@ -557,6 +578,14 @@ def _esummary_doi(doc: dict):
     return None
 
 
+def _esummary_authors(doc: dict) -> list:
+    out = []
+    for a in doc.get("authors", []) or []:
+        if isinstance(a, dict) and a.get("name"):
+            out.append(str(a["name"]).strip())
+    return out
+
+
 def cmd_verify(args) -> int:
     path = Path(args.file)
     led = read_ledger(path)
@@ -565,7 +594,7 @@ def cmd_verify(args) -> int:
                     if r.get("type") in verifiable and (r.get("ids") or {}).get("pmid") and not r.get("verified")})
     docs = fetch_ncbi_summaries(pmids, timeout=args.timeout) if pmids else {}
     now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    filled = title_fixed = clean = unreachable = 0
+    filled = title_fixed = clean = unreachable = mismatches = 0
     already = sum(1 for r in led.records()
                   if r.get("type") in verifiable and (r.get("ids") or {}).get("pmid") and r.get("verified"))
     skipped = sum(1 for r in led.records() if r.get("type") not in verifiable)
@@ -579,6 +608,28 @@ def cmd_verify(args) -> int:
         if not doc:
             unreachable += 1
             continue
+
+        # Conflict detection
+        mismatch_reasons = []
+        ncbi_title = _esummary_title(doc)
+        if rec.get("title") and ncbi_title and len(ncbi_title) > 20:
+            overlap = _token_overlap(rec["title"], ncbi_title)
+            if overlap < 0.30:
+                mismatch_reasons.append(f"title overlap {overlap:.2f} < 0.30")
+
+        ncbi_doi = _esummary_doi(doc)
+        rec_doi = (rec.get("ids") or {}).get("doi")
+        if rec_doi and ncbi_doi:
+            if rec_doi.lower().rstrip(".") != ncbi_doi.lower().rstrip("."):
+                mismatch_reasons.append(f"doi conflict ({rec_doi} vs {ncbi_doi})")
+
+        if mismatch_reasons:
+            rec["verified"] = False
+            rec["verification_notes"] = f"mismatch: {'; '.join(mismatch_reasons)}"
+            warn(f"pmid:{pmid} metadata mismatch: {'; '.join(mismatch_reasons)}. Record left unverified.")
+            mismatches += 1
+            continue
+
         changed = False
         loc = _esummary_locator(doc)
         for field in ("year", "volume", "issue", "pages"):
@@ -587,9 +638,8 @@ def cmd_verify(args) -> int:
                 rec["backfilled"].append(field)
                 changed = True
         if not (rec.get("ids") or {}).get("doi"):
-            doi = _esummary_doi(doc)
-            if doi:
-                rec["ids"]["doi"] = doi
+            if ncbi_doi:
+                rec["ids"]["doi"] = ncbi_doi
                 rec["backfilled"].append("doi")
                 changed = True
         if not rec.get("journal"):
@@ -599,16 +649,22 @@ def cmd_verify(args) -> int:
                 rec["backfilled"].append("journal")
                 changed = True
         if not rec.get("title"):
-            t = _esummary_title(doc)
-            if t:
-                rec["title"] = t
+            if ncbi_title:
+                rec["title"] = ncbi_title
                 rec["title_original"] = None
                 rec["backfilled"].append("title")
                 changed = True
                 title_fixed += 1
+        if not rec.get("authors"):
+            es_authors = _esummary_authors(doc)
+            if es_authors:
+                rec["authors"] = es_authors
+                rec["backfilled"].append("authors")
+                changed = True
         rec["verified"] = True
         rec["verified_source"] = "ncbi-esummary"
         rec["verified_at"] = now
+        rec.pop("verification_notes", None)
         if changed:
             filled += 1
         else:
@@ -618,10 +674,11 @@ def cmd_verify(args) -> int:
         if led.quarantined:
             qpath = append_quarantine(path, led.quarantined)
             warn(f"{len(led.quarantined)} pre-existing malformed line(s) quarantined to {qpath} (excluded from rewrite)")
+    mismatch_note = f", {mismatches} metadata mismatch(es) (unverified)" if mismatches else ""
     banner(
         "verify",
         f"{len(docs)} PubMed record(s) checked; {filled} backfilled, {title_fixed} title(s) set, "
-        f"{clean} verified clean, {unreachable} unreachable (fail-safe, left unverified); "
+        f"{clean} verified clean{mismatch_note}, {unreachable} unreachable (fail-safe, left unverified); "
         f"{skipped} record(s) of unverified type(s) skipped (no verifier configured)"
         + (f"; {already} already verified (not rechecked)" if already else "")
         + ("; --apply written" if args.apply else " (dry-run, no changes written)"),
@@ -668,8 +725,20 @@ def vancouver_author(name: str) -> str:
             surname, given = name, []
     else:
         surname, given = tokens[0], tokens[1:]
-    initials = "".join(t[0].upper() for t in given if t and t[0].isalpha())
-    return f"{surname} {initials}" if initials else surname
+    surname = surname.rstrip(",")
+    # Handle generational suffixes (Jr, Sr, 2nd, 3rd, II, III, IV)
+    suffix = ""
+    if given and given[-1].lower() in {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "2nd", "3rd"}:
+        suffix = " " + given[-1].rstrip(".")
+        given = given[:-1]
+    cleaned_given = [t.replace(".", "") for t in given if t]
+    # Idempotency guard: if given is already uppercase initials (e.g. ["PB"], ["J.W."], ["SH"])
+    if len(cleaned_given) == 1 and cleaned_given[0].isupper() and cleaned_given[0].isalpha() and len(cleaned_given[0]) <= 4:
+        initials = cleaned_given[0]
+    else:
+        initials = "".join(t[0].upper() for t in given if t and t[0].isalpha())
+    res = f"{surname} {initials}" if initials else surname
+    return f"{res}{suffix}"
 
 
 def _author_list(rec: dict, max_authors: int = 3) -> str:
@@ -817,7 +886,18 @@ def render_disease(rec: dict) -> str:
 def render_dataset(rec: dict) -> str:
     ids = rec.get("ids") or {}
     key = rec.get("key", "")
-    title = _need(rec, "title")
+    title = _need(rec, "title").strip().rstrip(".")
+    if key.startswith("pdb:"):
+        acc = ids.get("pdb") or key[len("pdb:"):]
+        meta = rec.get("meta") or {}
+        extras = []
+        method = meta.get("method") or meta.get("experimental_method")
+        if method:
+            extras.append(f"[{method}]")
+        if meta.get("resolution"):
+            extras.append(f"Resolution: {meta['resolution']}.")
+        extra_str = f" {' '.join(extras)}" if extras else ""
+        return f"PDB structure {acc}: {title}.{extra_str} https://www.rcsb.org/structure/{acc}"
     if key.startswith("geo:"):
         acc = ids.get("geo") or ids.get("accession") or key[len("geo:"):]
         return f"GEO series {acc}: {title}. https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={acc}"
@@ -957,6 +1037,7 @@ NS_VALUE_SHAPES = {
     "geo": re.compile(r"^GS[ED]\d+$", re.IGNORECASE),
     "sra": re.compile(r"^SR[RP]\d+$", re.IGNORECASE),
     "gb": re.compile(r"^[A-Z]{2,}\d+(\.\d+)?$", re.IGNORECASE),
+    "pdb": re.compile(r"^[0-9][a-z0-9]{3}$", re.IGNORECASE),
     "gene": re.compile(r"^\d+$"),
     "clinvar": re.compile(r"^\d+$"),
     "chembl": re.compile(r"^CHEMBL\d+$", re.IGNORECASE),
@@ -1382,6 +1463,7 @@ def selftest() -> int:
                              "articleids": [{"idtype": "doi", "value": "10.1111/cas.70480"}]},
                 "99900001": {"pubdate": "2011 Jun 30", "volume": "364", "issue": "26", "pages": "2507-16",
                              "source": "N Engl J Med", "title": "Mocked title for hint record.",
+                             "authors": [{"name": "Chapman PB", "authtype": "Author"}, {"name": "Hauschild A", "authtype": "Author"}],
                              "articleids": [{"idtype": "doi", "value": "10.1056/NEJMoa1103782"}]},
             }
             mod = sys.modules[__name__]
@@ -1398,8 +1480,47 @@ def selftest() -> int:
             h = led.by_key["pmid:99900001"]
             assert h["title"] == "Mocked title for hint record", "hint title not backfilled"
             assert h["volume"] == "364" and h["pages"] == "2507-16", "locators not backfilled"
-            assert "volume" in h["backfilled"] and "title" in h["backfilled"]
+            assert h["authors"] == ["Chapman PB", "Hauschild A"], f"authors not backfilled: {h['authors']}"
+            assert "volume" in h["backfilled"] and "title" in h["backfilled"] and "authors" in h["backfilled"]
         check("verify-backfill", st_verify_backfill)
+
+        # ---- verify mismatch (conflict detection) --------------------------------
+        def st_verify_mismatch():
+            f = d / "vm.jsonl"
+            # Title mismatch: completely unrelated title put into article record
+            bad_title = _fixture_article(pmid="540362", ids={"pmid": "540362", "doi": "10.1248/cpb.27.1942"},
+                                         title="Unrelated Subject Matter on Plant Photosynthesis")
+            # DOI mismatch
+            bad_doi = _fixture_article(pmid="21639808", ids={"pmid": "21639808", "doi": "10.1000/wrong.doi"},
+                                       title="Improved survival with vemurafenib in melanoma with BRAF V600E mutation")
+            f.write_text(json.dumps(bad_title) + "\n" + json.dumps(bad_doi) + "\n", encoding="utf-8")
+            docs = {
+                "540362": {"pubdate": "1979", "volume": "27", "issue": "8", "pages": "1942-4",
+                           "source": "Chem Pharm Bull (Tokyo)",
+                           "title": "Solution structure of alpha-conotoxin EI from Conus ermineus.",
+                           "articleids": [{"idtype": "doi", "value": "10.1248/cpb.27.1942"}]},
+                "21639808": {"pubdate": "2011", "volume": "364", "issue": "26", "pages": "2507-16",
+                             "source": "N Engl J Med",
+                             "title": "Improved survival with vemurafenib in melanoma with BRAF V600E mutation.",
+                             "articleids": [{"idtype": "doi", "value": "10.1056/nejmoa1103782"}]},
+            }
+            mod = sys.modules[__name__]
+            original = mod.fetch_ncbi_summaries
+            mod.fetch_ncbi_summaries = lambda pmids, timeout=15.0: docs
+            try:
+                rc, out = _capture(cmd_verify, argparse.Namespace(file=str(f), apply=True, timeout=1.0))
+            finally:
+                mod.fetch_ncbi_summaries = original
+            assert rc == 0
+            assert "2 metadata mismatch(es) (unverified)" in out
+            led = read_ledger(f)
+            rec_title = led.by_key["pmid:540362"]
+            assert rec_title["verified"] is False, "title mismatch record must NOT be verified"
+            assert "mismatch: title overlap" in rec_title.get("verification_notes", "")
+            rec_doi = led.by_key["pmid:21639808"]
+            assert rec_doi["verified"] is False, "doi mismatch record must NOT be verified"
+            assert "mismatch: doi conflict" in rec_doi.get("verification_notes", "")
+        check("verify-mismatch", st_verify_mismatch)
 
         # ---- bib -------------------------------------------------------------------
         def st_bib():
@@ -1410,6 +1531,11 @@ def selftest() -> int:
             assert vancouver_author("World Health Organization") == "World Health Organization"
             assert vancouver_author("Li Jiang") == "Li J"
             assert vancouver_author("WHO") == "WHO"
+            # Idempotency of vancouver_author on pre-formatted initials & punctuation
+            assert vancouver_author("Chapman PB") == "Chapman PB", vancouver_author("Chapman PB")
+            assert vancouver_author("Taniguchi SH") == "Taniguchi SH", vancouver_author("Taniguchi SH")
+            assert vancouver_author("Schmidberger, J.W.") == "Schmidberger JW", vancouver_author("Schmidberger, J.W.")
+            assert vancouver_author("Smith JA Jr") == "Smith JA Jr", vancouver_author("Smith JA Jr")
             # expand_pages guards
             assert expand_pages("2507-16") == "2507-2516"
             assert expand_pages("2507-2516") == "2507-2516"
@@ -1893,6 +2019,22 @@ def selftest() -> int:
                 rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(clean), out=str(d / "ht2.md"), expand_pages=False))
             assert rc == 0 and "hand-typed" not in buf_err2.getvalue(), buf_err2.getvalue()
         check("render-handtyped-warning", st_render_handtyped_warning)
+
+        # ---- pdb dataset support ---------------------------------------------
+        def st_pdb_dataset():
+            f = d / "pdb.jsonl"
+            rec = {"type": "dataset", "ids": {"pdb": "6N65"}, "title": "KRAS G-quadruplex G16T mutant",
+                   "meta": {"method": "X-RAY DIFFRACTION", "resolution": "1.6 Å"},
+                   "provenance": [{"aspect": "pdb_aspect"}]}
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(rec), stdin=False, aspect=None))
+            led = read_ledger(f)
+            assert "pdb:6N65" in led.by_key, "pdb:6N65 key not derived"
+            _, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pdb:6N65", expand_pages=False, offset=0))
+            line = out.splitlines()[0]
+            assert "PDB structure 6N65: KRAS G-quadruplex G16T mutant." in line
+            assert "[X-RAY DIFFRACTION]" in line and "Resolution: 1.6 Å." in line
+            assert "https://www.rcsb.org/structure/6N65" in line
+        check("pdb-dataset", st_pdb_dataset)
 
     failed = [r for r in results if r[1] is not None]
     for name, err in results:
