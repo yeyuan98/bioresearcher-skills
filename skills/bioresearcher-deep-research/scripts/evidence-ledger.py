@@ -14,7 +14,9 @@ Contract:
   assigns numbers by first appearance, rewrites the markers, and appends the
   References section from the ledger. Any unresolved key or [MISSING ...] entry
   fails the render (exit 1) WITHOUT writing the output file.
-- check validates a ledger end-to-end (exit 1 on quarantined lines).
+- check validates a ledger end-to-end (exit 1 on quarantined lines; with
+  --markers also on unresolved/mixed [@key] markers in the given markdown
+  files - exit 1 iff anything this invocation validated failed).
 - Verb banners: every subcommand prints "[evidence-ledger] <verb>: ..." so
   test graders can anchor on deterministic stdout.
 
@@ -564,6 +566,8 @@ def cmd_verify(args) -> int:
     docs = fetch_ncbi_summaries(pmids, timeout=args.timeout) if pmids else {}
     now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     filled = title_fixed = clean = unreachable = 0
+    already = sum(1 for r in led.records()
+                  if r.get("type") in verifiable and (r.get("ids") or {}).get("pmid") and r.get("verified"))
     skipped = sum(1 for r in led.records() if r.get("type") not in verifiable)
     for rec in led.records():
         if rec.get("type") not in verifiable:
@@ -619,6 +623,7 @@ def cmd_verify(args) -> int:
         f"{len(docs)} PubMed record(s) checked; {filled} backfilled, {title_fixed} title(s) set, "
         f"{clean} verified clean, {unreachable} unreachable (fail-safe, left unverified); "
         f"{skipped} record(s) of unverified type(s) skipped (no verifier configured)"
+        + (f"; {already} already verified (not rechecked)" if already else "")
         + ("; --apply written" if args.apply else " (dry-run, no changes written)"),
     )
     return 0
@@ -970,6 +975,12 @@ REFS_STRIP_RE = re.compile(
     r".*?(?=\n#{1,6}[ \t]*\S|\Z)"
 )
 
+# Hand-typed numeric citation brackets (render's input is authored with
+# [@key] markers, so any [N]/[N, M]/[N-M] bracket in a draft is suspect).
+# Negative lookarounds exclude markdown links [1](url), reference defs [1]:,
+# and wikilinks [[1,2]].
+HAND_TYPED_NUM_RE = re.compile(r"(?<!\[)\[\d{1,3}(?:\s*[,\u2013\-]\s*\d{1,3})*\](?![:(\[])")
+
 CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
 
 
@@ -1098,6 +1109,14 @@ def cmd_render(args) -> int:
     # Marker substitution, fence-aware: scan the masked copy (offsets equal),
     # splice replacements into the real body.
     masked_body = mask_code_blocks(body)
+    # Hand-typed numeric brackets in the DRAFT are the residual leak class:
+    # render owns numbering, so warn loudly (non-fatal - prose ranges like
+    # [140, 155] are legitimate; links/wikilinks/reference defs are excluded).
+    hand_typed = [m.start() for m in HAND_TYPED_NUM_RE.finditer(masked_body)]
+    if hand_typed:
+        lines = sorted({masked_body.count("\n", 0, pos) + 1 for pos in hand_typed[:5]})
+        warn(f"draft contains {len(hand_typed)} hand-typed numeric citation bracket(s) "
+             f"(first at line(s) {lines}): render owns numbering - remove hand-typed [N] brackets from the draft")
     parts: list = []
     last = 0
     for m in MARKER_RE.finditer(masked_body):
@@ -1139,7 +1158,53 @@ def cmd_render(args) -> int:
     return 0
 
 
+def _check_markers(led: Ledger, paths: list) -> int:
+    """Cross-validate [@key] markers in markdown files against the ledger.
+
+    Mirrors render's group semantics exactly: groups with zero cite tokens are
+    prose (ignored); all-cite groups must fully resolve (direct or sec_index);
+    groups mixing >=1 cite token with any non-cite token are failures;
+    shape-kind tokens (recognized namespace, invalid shape) warn only.
+    Returns the number of failures; a missing marker file counts as one
+    (never a vacuous pass)."""
+    failures = 0
+    for raw in paths:
+        p = Path(raw)
+        if not p.is_file():
+            banner("check", f"markers: marker file not found: {p}")
+            failures += 1
+            continue
+        text = p.read_text(encoding="utf-8-sig")
+        masked = mask_code_blocks(text)
+        groups = resolved = 0
+        for m in MARKER_RE.finditer(masked):
+            tokens = [t for t in m.group(1).split(";") if t.strip()]
+            kinds = [classify_token(t) for t in tokens]
+            cites = [k for k in kinds if k[0] == "cite"]
+            if not tokens or not cites:
+                continue  # prose bracket - render leaves it verbatim
+            line = masked.count("\n", 0, m.start()) + 1
+            groups += 1
+            if any(k[0] != "cite" for k in kinds):
+                warn(f"{p.name}:{line}: mixed citation group {m.group(0)!r}: every token must be a cite-key")
+                failures += 1
+                continue
+            for kind, ns, value in cites:
+                if kind == "shape":
+                    warn(f"{p.name}:{line}: bracket {m.group(0)!r} uses the {ns}: namespace but its value is not shape-valid (left verbatim)")
+                    continue
+                key = resolve_key(led, ns, value)
+                if key is None:
+                    warn(f"{p.name}:{line}: unresolved marker {ns}:{value} (no matching ledger record)")
+                    failures += 1
+                else:
+                    resolved += 1
+        print(f"markers[{p.name}]: {groups} citation group(s), {resolved} marker(s) resolved")
+    return failures
+
+
 def cmd_check(args) -> int:
+    markers = getattr(args, "markers", None) or []
     led = read_ledger(Path(args.file))
     types: dict = {}
     for rec in led.records():
@@ -1154,6 +1219,12 @@ def cmd_check(args) -> int:
         for q in led.quarantined:
             warn(f"quarantined {q.get('file')}:{q.get('line')}: {q.get('error')}")
         return 1
+    if markers:
+        marker_failures = _check_markers(led, markers)
+        banner("check", f"markers: {marker_failures} problem(s) across {len(markers)} file(s); "
+                        f"{'FAIL' if marker_failures else 'OK'}")
+        if marker_failures:
+            return 1
     return 0
 
 
@@ -1761,6 +1832,68 @@ def selftest() -> int:
             assert rc == 1 and "quarantined 1" in out and "FAIL" in out, f"quarantined ledger must fail: {out}"
         check("check", st_check)
 
+        # ---- check --markers: worker marker cross-validation gate ------------
+        def st_check_markers():
+            f = d / "ckm.jsonl"
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(_fixture_article()), stdin=False, aspect=None))
+            good = d / "good.md"
+            good.write_text(
+                "Real [@pmid:21639808] plus its doi twin [@doi:10.1056/NEJMOA1103782].\n"
+                "Prose [@home] and shape-ish [@gene:BRAF] stay verbatim.\n"
+                "CI text [95% CI 78-89] and a link [1](http://x) are not citations.\n"
+                "Fenced example:\n\n```\n[@pmid:99999999]\n```\n",
+                encoding="utf-8",
+            )
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(good)]))
+            assert rc == 0, f"resolvable markers must pass:\n{out}"
+            assert "markers[good.md]: 2 citation group(s), 2 marker(s) resolved" in out
+            assert "markers: 0 problem(s) across 1 file(s); OK" in out
+            # unresolved marker -> exit 1
+            bad = d / "bad.md"
+            bad.write_text("Broken [@pmid:99999999] cite.\n", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stderr(buf):
+                rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(bad)]))
+            assert rc == 1 and "unresolved marker pmid:99999999" in buf.getvalue(), out + buf.getvalue()
+            # mixed group (cite + plain token) -> exit 1, mirroring render
+            mix = d / "mix.md"
+            mix.write_text("Mixed [@pmid:21639808; see note] group.\n", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stderr(buf):
+                rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(mix)]))
+            assert rc == 1 and "mixed citation group" in buf.getvalue(), out + buf.getvalue()
+            # missing marker file -> exit 1 (never a vacuous pass)
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(d / "nope.md")]))
+            assert rc == 1 and "marker file not found" in out, out
+        check("check-markers", st_check_markers)
+
+        # ---- render: hand-typed numeric bracket warning (non-fatal) ---------
+        def st_render_handtyped_warning():
+            f = d / "ht.jsonl"
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(_fixture_article()), stdin=False, aspect=None))
+            draft = d / "ht.draft.md"
+            draft.write_text(
+                "Clean [@pmid:21639808] marker.\n\nBut a hand-typed [1] leak and [2, 3] too.\n\n"
+                "Not citations: [95% CI 78-89], link [4](http://x), wiki [[5, 6]], fence:\n\n```\n[7]\n```\n",
+                encoding="utf-8",
+            )
+            out_path = d / "ht.md"
+            buf_err = io.StringIO()
+            with contextlib.redirect_stderr(buf_err):
+                rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(draft), out=str(out_path), expand_pages=False))
+            err = buf_err.getvalue()
+            assert rc == 0, "hand-typed brackets must NOT fail render"
+            assert "hand-typed numeric citation bracket" in err and "line(s) [3]" in err, err
+            assert "[7]" not in err.replace("line(s)", ""), "fenced [7] must not warn"
+            # clean draft: no warning at all
+            clean = d / "ht2.draft.md"
+            clean.write_text("Only [@pmid:21639808] here.\n", encoding="utf-8")
+            buf_err2 = io.StringIO()
+            with contextlib.redirect_stderr(buf_err2):
+                rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(clean), out=str(d / "ht2.md"), expand_pages=False))
+            assert rc == 0 and "hand-typed" not in buf_err2.getvalue(), buf_err2.getvalue()
+        check("render-handtyped-warning", st_render_handtyped_warning)
+
     failed = [r for r in results if r[1] is not None]
     for name, err in results:
         print(f"{'PASS' if err is None else 'FAIL'} {name}" + (f": {err}" if err else ""))
@@ -1817,8 +1950,10 @@ def main() -> int:
     p.add_argument("--expand-pages", action="store_true", help="expand abbreviated page ranges (2507-16 -> 2507-2516)")
     p.set_defaults(fn=cmd_render)
 
-    p = sub.add_parser("check", help="Validate a ledger file (exit 1 on quarantined lines)")
+    p = sub.add_parser("check", help="Validate a ledger file (exit 1 on quarantined lines; with --markers also on unresolved/mixed markers)")
     p.add_argument("file")
+    p.add_argument("--markers", nargs="+", metavar="MD",
+                   help="markdown file(s) whose [@key] markers must resolve in this ledger")
     p.set_defaults(fn=cmd_check)
 
     p = sub.add_parser("selftest", help="Hermetic feature-matrix selftest (no network)")
