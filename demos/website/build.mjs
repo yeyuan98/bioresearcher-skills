@@ -51,7 +51,7 @@ const REPO = path.dirname(DEMOS_DIR);
 const SITE_URL = "https://yeyuan98.github.io/bioresearcher-skills";
 const REPO_URL = "https://github.com/yeyuan98/bioresearcher-skills";
 const MAX_ASSET_BYTES = 1.5 * 1024 * 1024;
-const PACK_COMMIT = "2d4ab09d272b87c9dcf04cb55b46ab274892ebc5"; // artifacts permalink commit
+const PACK_COMMIT = "79271f069e34510f988eaddd90c55da42a178053"; // refresh pack commit (2026-09-11 artifacts; 2d4ab09 = original 2026-09-06 pack, still referenced by pubmed-weekly)
 
 // Per-language section anchors into demos/docs/agent.{en,zh}.md. Each anchor
 // is asserted at build time against the doc's heading text (catches

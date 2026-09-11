@@ -237,11 +237,11 @@ deep-research **1.7.0** + biomcp **1.4.0**，提交 `d818c85`，见各
 
 | 案例 | 语言 | 结果 | 耗时 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|---|
-| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS（rubric 裁定 SATISFIED） | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-en) |
-| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS（rubric 裁定 SATISFIED） | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-zh) |
-| 6.4 访谈优先 | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-interview-en) |
+| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS（rubric 裁定 SATISFIED） | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-en) |
+| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS（rubric 裁定 SATISFIED） | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-zh) |
+| 6.4 访谈优先 | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-interview-en) |
 | 6.5 PubMed 周更解析 | EN | PASS（rubric 裁定 SATISFIED） | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-plot-making-en) |
+| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-plot-making-en) |
 | 6.7 文档化案例（WorkBuddy / onboard） | ZH/EN | —（非运行） | — | 见 6.7 小节 |
 
 （仓库内浏览请用相对路径 `../artifacts/<案例名>/`。）

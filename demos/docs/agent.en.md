@@ -259,11 +259,11 @@ produced outputs.
 
 | Case | Lang | Outcome | Duration | Demo link (GitHub permalink) |
 |---|---|---|---|---|
-| 6.2 deep research (BRCA1 DNA repair) | EN | PASS (rubric SATISFIED) | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-en) |
-| 6.3 deep research (tumor immunotherapy) | ZH | PASS (rubric SATISFIED) | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-zh) |
-| 6.4 interview-first | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-interview-en) |
+| 6.2 deep research (BRCA1 DNA repair) | EN | PASS (rubric SATISFIED) | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-en) |
+| 6.3 deep research (tumor immunotherapy) | ZH | PASS (rubric SATISFIED) | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-zh) |
+| 6.4 interview-first | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-interview-en) |
 | 6.5 PubMed weekly parse | EN | PASS (rubric SATISFIED) | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-plot-making-en) |
+| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-plot-making-en) |
 | 6.7 documented cases (WorkBuddy / onboard) | ZH/EN | — (non-run) | — | see §6.7 |
 
 (When browsing the repo, use relative paths `../artifacts/<case>/`.)
