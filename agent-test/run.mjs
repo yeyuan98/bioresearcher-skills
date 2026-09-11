@@ -929,11 +929,16 @@ function dropIncompleteRepDirs(test, rep) {
     const dir = path.join(testRunsDir, name);
     const log = path.join(dir, "log.jsonl");
     const result = path.join(dir, "result.json");
+    // Graded artifacts are never dropped: a timed-out/killed rep carries an
+    // ERROR result.json (written before exit) even though its log lacks the
+    // terminal stop - deleting it would destroy the only forensic evidence.
+    // Resume stays safe: findResumeDir additionally requires endsWithStop.
+    if (fs.existsSync(result)) continue;
     const logOk = (() => {
       const p = readLogFile(log);
       return !!(p && p.endsWithStop);
     })();
-    if (!(logOk && fs.existsSync(result))) fs.rmSync(dir, { recursive: true, force: true });
+    if (!logOk) fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
