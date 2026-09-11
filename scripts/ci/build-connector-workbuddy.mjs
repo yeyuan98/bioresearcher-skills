@@ -187,3 +187,9 @@ const sha256 = createHash("sha256").update(tarBytes).digest("hex");
 ok(`tarball ${join(outDir, `bioresearcher-connector_workbuddy-v${version}.tar.gz`)}`);
 console.log(`     ${tarBytes.length} bytes  sha256=${sha256}`);
 ok(`staged at ${join(outDir, "bioresearcher")}/ (root dir inside the tarball)`);
+
+// --- validate against WorkBuddy audit rubrics ----------------------------------
+const validatorPath = join(dirname(new URL(import.meta.url).pathname), "validate-connector-workbuddy.mjs");
+if (existsSync(validatorPath)) {
+  execFileSync(process.execPath, [validatorPath, tarball], { stdio: "inherit" });
+}

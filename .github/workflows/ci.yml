@@ -57,7 +57,7 @@ jobs:
       - name: Skill python-script health gate
         run: node scripts/ci/check-skill-scripts.mjs
 
-      - name: WorkBuddy connector build smoke
+      - name: WorkBuddy connector build smoke & audit validation
         run: |
           OUT="$(mktemp -d)"
           node scripts/ci/build-connector-workbuddy.mjs --out "$OUT"
@@ -70,6 +70,7 @@ jobs:
           N="$(node -p 'Object.keys(require("./connector/workbuddy/skill-locales.json").skills).length')"
           M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
           test "$N" -eq "$M"
+          node scripts/ci/validate-connector-workbuddy.mjs "$TARBALL"
 
       - name: OpenCode connector build smoke
         run: |
