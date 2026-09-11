@@ -18,6 +18,7 @@ TOPIC: <TOPIC>
 YOUR RESEARCH FOCUS: <RESEARCH-ASPECT>
 DESCRIPTION: <ABSTRACT>
 SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
+EXECUTION RULE: Do NOT read or inspect evidence-ledger.py or other skill scripts; all schemas and commands are fully specified here.
 ```
 
 - ABSTRACT: <200 words describing the exact focus, a list of detailed
@@ -131,10 +132,17 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       `python3 <SKILL_DIR>/scripts/evidence-ledger.py add <file> --stdin`,
       substituting the SKILL_DIR value from your prompt LITERALLY - it is a
       path string, NOT an environment variable (`$SKILL_DIR` in a shell
-      resolves to nothing and breaks the call). Pass a JSON ARRAY of the
-      batch's records (a heredoc works well), or equivalently
-      `add <file> @<batch.json>` with an array file. Both validate,
-      normalize, and accept every record in one call, and the banner echoes
+      resolves to nothing and breaks the call). Pass records via a shell heredoc
+      or with an array/JSONL file (`add <file> @<batch.json>`):
+      ```bash
+      python3 <SKILL_DIR>/scripts/evidence-ledger.py add reports/<TOPIC>/evidence/<YOUR-FOCUS>.jsonl --stdin << 'EOF'
+      [
+        {"schema":"bioresearcher-evidence/1","type":"article","ids":{"pmid":"..."},"title":"...","provenance":[{"aspect":"<YOUR-FOCUS>","tool":"article_search","args":{},"retrieved_at":"<ISO>"}]}
+      ]
+      EOF
+      ```
+      (A JSON array `[...]`, a single JSON object `{...}`, or newline-delimited JSONL lines are all accepted by `--stdin` or `@<file>`).
+      Both validate, normalize, and accept every record in one call, and the banner echoes
       the derived canonical keys - cite those keys. Re-adding the same key
       MERGES fill-only (never overwrites a non-null value): later adds for
       the same source are safe and expected (e.g. enriching a record after a
@@ -147,8 +155,12 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       timestamp. Fields the tool did not return stay null; values inferred
       from your own query parameters (e.g. a phase filter) may enter `meta`
       ONLY with the filter captured in `provenance.args` and the inference
-      disclosed in the report. Without Bash ONLY (e.g. the Claude plugin
-      worker): write raw JSONL lines with the Write tool and re-read the
+      disclosed in the report. When querying ClinicalTrials.gov
+      (`trial_search` / `biomcp_trial_search`), use exact uppercase underscore
+      enum values for `status`: `RECRUITING`, `ACTIVE_NOT_RECRUITING`,
+      `COMPLETED`, `TERMINATED` (commas or spaces in status trigger HTTP 400
+      Bad Request from ClinicalTrials.gov). Without Bash ONLY (e.g. the Claude
+      plugin worker): write raw JSONL lines with the Write tool and re-read the
       ledger to match markers; the orchestrator validates via `check` upon return.
     - BEFORE reporting completion, run
       `python3 <SKILL_DIR>/scripts/evidence-ledger.py check <file> --markers <YOUR-FOCUS>.md` -

@@ -146,6 +146,8 @@ skill or see Prerequisites).
 **Tier dispatch hierarchy:** When a subagent tool (`task` or `Task`) is
 available in the harness, parallel worker dispatch (Tier A or Tier B) is
 MANDATORY to maintain research parallelism and isolated worker contexts.
+Subagents inherit all configured tools (biomcp, shell, filesystem) automatically;
+do NOT dispatch exploratory probe tasks to test tool access.
 Tier C is strictly a degraded fallback when no subagent tool exists.
 
 **Tier A - dedicated worker subagent (preferred when available):** if the
@@ -172,6 +174,7 @@ TOPIC: <TOPIC>
 YOUR RESEARCH FOCUS: <RESEARCH-ASPECT>
 DESCRIPTION: <ABSTRACT>
 SKILL_DIR: <absolute path to this skill's directory>  # Tier B only; a literal path string workers substitute into commands - NOT an env var
+EXECUTION RULE: Do NOT read or inspect evidence-ledger.py or other skill scripts; all schemas and commands are fully specified here.
 ```
 
 ABSTRACT is <200 words describing the exact focus, a list of detailed

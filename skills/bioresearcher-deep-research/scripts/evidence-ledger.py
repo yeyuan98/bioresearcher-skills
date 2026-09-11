@@ -464,16 +464,46 @@ def append_quarantine(out_path: Path, entries: list) -> Path:
 # Subcommands
 # ---------------------------------------------------------------------------
 
+def _parse_payload(text: str) -> list:
+    """Parse JSON array, single JSON object, or newline-delimited JSON (.jsonl).
+    Strips optional markdown code fences, leading UTF-8 BOM, and blank lines."""
+    text = (text or "").lstrip("\ufeff")
+    lines = text.strip().splitlines()
+    if lines and lines[0].strip().startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    cleaned = "\n".join(lines).strip()
+    if not cleaned:
+        raise ValueError("empty record input payload")
+    try:
+        payload = json.loads(cleaned)
+        return payload if isinstance(payload, list) else [payload]
+    except json.JSONDecodeError:
+        records = []
+        for line_no, line in enumerate(cleaned.splitlines(), start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"malformed JSON at line {line_no}: {e}") from e
+            if isinstance(item, list):
+                records.extend(item)
+            else:
+                records.append(item)
+        return records
+
+
 def _parse_incoming(args) -> list:
     if args.stdin:
-        payload = json.loads(sys.stdin.read())
-        return payload if isinstance(payload, list) else [payload]
+        return _parse_payload(sys.stdin.read())
     if getattr(args, "record", None) is None:
         raise ValueError("provide a record JSON, @file, or --stdin")
     if args.record.startswith("@"):
-        payload = json.loads(Path(args.record[1:]).read_text(encoding="utf-8-sig"))
-        return payload if isinstance(payload, list) else [payload]
-    return [json.loads(args.record)]
+        return _parse_payload(Path(args.record[1:]).read_text(encoding="utf-8-sig"))
+    return _parse_payload(args.record)
 
 
 def cmd_add(args) -> int:
@@ -747,7 +777,9 @@ def _author_list(rec: dict, max_authors: int = 3) -> str:
         return "[MISSING field: authors]"
     out = ", ".join(filter(None, (vancouver_author(str(a)) for a in authors[:max_authors])))
     if len(authors) > max_authors:
-        out += ", et al"
+        out += ", et al."
+    else:
+        out = _close_segment(out)
     return out
 
 
@@ -790,6 +822,17 @@ def _close(s: str) -> str:
     return s if s.endswith(".") else s + "."
 
 
+def _close_segment(s: str) -> str:
+    """Ensure a metadata segment terminates with exactly one period, stripping any
+    pre-existing trailing period or whitespace (e.g. 'Tesaro, Inc.' -> 'Tesaro, Inc.')."""
+    if not s:
+        return ""
+    stripped = str(s).strip()
+    if not stripped:
+        return ""
+    return stripped.rstrip(".") + "."
+
+
 def _close_title(v) -> str:
     """Render a title and close with a single period (registry titles often
     already end with one - never emit 'Title..')."""
@@ -825,9 +868,9 @@ def render_trial(rec: dict) -> str:
         # "2"): never double the prefix.
         out += f" {phase}." if phase.lower().startswith("phase") else f" Phase {phase}."
     if meta.get("sponsor"):
-        out += f" Sponsor: {meta['sponsor']}."
+        out += f" Sponsor: {_close_segment(meta['sponsor'])}"
     if meta.get("status"):
-        out += f" Status: {meta['status']}."
+        out += f" Status: {_close_segment(meta['status'])}"
     out += " " + (rec.get("url") or f"https://clinicaltrials.gov/study/{nct}")
     return out
 
@@ -836,10 +879,11 @@ def render_patent(rec: dict) -> str:
     ids = rec.get("ids") or {}
     meta = rec.get("meta") or {}
     num = ids.get("patent") or "[MISSING field: ids.patent]"
-    assignee = meta.get("assignee") or "[MISSING field: meta.assignee]"
+    assignee = (meta.get("assignee") or "").strip()
+    assignee_str = f"{_close_segment(assignee)} " if assignee else "[MISSING field: meta.assignee]. "
     status = f" ({meta['status']})" if meta.get("status") else ""
     url = rec.get("url") or f"https://patents.google.com/patent/{num}"
-    return f"{assignee}. {_need(rec, 'title')}. {num}{status}. {url}"
+    return f"{assignee_str}{_close_title(rec.get('title'))} {num}{status}. {url}"
 
 
 def render_gene(rec: dict) -> str:
@@ -880,7 +924,7 @@ def render_disease(rec: dict) -> str:
     ids = rec.get("ids") or {}
     oid = next((f"{k.upper()}:{ids[k]}" for k in ("mondo", "doid", "omim", "efo") if ids.get(k)),
                "[MISSING field: ids.mondo|doid|omim|efo]")
-    return f"{_need(rec, 'title')}. {oid}. {rec.get('url') or ''}".strip()
+    return f"{_close_title(rec.get('title'))} {oid}. {rec.get('url') or ''}".strip()
 
 
 def render_dataset(rec: dict) -> str:
@@ -910,10 +954,12 @@ def render_dataset(rec: dict) -> str:
 
 def render_web(rec: dict) -> str:
     meta = rec.get("meta") or {}
-    updated = f" Updated {meta['updated']}." if meta.get("updated") else ""
+    updated = f" Updated {_close_segment(meta['updated'])}" if meta.get("updated") else ""
     url = rec.get("url") or (rec.get("ids") or {}).get("url") or "[MISSING field: url]"
     accessed = meta.get("accessed") or "[MISSING field: meta.accessed]"
-    return f"{_need(rec, 'title')}. {meta.get('organization') or '[MISSING field: meta.organization]'}.{updated} {url}. Accessed: {accessed}."
+    org = (meta.get("organization") or "").strip()
+    org_str = f" {_close_segment(org)}" if org else " [MISSING field: meta.organization]."
+    return f"{_close_title(rec.get('title'))}{org_str}{updated} {url}. Accessed: {accessed}."
 
 
 def render_other(rec: dict) -> str:
@@ -1546,7 +1592,7 @@ def selftest() -> int:
             rc, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pmid:21639808", expand_pages=False, offset=0))
             assert rc == 0
             first = out.splitlines()[0]
-            assert "Chapman PB, Hauschild A, Robert C, et al" in first, f"Vancouver initials wrong: {first}"
+            assert "Chapman PB, Hauschild A, Robert C, et al." in first, f"Vancouver initials / period wrong: {first}"
             assert "2011;364(26):2507-16" in first, f"locator wrong: {first}"
             assert "PMID: 21639808." in first and "DOI: 10.1056/nejmoa1103782." in first, first
             rc, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pmid:21639808", expand_pages=True, offset=0))
@@ -1559,7 +1605,7 @@ def selftest() -> int:
             _, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pmid:42487519", expand_pages=False, offset=0))
             line = out.splitlines()[0]
             assert "Cancer Sci. 2026." in line and "364" not in line and "DOI: 10.1111/cas.70480." in line, f"epub form wrong: {line}"
-            assert "Takahashi M, Taniguchi SH" in line, "multi-initial author wrong"
+            assert "Takahashi M, Taniguchi SH." in line, f"author list period wrong: {line}"
             # unknown key -> loud + non-zero
             rc, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="pmid:42487519,pmid:nope", expand_pages=False, offset=0))
             assert rc != 0, "unknown key must exit non-zero"
@@ -1765,6 +1811,20 @@ def selftest() -> int:
                      {"type": "article", "title": "no ids", "ids": {}}]
             rc, out = add_stdin(f, json.dumps(mixed))
             assert rc == 0 and "1 record(s) accepted, 1 rejected" in out, f"mixed batch accounting wrong: {out}"
+            # newline-delimited JSON (.jsonl) batch via --stdin
+            jsonl_batch = (json.dumps(_fixture_article(pmid="10000006", doi="10.1000/b6", title="Batch six", ids={"pmid": "10000006", "doi": "10.1000/b6", "pmcid": "PMC1000006"})) + "\n" +
+                           json.dumps(_fixture_article(pmid="10000007", doi="10.1000/b7", title="Batch seven", ids={"pmid": "10000007", "doi": "10.1000/b7", "pmcid": "PMC1000007"})) + "\n")
+            rc, out = add_stdin(f, jsonl_batch)
+            assert rc == 0 and "add: 2 record(s) accepted, 0 rejected" in out, f"stdin jsonl batch failed: {out}"
+            # @file with newline-delimited JSONL
+            jf = d / "bt-lines.jsonl"
+            jf.write_text(jsonl_batch, encoding="utf-8")
+            rc, out = _capture(cmd_add, argparse.Namespace(file=str(f), record="@" + str(jf), stdin=False, aspect=None))
+            assert rc == 0 and "add: 2 record(s) accepted" in out, f"@file jsonl batch failed: {out}"
+            # markdown code-fenced payload in stdin
+            fenced = "```json\n" + json.dumps([_fixture_article(pmid="10000008", doi="10.1000/b8", title="Batch eight", ids={"pmid": "10000008", "doi": "10.1000/b8", "pmcid": "PMC1000008"})]) + "\n```\n"
+            rc, out = add_stdin(f, fenced)
+            assert rc == 0 and "add: 1 record(s) accepted" in out, f"fenced payload failed: {out}"
             # title-key rules: web/dataset keep hard identity fields; article
             # rejects title-only input AND explicit title: keys; other falls
             # back to a title: key.
@@ -1873,15 +1933,16 @@ def selftest() -> int:
             assert "[4-6]" in text, f"consecutive run not range-compressed: {text}"
             assert "## References" in text and "[1] vemurafenib." in text and "[2] Chapman PB" in text
             # registry titles ending in a period never render doubled ("Title.. Status")
+            # and corporate sponsors ending in periods (e.g. "Tesaro, Inc.") do not double
             tdot = d / "tdot.jsonl"
             tdot.write_text(json.dumps({
                 "key": "nct:NCT01844986", "type": "trial", "ids": {"nct": "NCT01844986"},
                 "title": "Olaparib Maintenance Monotherapy in Patients With BRCA Mutated Ovarian Cancer Following First Line Platinum Based Chemotherapy.",
-                "meta": {"status": "ACTIVE_NOT_RECRUITING"},
+                "meta": {"phase": "Phase 3.", "sponsor": "Tesaro, Inc.", "status": "ACTIVE_NOT_RECRUITING."},
                 "provenance": [{"aspect": "a"}]}) + "\n", encoding="utf-8")
             _, tout = _capture(cmd_bib, argparse.Namespace(file=str(tdot), keys="nct:NCT01844986", expand_pages=False, offset=0))
             tline = tout.splitlines()[0]
-            assert "Chemotherapy. Status:" in tline and ".." not in tline, f"double period rendered: {tline}"
+            assert "Chemotherapy. Phase 3. Sponsor: Tesaro, Inc. Status: ACTIVE_NOT_RECRUITING." in tline and ".." not in tline, f"double period rendered: {tline}"
             assert "[MISSING" not in text
             refs = text.split("## References", 1)[1]
             nums = re.findall(r"(?m)^\[(\d+)\]", refs)
@@ -1932,7 +1993,7 @@ def selftest() -> int:
             assert "## References\n\n[1] example entry." in ftext, "fenced References example was stripped"
             assert "[@pmid:21639808]" in ftext, "marker inside a fence was rewritten"
             assert "Tail kept." in ftext, "content after a fenced References example was truncated"
-            assert "Real cite [1]." in ftext and ftext.rstrip().endswith("[1] Chapman PB, Hauschild A, Robert C, et al Improved survival with vemurafenib in melanoma with BRAF V600E mutation. N Engl J Med. 2011;364(26):2507-16. DOI: 10.1056/nejmoa1103782. PMID: 21639808."), \
+            assert "Real cite [1]." in ftext and ftext.rstrip().endswith("[1] Chapman PB, Hauschild A, Robert C, et al. Improved survival with vemurafenib in melanoma with BRAF V600E mutation. N Engl J Med. 2011;364(26):2507-16. DOI: 10.1056/nejmoa1103782. PMID: 21639808."), \
                 f"real marker/References wrong:\n{ftext}"
             # mixed citation group: at least one cite-key + a non-citation token
             # must hard-fail (never silently drop the citation)
