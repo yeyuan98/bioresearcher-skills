@@ -10,6 +10,13 @@ Contract:
 - Fill-missing-only merging: never overwrite a non-null stored value.
 - Loud gaps: missing fields render as [MISSING field: ...]; unknown bib keys as
   [MISSING record <key>] with a non-zero exit. Never fabricate.
+- render is the single numbering authority: drafts cite [@key] markers; render
+  assigns numbers by first appearance, rewrites the markers, and appends the
+  References section from the ledger. Any unresolved key or [MISSING ...] entry
+  fails the render (exit 1) WITHOUT writing the output file.
+- check validates a ledger end-to-end (exit 1 on quarantined lines; with
+  --markers also on unresolved/mixed [@key] markers in the given markdown
+  files - exit 1 iff anything this invocation validated failed).
 - Verb banners: every subcommand prints "[evidence-ledger] <verb>: ..." so
   test graders can anchor on deterministic stdout.
 
@@ -161,6 +168,14 @@ def normalize_record(raw, require_provenance_aspect=None) -> dict:
     title = raw.get("title")
     if title is not None:
         title = str(title).strip() or None
+    if title is None and rtype != "article":
+        # biomcp record shapes often carry `name` instead of `title` (drugs,
+        # genes, diseases): fold it fill-only so bibliographies never render
+        # [MISSING field: title] for schema-shaped records. Articles keep
+        # their hard id requirement (a name-only article must not verify-gate).
+        name = raw.get("name")
+        if isinstance(name, str) and name.strip():
+            title = name.strip()
     if not title and not ids:
         raise ValueError("record needs a title or at least one id")
     if raw.get("meta") is not None and not isinstance(raw.get("meta"), dict):
@@ -462,16 +477,23 @@ def cmd_add(args) -> int:
         qpath = append_quarantine(path, led.quarantined)
         warn(f"{len(led.quarantined)} pre-existing malformed line(s) quarantined to {qpath} (excluded from rewrite)")
     accepted = rejected = 0
+    derived_keys: list = []
     for raw in _parse_incoming(args):
         try:
-            led.upsert(normalize_record(raw, require_provenance_aspect=args.aspect))
+            rec = normalize_record(raw, require_provenance_aspect=args.aspect)
         except (ValueError, TypeError) as e:
             rejected += 1
             warn(f"rejected record ({e}): {json.dumps(raw, ensure_ascii=False)[:200]}")
             continue
+        led.upsert(rec)
+        derived_keys.append(rec["key"])
         accepted += 1
     led.write(path)
     banner("add", f"{accepted} record(s) accepted, {rejected} rejected -> {path}")
+    if derived_keys:
+        # Echo the derived canonical keys so workers cite exactly what the
+        # ledger keyed (dataset/alias-derived keys are otherwise guesswork).
+        banner("add", f"derived keys: {', '.join(derived_keys)}")
     return 0
 
 
@@ -544,6 +566,8 @@ def cmd_verify(args) -> int:
     docs = fetch_ncbi_summaries(pmids, timeout=args.timeout) if pmids else {}
     now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     filled = title_fixed = clean = unreachable = 0
+    already = sum(1 for r in led.records()
+                  if r.get("type") in verifiable and (r.get("ids") or {}).get("pmid") and r.get("verified"))
     skipped = sum(1 for r in led.records() if r.get("type") not in verifiable)
     for rec in led.records():
         if rec.get("type") not in verifiable:
@@ -599,6 +623,7 @@ def cmd_verify(args) -> int:
         f"{len(docs)} PubMed record(s) checked; {filled} backfilled, {title_fixed} title(s) set, "
         f"{clean} verified clean, {unreachable} unreachable (fail-safe, left unverified); "
         f"{skipped} record(s) of unverified type(s) skipped (no verifier configured)"
+        + (f"; {already} already verified (not rechecked)" if already else "")
         + ("; --apply written" if args.apply else " (dry-run, no changes written)"),
     )
     return 0
@@ -696,6 +721,14 @@ def _close(s: str) -> str:
     return s if s.endswith(".") else s + "."
 
 
+def _close_title(v) -> str:
+    """Render a title and close with a single period (registry titles often
+    already end with one - never emit 'Title..')."""
+    if v in (None, ""):
+        return f"[MISSING field: title]"
+    return _close(str(v).strip().rstrip("."))
+
+
 def render_article(rec: dict, expand: bool) -> str:
     ids = rec.get("ids") or {}
     title = _close(_need(rec, "title").strip())
@@ -716,7 +749,7 @@ def render_trial(rec: dict) -> str:
     ids = rec.get("ids") or {}
     meta = rec.get("meta") or {}
     nct = ids.get("nct") or "[MISSING field: ids.nct]"
-    out = f"{nct}: {_need(rec, 'title')}."
+    out = f"{nct}: {_close_title(rec.get('title'))}"
     phase = str(meta.get("phase") or "").strip().rstrip(".")
     if phase:
         # Workers copy phase verbatim from biomcp/CTgov ("Phase 2", "PHASE3",
@@ -771,7 +804,7 @@ def render_drug(rec: dict) -> str:
                 "[MISSING field: ids.chembl|chebi|unii]")
     ind = f" Indication: {meta['indication']}." if meta.get("indication") else ""
     url = rec.get("url") or ""
-    return f"{_need(rec, 'title')}.{ind} {dbid}. {url}".strip()
+    return f"{_close_title(rec.get('title'))}{ind} {dbid}. {url}".strip()
 
 
 def render_disease(rec: dict) -> str:
@@ -900,6 +933,298 @@ def cmd_stats(args) -> int:
     banner("stats", f"{len(led.by_key)} record(s); verified {verified}; with locator {located}; quarantined lines {len(led.quarantined)}")
     for t, c in sorted(types.items()):
         print(f"  {t}: {c}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Cite-key rendering (draft -> numbered report; the single numbering authority)
+# ---------------------------------------------------------------------------
+
+# A cite-key marker: [@ns:value] or [@a; @b]. A bracket is a citation group
+# only if EVERY non-empty token is a recognized namespace with a shape-valid
+# value; anything else (prose [@home], pandoc [@Chapman2011], [@gene:BRAF]
+# symbols) passes through verbatim.
+MARKER_RE = re.compile(r"\[@([^\[\]]+)\]")
+
+# Canonical value shapes per key namespace (see KEY_NAMESPACES). Namespaces
+# without an entry accept any non-empty value.
+NS_VALUE_SHAPES = {
+    "pmid": re.compile(r"^\d+$"),
+    "doi": re.compile(r"^10\.\S+$", re.IGNORECASE),
+    "pmcid": re.compile(r"^PMC\d+$", re.IGNORECASE),
+    "nct": re.compile(r"^NCT\d+$", re.IGNORECASE),
+    "patent": re.compile(r"^[A-Z]{2}\d+", re.IGNORECASE),
+    "geo": re.compile(r"^GS[ED]\d+$", re.IGNORECASE),
+    "sra": re.compile(r"^SR[RP]\d+$", re.IGNORECASE),
+    "gb": re.compile(r"^[A-Z]{2,}\d+(\.\d+)?$", re.IGNORECASE),
+    "gene": re.compile(r"^\d+$"),
+    "clinvar": re.compile(r"^\d+$"),
+    "chembl": re.compile(r"^CHEMBL\d+$", re.IGNORECASE),
+    "chebi": re.compile(r"^CHEBI[:_ ]?\d+$", re.IGNORECASE),
+    "unii": re.compile(r"^[A-Z0-9]{4,10}$", re.IGNORECASE),
+    "mondo": re.compile(r"^MONDO[:_ ]?\d+$", re.IGNORECASE),
+    "doid": re.compile(r"^DOID[:_ ]?\d+$", re.IGNORECASE),
+    "omim": re.compile(r"^\d{5,7}$"),
+    "efo": re.compile(r"^[A-Z]{2,}[_:]?\d+", re.IGNORECASE),
+    "url": re.compile(r"^[0-9a-f]{16}$", re.IGNORECASE),
+    "title": re.compile(r"^[0-9a-f]{16}$", re.IGNORECASE),
+}
+
+REFS_STRIP_RE = re.compile(
+    r"(?ims)^#{1,6}[ \t]*(?:references?|bibliography|literature cited|citations)\b[^\n]*\n"
+    r".*?(?=\n#{1,6}[ \t]*\S|\Z)"
+)
+
+# Hand-typed numeric citation brackets (render's input is authored with
+# [@key] markers, so any [N]/[N, M]/[N-M] bracket in a draft is suspect).
+# Negative lookarounds exclude markdown links [1](url), reference defs [1]:,
+# and wikilinks [[1,2]].
+HAND_TYPED_NUM_RE = re.compile(r"(?<!\[)\[\d{1,3}(?:\s*[,\u2013\-]\s*\d{1,3})*\](?![:(\[])")
+
+CODE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
+
+
+def mask_code_blocks(text: str) -> str:
+    """Fenced code blocks -> same-length newline filler (offsets preserved), so
+    section detection and marker scans never fire on example/documentation
+    content inside fences."""
+    return CODE_BLOCK_RE.sub(lambda m: "\n" * (m.end() - m.start()), text)
+
+
+def classify_token(token: str):
+    """Classify a marker token: ('cite', ns, value) | ('shape', ns, value) | ('plain', tok, None)."""
+    tok = token.strip()
+    if tok.startswith("@"):
+        tok = tok[1:].strip()
+    if ":" not in tok:
+        return ("plain", tok, None)
+    ns, _, value = tok.partition(":")
+    ns, value = ns.strip().lower(), value.strip()
+    if not value or ns not in KEY_NAMESPACES:
+        return ("plain", tok, None)
+    shape = NS_VALUE_SHAPES.get(ns)
+    if shape is None or shape.match(value):
+        return ("cite", ns, value)
+    return ("shape", ns, value)
+
+
+def _canonical_marker_key(ns: str, value: str) -> str:
+    try:
+        return f"{ns}:{_canonicalize_id_value(ns, value)}"
+    except ValueError:
+        return f"{ns}:{value}"
+
+
+def resolve_key(led: Ledger, ns: str, value: str):
+    """Resolve a marker key to a ledger key: direct -> secondary-id twin -> None."""
+    cand = _canonical_marker_key(ns, value)
+    if cand in led.by_key:
+        return cand
+    if ns in ("doi", "pmcid"):
+        # merge promotes doi:/pmcid: twins to their pmid key; the marker may
+        # legitimately cite the pre-promotion namespace.
+        canon_val = cand.split(":", 1)[1].lower()
+        twin = led.sec_index.get(f"{ns}:{canon_val}")
+        if twin and twin in led.by_key:
+            return twin
+    return None
+
+
+def _compress_numbers(nums: list) -> str:
+    """[1,2,3,5] -> '1-3, 5'; [1,2] -> '1, 2'."""
+    nums = sorted(set(nums))
+    parts, i = [], 0
+    while i < len(nums):
+        j = i
+        while j + 1 < len(nums) and nums[j + 1] == nums[j] + 1:
+            j += 1
+        if j - i >= 2:
+            parts.append(f"{nums[i]}-{nums[j]}")
+        elif j == i + 1:
+            parts.append(f"{nums[i]}, {nums[j]}")
+        else:
+            parts.append(str(nums[i]))
+        i = j + 1
+    return ", ".join(parts)
+
+
+def cmd_render(args) -> int:
+    led = read_ledger(Path(args.ledger))
+    text = Path(args.draft).read_text(encoding="utf-8-sig")
+    out_path = Path(args.out)
+
+    # Strip pre-existing References-like sections, fence-aware: detect on a
+    # code-block-masked copy (offsets preserved), cut from the real text in
+    # reverse so earlier spans stay valid.
+    masked = mask_code_blocks(text)
+    had_entries = False
+    for m in reversed(list(REFS_STRIP_RE.finditer(masked))):
+        chunk = text[m.start():m.end()]
+        if re.search(r"(?m)^\s*[-*]?\s*\[\d+\]", chunk):
+            had_entries = True
+        if "[@" in chunk:
+            warn("a pre-existing References-like section contained [@key] marker(s); "
+                 "the section was stripped - cite those sources in the body instead")
+        text = text[:m.start()] + text[m.end():]
+    body = text.rstrip() + "\n"
+
+    failures: list = []
+    numbers: dict = {}
+    order: list = []
+
+    def render_marker(bracket: str) -> str:
+        inner = bracket[2:-1] if bracket.endswith("]") else bracket[2:]
+        tokens = [t for t in inner.split(";") if t.strip()]
+        kinds = [classify_token(t) for t in tokens]
+        cites = [k for k in kinds if k[0] == "cite"]
+        if not tokens or not cites:
+            for kind, ns, _ in kinds:
+                if kind == "shape":
+                    warn(f"bracket {bracket!r} uses the {ns}: namespace but its value is not shape-valid; left verbatim")
+            return bracket
+        if any(k[0] != "cite" for k in kinds):
+            # A group with at least one real cite-key must not silently drop
+            # its non-citation tokens - that would lose citations quietly.
+            failures.append(f"mixed citation group {bracket!r}: every token must be a cite-key")
+            return bracket
+        keys = []
+        for _, ns, value in cites:
+            key = resolve_key(led, ns, value)
+            if key is None:
+                suggestions = [k for k in sorted(led.by_key) if k.startswith(ns + ":")][:5]
+                failures.append(
+                    f"unknown citation key {ns}:{value}"
+                    + (f" (did you mean: {', '.join(suggestions)}?)" if suggestions else "")
+                )
+                continue
+            keys.append(key)
+        if failures:
+            return bracket
+        for key in keys:
+            if key not in numbers:
+                numbers[key] = len(numbers) + 1
+                order.append(key)
+        return "[" + _compress_numbers([numbers[k] for k in keys]) + "]"
+
+    # Marker substitution, fence-aware: scan the masked copy (offsets equal),
+    # splice replacements into the real body.
+    masked_body = mask_code_blocks(body)
+    # Hand-typed numeric brackets in the DRAFT are the residual leak class:
+    # render owns numbering, so warn loudly (non-fatal - prose ranges like
+    # [140, 155] are legitimate; links/wikilinks/reference defs are excluded).
+    hand_typed = [m.start() for m in HAND_TYPED_NUM_RE.finditer(masked_body)]
+    if hand_typed:
+        lines = sorted({masked_body.count("\n", 0, pos) + 1 for pos in hand_typed[:5]})
+        warn(f"draft contains {len(hand_typed)} hand-typed numeric citation bracket(s) "
+             f"(first at line(s) {lines}): render owns numbering - remove hand-typed [N] brackets from the draft")
+    parts: list = []
+    last = 0
+    for m in MARKER_RE.finditer(masked_body):
+        parts.append(body[last:m.start()])
+        parts.append(render_marker(body[m.start():m.end()]))
+        last = m.end()
+    parts.append(body[last:])
+    rendered_body = "".join(parts)
+
+    # Double-render guard: an already-rendered document has no markers left.
+    if not order and had_entries:
+        banner("render", "FAILED: no [@key] citation markers found, but a References section with entries was present "
+                         "(already-rendered document?); nothing written")
+        return 1
+    if failures:
+        for f in failures:
+            warn(f"unresolved citation: {f}")
+        banner("render", f"FAILED: {len(failures)} unresolved citation key(s); nothing written")
+        return 1
+
+    entries = []
+    missing = []
+    for key in order:
+        entry = render_record(led.by_key[key], args.expand_pages)
+        if "[MISSING" in entry:
+            missing.append(key)
+        entries.append(f"[{numbers[key]}] {entry}")
+    if missing:
+        for key in missing:
+            warn(f"record {key} would render with [MISSING ...] markers (incomplete ledger record)")
+        banner("render", f"FAILED: {len(missing)} record(s) render with [MISSING ...] gaps "
+                         f"({', '.join(missing[:5])}{' ...' if len(missing) > 5 else ''}); nothing written")
+        return 1
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    refs = "\n".join(entries) if entries else "(no cited sources)"
+    out_path.write_text(rendered_body + "\n## References\n\n" + refs + "\n", encoding="utf-8")
+    banner("render", f"{len(order)} citation(s) numbered, {len(entries)} reference(s) rendered from {args.ledger} -> {args.out}")
+    return 0
+
+
+def _check_markers(led: Ledger, paths: list) -> int:
+    """Cross-validate [@key] markers in markdown files against the ledger.
+
+    Mirrors render's group semantics exactly: groups with zero cite tokens are
+    prose (ignored); all-cite groups must fully resolve (direct or sec_index);
+    groups mixing >=1 cite token with any non-cite token are failures;
+    shape-kind tokens (recognized namespace, invalid shape) warn only.
+    Returns the number of failures; a missing marker file counts as one
+    (never a vacuous pass)."""
+    failures = 0
+    for raw in paths:
+        p = Path(raw)
+        if not p.is_file():
+            banner("check", f"markers: marker file not found: {p}")
+            failures += 1
+            continue
+        text = p.read_text(encoding="utf-8-sig")
+        masked = mask_code_blocks(text)
+        groups = resolved = 0
+        for m in MARKER_RE.finditer(masked):
+            tokens = [t for t in m.group(1).split(";") if t.strip()]
+            kinds = [classify_token(t) for t in tokens]
+            cites = [k for k in kinds if k[0] == "cite"]
+            if not tokens or not cites:
+                continue  # prose bracket - render leaves it verbatim
+            line = masked.count("\n", 0, m.start()) + 1
+            groups += 1
+            if any(k[0] != "cite" for k in kinds):
+                warn(f"{p.name}:{line}: mixed citation group {m.group(0)!r}: every token must be a cite-key")
+                failures += 1
+                continue
+            for kind, ns, value in cites:
+                if kind == "shape":
+                    warn(f"{p.name}:{line}: bracket {m.group(0)!r} uses the {ns}: namespace but its value is not shape-valid (left verbatim)")
+                    continue
+                key = resolve_key(led, ns, value)
+                if key is None:
+                    warn(f"{p.name}:{line}: unresolved marker {ns}:{value} (no matching ledger record)")
+                    failures += 1
+                else:
+                    resolved += 1
+        print(f"markers[{p.name}]: {groups} citation group(s), {resolved} marker(s) resolved")
+    return failures
+
+
+def cmd_check(args) -> int:
+    markers = getattr(args, "markers", None) or []
+    led = read_ledger(Path(args.file))
+    types: dict = {}
+    for rec in led.records():
+        types[rec.get("type", "?")] = types.get(rec.get("type", "?"), 0) + 1
+    for k in sorted(led.by_key):
+        print(k)
+    status = "OK" if not led.quarantined else "FAIL"
+    banner("check", f"{len(led.by_key)} record(s) across {len(types)} type(s) "
+                    f"({', '.join(f'{t}:{c}' for t, c in sorted(types.items())) or 'none'}); "
+                    f"quarantined {len(led.quarantined)}; {status}")
+    if led.quarantined:
+        for q in led.quarantined:
+            warn(f"quarantined {q.get('file')}:{q.get('line')}: {q.get('error')}")
+        return 1
+    if markers:
+        marker_failures = _check_markers(led, markers)
+        banner("check", f"markers: {marker_failures} problem(s) across {len(markers)} file(s); "
+                        f"{'FAIL' if marker_failures else 'OK'}")
+        if marker_failures:
+            return 1
     return 0
 
 
@@ -1345,6 +1670,230 @@ def selftest() -> int:
             assert len(led3.by_key) == 1 and not led3.quarantined, f"BOM re-read failed: {led3.quarantined}"
         check("batch/title-rules", st_batch_and_title_rules)
 
+        # ---- name -> title fold (biomcp `name`-shaped records) -------------
+        def st_name_fold():
+            f = d / "nf.jsonl"
+            # drug carrying `name` instead of `title` (biomcp drug_get shape)
+            drug = {"type": "drug", "ids": {"chembl": "CHEMBL1229517"}, "name": "vemurafenib",
+                    "meta": {"indication": "BRAF V600E-mutant melanoma"}, "provenance": [{"aspect": "a"}]}
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(drug), stdin=False, aspect=None))
+            led = read_ledger(f)
+            assert "chembl:CHEMBL1229517" in led.by_key, "name-bearing drug not accepted"
+            assert led.by_key["chembl:CHEMBL1229517"]["title"] == "vemurafenib", "name not folded into title"
+            # fold is idempotent across re-reads and preserves the original field
+            before = json.dumps(led.by_key["chembl:CHEMBL1229517"], sort_keys=True)
+            after = json.dumps(read_ledger(f).by_key["chembl:CHEMBL1229517"], sort_keys=True)
+            assert before == after, "name fold not idempotent on re-read"
+            assert led.by_key["chembl:CHEMBL1229517"].get("name") == "vemurafenib", "original name field lost"
+            # gene name-only now accepted too (acceptance widening, CHANGELOG-noted)
+            gene = {"type": "gene", "ids": {"entrez_id": "673"}, "name": "B-Raf proto-oncogene",
+                    "provenance": [{"aspect": "a"}]}
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(gene), stdin=False, aspect=None))
+            assert "gene:673" in read_ledger(f).by_key, "name-bearing gene not accepted"
+            # article keeps its hard id requirement: name-only rejected
+            _capture(cmd_add, argparse.Namespace(file=str(f), record='{"type": "article", "name": "x", "ids": {}}', stdin=False, aspect=None))
+            # web/dataset keep their hard identity fields: name-only rejected
+            _capture(cmd_add, argparse.Namespace(file=str(f), record='{"type": "web", "name": "Just a page", "ids": {}}', stdin=False, aspect=None))
+            _capture(cmd_add, argparse.Namespace(file=str(f), record='{"type": "dataset", "name": "Just a series", "ids": {}}', stdin=False, aspect=None))
+            keys = set(read_ledger(f).by_key)
+            assert not any(k.startswith("title:") for k in keys), "name-only article/web/dataset must not derive title keys"
+            assert len(keys) == 2, f"name-fold acceptance boundary wrong: {sorted(keys)}"
+            # renders clean (no [MISSING field: title])
+            _, out = _capture(cmd_bib, argparse.Namespace(file=str(f), keys="chembl:CHEMBL1229517", expand_pages=False, offset=0))
+            assert "[MISSING" not in out.splitlines()[0], f"drug still renders MISSING: {out.splitlines()[0]}"
+            assert "Vemurafenib" in out.splitlines()[0] or "vemurafenib" in out.splitlines()[0], out.splitlines()[0]
+        check("name-fold", st_name_fold)
+
+        # ---- render: cite-key markers -> numbered citations + References ---
+        def _render_ledger(d):
+            f = d / "render.jsonl"
+            batch = [
+                _fixture_article(),
+                _fixture_article(pmid="30000001", doi="10.1000/r1", title="Render one", ids={"pmid": "30000001", "doi": "10.1000/r1", "pmcid": "PMC3000001"}),
+                _fixture_article(pmid="30000002", doi="10.1000/r2", title="Render two", ids={"pmid": "30000002", "doi": "10.1000/r2", "pmcid": "PMC3000002"}),
+                _fixture_article(pmid="30000003", doi="10.1000/r3", title="Render three", ids={"pmid": "30000003", "doi": "10.1000/r3", "pmcid": "PMC3000003"}),
+                {"key": "nct:NCT04280705", "type": "trial", "ids": {"nct": "NCT04280705"},
+                 "title": "Encorafenib Plus Cetuximab", "meta": {"phase": "Phase 2", "sponsor": "Pfizer", "status": "Completed"},
+                 "provenance": [{"aspect": "a"}]},
+                {"type": "drug", "ids": {"chembl": "CHEMBL1229517"}, "name": "vemurafenib",
+                 "meta": {"indication": "BRAF V600E-mutant melanoma"}, "provenance": [{"aspect": "a"}]},
+            ]
+            old_stdin, sys.stdin = sys.stdin, io.StringIO(json.dumps(batch))
+            try:
+                _capture(cmd_add, argparse.Namespace(file=str(f), record=None, stdin=True, aspect=None))
+            finally:
+                sys.stdin = old_stdin
+            return f
+
+        def st_render():
+            f = _render_ledger(d)
+            draft = d / "report.draft.md"
+            draft.write_text(
+                "# Report\n\n"
+                "Vemurafenib [@chembl:CHEMBL1229517] improves survival [@pmid:21639808].\n\n"
+                "Prose [@home] and pandoc [@Chapman2011] and symbol-ish [@gene:BRAF] stay verbatim.\n\n"
+                "Trial plus article [@nct:NCT04280705; @pmid:21639808] group. Again [@pmid:21639808].\n\n"
+                "Three more [@pmid:30000001; @pmid:30000002; @pmid:30000003] in one group.\n",
+                encoding="utf-8",
+            )
+            out = d / "final.md"
+            rc, stdout = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(draft), out=str(out), expand_pages=False))
+            assert rc == 0, f"render failed: {stdout}"
+            text = out.read_text(encoding="utf-8")
+            assert "Vemurafenib [1] improves survival [2]." in text, f"numbering wrong:\n{text}"
+            assert "[@home]" in text and "[@Chapman2011]" in text and "[@gene:BRAF]" in text, "prose brackets rewritten"
+            assert "[2, 3]" in text, f"group not sorted/compressed: {text}"
+            assert "Again [2]." in text, "duplicate key not reusing its number"
+            assert "[4-6]" in text, f"consecutive run not range-compressed: {text}"
+            assert "## References" in text and "[1] vemurafenib." in text and "[2] Chapman PB" in text
+            # registry titles ending in a period never render doubled ("Title.. Status")
+            tdot = d / "tdot.jsonl"
+            tdot.write_text(json.dumps({
+                "key": "nct:NCT01844986", "type": "trial", "ids": {"nct": "NCT01844986"},
+                "title": "Olaparib Maintenance Monotherapy in Patients With BRCA Mutated Ovarian Cancer Following First Line Platinum Based Chemotherapy.",
+                "meta": {"status": "ACTIVE_NOT_RECRUITING"},
+                "provenance": [{"aspect": "a"}]}) + "\n", encoding="utf-8")
+            _, tout = _capture(cmd_bib, argparse.Namespace(file=str(tdot), keys="nct:NCT01844986", expand_pages=False, offset=0))
+            tline = tout.splitlines()[0]
+            assert "Chemotherapy. Status:" in tline and ".." not in tline, f"double period rendered: {tline}"
+            assert "[MISSING" not in text
+            refs = text.split("## References", 1)[1]
+            nums = re.findall(r"(?m)^\[(\d+)\]", refs)
+            assert nums == [str(i) for i in range(1, 7)], f"bibliography not 1..N contiguous: {nums}"
+            # idempotent re-render of the SAME draft
+            out2 = d / "final2.md"
+            _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(draft), out=str(out2), expand_pages=False))
+            assert out2.read_text(encoding="utf-8") == text, "re-render of the same draft is not idempotent"
+            # sec-index: doi: marker resolves to the promoted pmid twin
+            doi_draft = d / "doi.draft.md"
+            doi_draft.write_text("Only one [@doi:10.1056/nejmoa1103782].\n", encoding="utf-8")
+            doi_out = d / "doi.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(doi_draft), out=str(doi_out), expand_pages=False))
+            dtext = doi_out.read_text(encoding="utf-8")
+            assert rc == 0 and "Only one [1]." in dtext and "PMID: 21639808." in dtext, f"doi twin resolution failed: {dtext}"
+            assert len(re.findall(r"(?m)^\[\d+\]", dtext.split("## References", 1)[1])) == 1
+            # unknown key: exit 1, output NOT written
+            bad = d / "bad.draft.md"
+            bad.write_text("Broken [@pmid:99999999].\n", encoding="utf-8")
+            bad_out = d / "bad.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(bad), out=str(bad_out), expand_pages=False))
+            assert rc != 0 and not bad_out.exists(), "unknown key must exit 1 without writing output"
+            # [MISSING ...] entry: exit 1, output NOT written
+            tonly = {"type": "trial", "title": "Title-only degraded trial", "provenance": [{"aspect": "a"}]}
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(tonly), stdin=False, aspect=None))
+            tkey = next(k for k in read_ledger(f).by_key if k.startswith("title:"))
+            miss = d / "miss.draft.md"
+            miss.write_text(f"Degraded [@{tkey}] cite.\n", encoding="utf-8")
+            miss_out = d / "miss.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(miss), out=str(miss_out), expand_pages=False))
+            assert rc != 0 and not miss_out.exists(), "MISSING-rendering record must exit 1 without writing output"
+            # double-render guard: rendering an already-rendered report fails
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(out), out=str(d / "double.md"), expand_pages=False))
+            assert rc != 0, "double-render must fail (no markers, References present)"
+            assert not (d / "double.md").exists()
+            # fence-awareness: a fenced example References section / marker is
+            # never stripped and never numbered
+            fence_draft = d / "fence.draft.md"
+            fence_draft.write_text(
+                "# F\n\nReal cite [@pmid:21639808].\n\nExample (do not touch):\n\n```\n"
+                "## References\n\n[1] example entry.\n\nCite like [@pmid:21639808].\n```\n\nTail kept.\n",
+                encoding="utf-8",
+            )
+            fence_out = d / "fence.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(fence_draft), out=str(fence_out), expand_pages=False))
+            ftext = fence_out.read_text(encoding="utf-8")
+            assert rc == 0, "fenced content must not break render"
+            assert "## References\n\n[1] example entry." in ftext, "fenced References example was stripped"
+            assert "[@pmid:21639808]" in ftext, "marker inside a fence was rewritten"
+            assert "Tail kept." in ftext, "content after a fenced References example was truncated"
+            assert "Real cite [1]." in ftext and ftext.rstrip().endswith("[1] Chapman PB, Hauschild A, Robert C, et al Improved survival with vemurafenib in melanoma with BRAF V600E mutation. N Engl J Med. 2011;364(26):2507-16. DOI: 10.1056/nejmoa1103782. PMID: 21639808."), \
+                f"real marker/References wrong:\n{ftext}"
+            # mixed citation group: at least one cite-key + a non-citation token
+            # must hard-fail (never silently drop the citation)
+            mix = d / "mix.draft.md"
+            mix.write_text("Mixed [@pmid:21639808; see note] group.\n", encoding="utf-8")
+            mix_out = d / "mix.md"
+            rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(mix), out=str(mix_out), expand_pages=False))
+            assert rc != 0 and not mix_out.exists(), "mixed citation group must exit 1 without writing output"
+        check("render", st_render)
+
+        # ---- check: worker validity gate -----------------------------------
+        def st_check():
+            f = d / "ck.jsonl"
+            f.write_text("", encoding="utf-8")
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f)))
+            assert rc == 0 and "0 record(s)" in out and "quarantined 0" in out, f"empty ledger must pass: {out}"
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(_fixture_article()), stdin=False, aspect=None))
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f)))
+            assert rc == 0 and "1 record(s)" in out and "pmid:21639808" in out and "; OK" in out, out
+            bad = d / "ck2.jsonl"
+            bad.write_text(json.dumps(_fixture_article()) + "\nnot json\n", encoding="utf-8")
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(bad)))
+            assert rc == 1 and "quarantined 1" in out and "FAIL" in out, f"quarantined ledger must fail: {out}"
+        check("check", st_check)
+
+        # ---- check --markers: worker marker cross-validation gate ------------
+        def st_check_markers():
+            f = d / "ckm.jsonl"
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(_fixture_article()), stdin=False, aspect=None))
+            good = d / "good.md"
+            good.write_text(
+                "Real [@pmid:21639808] plus its doi twin [@doi:10.1056/NEJMOA1103782].\n"
+                "Prose [@home] and shape-ish [@gene:BRAF] stay verbatim.\n"
+                "CI text [95% CI 78-89] and a link [1](http://x) are not citations.\n"
+                "Fenced example:\n\n```\n[@pmid:99999999]\n```\n",
+                encoding="utf-8",
+            )
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(good)]))
+            assert rc == 0, f"resolvable markers must pass:\n{out}"
+            assert "markers[good.md]: 2 citation group(s), 2 marker(s) resolved" in out
+            assert "markers: 0 problem(s) across 1 file(s); OK" in out
+            # unresolved marker -> exit 1
+            bad = d / "bad.md"
+            bad.write_text("Broken [@pmid:99999999] cite.\n", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stderr(buf):
+                rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(bad)]))
+            assert rc == 1 and "unresolved marker pmid:99999999" in buf.getvalue(), out + buf.getvalue()
+            # mixed group (cite + plain token) -> exit 1, mirroring render
+            mix = d / "mix.md"
+            mix.write_text("Mixed [@pmid:21639808; see note] group.\n", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stderr(buf):
+                rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(mix)]))
+            assert rc == 1 and "mixed citation group" in buf.getvalue(), out + buf.getvalue()
+            # missing marker file -> exit 1 (never a vacuous pass)
+            rc, out = _capture(cmd_check, argparse.Namespace(file=str(f), markers=[str(d / "nope.md")]))
+            assert rc == 1 and "marker file not found" in out, out
+        check("check-markers", st_check_markers)
+
+        # ---- render: hand-typed numeric bracket warning (non-fatal) ---------
+        def st_render_handtyped_warning():
+            f = d / "ht.jsonl"
+            _capture(cmd_add, argparse.Namespace(file=str(f), record=json.dumps(_fixture_article()), stdin=False, aspect=None))
+            draft = d / "ht.draft.md"
+            draft.write_text(
+                "Clean [@pmid:21639808] marker.\n\nBut a hand-typed [1] leak and [2, 3] too.\n\n"
+                "Not citations: [95% CI 78-89], link [4](http://x), wiki [[5, 6]], fence:\n\n```\n[7]\n```\n",
+                encoding="utf-8",
+            )
+            out_path = d / "ht.md"
+            buf_err = io.StringIO()
+            with contextlib.redirect_stderr(buf_err):
+                rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(draft), out=str(out_path), expand_pages=False))
+            err = buf_err.getvalue()
+            assert rc == 0, "hand-typed brackets must NOT fail render"
+            assert "hand-typed numeric citation bracket" in err and "line(s) [3]" in err, err
+            assert "[7]" not in err.replace("line(s)", ""), "fenced [7] must not warn"
+            # clean draft: no warning at all
+            clean = d / "ht2.draft.md"
+            clean.write_text("Only [@pmid:21639808] here.\n", encoding="utf-8")
+            buf_err2 = io.StringIO()
+            with contextlib.redirect_stderr(buf_err2):
+                rc, _ = _capture(cmd_render, argparse.Namespace(ledger=str(f), draft=str(clean), out=str(d / "ht2.md"), expand_pages=False))
+            assert rc == 0 and "hand-typed" not in buf_err2.getvalue(), buf_err2.getvalue()
+        check("render-handtyped-warning", st_render_handtyped_warning)
+
     failed = [r for r in results if r[1] is not None]
     for name, err in results:
         print(f"{'PASS' if err is None else 'FAIL'} {name}" + (f": {err}" if err else ""))
@@ -1393,6 +1942,19 @@ def main() -> int:
     p = sub.add_parser("stats", help="Ledger summary counts")
     p.add_argument("file")
     p.set_defaults(fn=cmd_stats)
+
+    p = sub.add_parser("render", help="Number cite-key markers in a draft and append the References section")
+    p.add_argument("ledger", help="merged ledger file (evidence/sources.jsonl)")
+    p.add_argument("draft", help="markdown draft authored with [@key] markers")
+    p.add_argument("-o", "--out", required=True, help="output report path (never written on failure)")
+    p.add_argument("--expand-pages", action="store_true", help="expand abbreviated page ranges (2507-16 -> 2507-2516)")
+    p.set_defaults(fn=cmd_render)
+
+    p = sub.add_parser("check", help="Validate a ledger file (exit 1 on quarantined lines; with --markers also on unresolved/mixed markers)")
+    p.add_argument("file")
+    p.add_argument("--markers", nargs="+", metavar="MD",
+                   help="markdown file(s) whose [@key] markers must resolve in this ledger")
+    p.set_defaults(fn=cmd_check)
 
     p = sub.add_parser("selftest", help="Hermetic feature-matrix selftest (no network)")
     p.set_defaults(fn=lambda a: selftest())

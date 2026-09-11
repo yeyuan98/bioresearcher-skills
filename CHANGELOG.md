@@ -13,7 +13,35 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
-## [Unreleased]
+## [1.10.0] - 2026-09-11
+
+### bioresearcher-deep-research 1.6.0
+
+Worker-friction fixes from live-run transcript forensics (three glm-5.3-flash agent tests; every fix traces to an observed failure):
+
+- `check --markers <md...>`: worker self-gate closing the unbacked-marker hole (a negative-example `[@pmid:...]` cited in an aspect file without a ledger record passed `check` and nearly reached `render`). Mirrors render's group semantics exactly (all-cite groups must resolve via direct key or sec_index twin; mixed cite+non-cite groups fail; shape-kind tokens warn only; prose brackets and fenced examples ignored); missing marker files exit 1 (never a vacuous pass through the fail-safe catch); without `--markers` behavior is byte-identical.
+- `render` warns (non-fatal) on hand-typed numeric citation brackets in the DRAFT - the observed `trials [1] [1-5]` leak class; link/wikilink/reference-def-safe pattern; fenced code excluded; render owns numbering.
+- `verify` banner appends `; N already verified (not rechecked)` so dry-runs after `--apply` no longer read as "nothing checked".
+- SKILL_DIR papercut fixed (4/6 dispatched workers failed their FIRST ledger command on `$SKILL_DIR` resolving to nothing): worker-protocol examples use the `<SKILL_DIR>` placeholder with "literal path string, NOT an environment variable" wording, and Tier B orchestrators substitute the resolved absolute path into every inlined `<SKILL_DIR>` so workers never see a placeholder.
+- Worker protocol: re-add-is-safe upsert note (upsert merges fill-only - workers no longer grep the script source to trust re-adds, and cross-aspect keys are remedied by re-adding to the own ledger); `retrieved_at` must be the real UTC call time (`date -u`), never rounded/placeholder; query-parameter-derived values (e.g. a phase filter) may enter `meta` only with the filter captured in `provenance.args` and disclosed; markers are only for resolvable cited sources (mention-by-id stays plain text); end-of-aspect gate is now `check <file> --markers <aspect>.md`.
+- New "Restart / gap top-up" protocol (serialized ownership transfer): codifies the observed-safe pattern of a top-up worker adopting a terminated worker's aspect - same ledger via `add`, targeted report edits, `check --markers`, never other aspects or the draft.
+- Orchestrator duty: numeric caps from the user/plan are relayed to worker prompts VERBATIM (a live run's "at most 10 calls" became "roughly 8-14" and the worker made 24, causing a timeout).
+- clinical-trials.md: CT.gov v2 status-filter enum documented (single value, any case, commas AND spaces fail with HTTP 400 - hit in three live runs).
+
+### bioresearcher-deep-research 1.5.0
+
+Citation-pipeline revamp: citations are key-based end-to-end and numbered nowhere until rendered - the ledger is the single source of truth and hand-assembled citations/bibliographies are structurally impossible instead of merely discouraged.
+
+- New `evidence-ledger.py render` (the single numbering authority): orchestrator drafts `final_report.draft.md` with semantic cite-key markers (`[@pmid:21639808]`, groups `[@a; @b]`); `render` numbers every marker by first appearance (range-compressing groups), rewrites them in place, and appends the References section generated from the merged ledger via the same rendering path as `bib`. Marker tokens must be namespace+shape-valid cite-keys (prose `[@home]`/pandoc `[@Chapman2011]` brackets pass through verbatim); `doi:`/`pmcid:` markers resolve through the secondary-id index when merge promoted the twin to a `pmid:` key. Hard-fail contract (exit 1, output file never written): unresolved key (with did-you-mean suggestions), any record that would render `[MISSING ...]`, or re-rendering an already-rendered document.
+- New `evidence-ledger.py check` (worker validity gate): re-reads/re-normalizes the ledger, prints counts + derived keys; exit 1 iff quarantined lines exist (zero-record evidence-gap-only ledgers legitimately pass). `add` now echoes the derived canonical keys per batch.
+- Workers write aspect reports with cite-key markers and NO bibliography (deliverable unit = aspect.md + ledger pair); worker-protocol rule 8 loses the hand-copy bibliography bullet and gains the mandatory end-of-aspect `check` gate (Tier A carve-out: no shell, orchestrator merge/render are the gates); `SKILL_DIR` (resolved absolute path) rides in the Tier B prompt template so subagents can actually reach the script.
+- `vet-references.py` two-layer revamp: Layer 1 offline structural audit (hard exit 1, runs outside the network fail-safe handler) - exactly one References-like section, in-text citations contiguous [1]..[N] numbered by order of appearance, N == bibliography entry count, zero `[MISSING ...]`/None/undefined placeholders, fenced code blocks excluded, orphan-citation errors carry a rephrase hint for prose numeric intervals; Layer 2 (NCBI esummary cross-check) unchanged and still network fail-safe. File-not-found exits 1 (local, deterministic). New hermetic `selftest` (11 audit fixtures). Fixes a `compute_token_overlap` typo that crashed the NCBI layer under the blanket handler.
+- `normalize_record`: non-article records fold a top-level biomcp `name` into an absent `title` (fill-only, idempotent) - fixes `[MISSING field: title]` drug bibliographies. Acceptance widening (CHANGELOG-noted): name-only records of `other`/`gene`/`trial`/`disease`/`variant` become valid; `web`/`dataset` still reject name-only input via their hard identity requirements; articles keep the hard pmid/doi/pmcid requirement.
+- Workflow (SKILL.md): Step 2 plan-presentation budget (compact question-tool payloads, delta-only amendments, full plan to `reports/<TOPIC>/plan.md`); aspect ABSTRACTs must state inclusion definition + binding exclusion criteria; Steps 5/5a/5b/5c rewired to draft (cite-keys) -> merge -> verify -> render -> vet -> html, with stop-and-repair contracts on render/vet exit 1, a degraded mode that delivers the cite-key draft (never hand-numbering), and a guardrail against ad-hoc report-assembly scripts; synthesis applies the evidence-verification discipline at merge time.
+- New "Evidence verification discipline" in analysis-methods.md (domain-neutral, applies to any topic): direction of causality, quantitative fidelity (numbers keyed to ledger records at capture), criterion vs keyword, axis discipline (no improvised categories; unplaceable findings go to Limitations), primary vs downstream attribution. Tier B inline payload carries the discipline; the dr-worker agent reads it at startup.
+- citations.md rescoped to the marker grammar + renderer-output formats; report-template.md per-aspect structure loses the References section; `keys`/`bib` demoted to debug utilities off the main path.
+- CI: `check-skill-scripts.mjs` now runs both hermetic selftests with per-check completion-banner regexes.
+- Ledger schema unchanged (`bioresearcher-evidence/1`); evidence-ledger selftest extended to 15 groups (render / check / name-fold).
 
 ## [1.9.0] - 2026-09-10
 

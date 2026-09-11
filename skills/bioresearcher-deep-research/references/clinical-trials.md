@@ -15,7 +15,7 @@ intervention, or keyword with status/phase filters and CURSOR pagination.
 | Parameter | Type | Notes |
 |-----------|------|-------|
 | query | string (required) | Condition, intervention, or keyword |
-| status | string, optional | e.g. "Recruiting", "Completed" |
+| status | string, optional | single CT.gov v2 enum value, any letter case (uppercased upstream): `Recruiting`, `Active_not_recruiting`, `Not_yet_recruiting`, `Enrolling_by_invitation`, `Completed`, `Suspended`, `Terminated`, `Withdrawn`, `Withheld`, `Unknown`. Commas AND spaces FAIL with HTTP 400 (`"Active, not recruiting"` is rejected) - use the underscore spelling; on 400, drop the filter and triage locally by the returned `status` field |
 | phase | string, optional | e.g. "Phase 1", "Phase 2" |
 | intervention_type | string, optional | e.g. "Drug", "Device" |
 | limit | int 1-50, default 10 | Maximum results per page |

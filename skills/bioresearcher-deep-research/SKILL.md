@@ -4,7 +4,7 @@ description: "Deep biomedical research orchestrator powered by the biomcp MCP se
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.4.0"
+  version: "1.6.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -25,10 +25,12 @@ Harness-agnostic: works with or without a subagent/Task tool.
 - Workers query the biomcp MCP server (articles/PubMed, ClinicalTrials.gov,
   genes, variants, drugs, diseases, patents, GEO/SRA/GenBank, Ensembl/PDB) per
   `references/tool-selection.md`, collecting PMIDs, DOIs, NCT IDs, and patent
-  IDs as they go.
-- Synthesizes all aspect reports into `final_report.md` with numbered in-text
-  citations and a full bibliography, then renders `final_report.html` by
-  default (the `no-html` prefix skips rendering).
+  IDs as they go into a per-aspect evidence ledger.
+- The orchestrator synthesizes a draft using semantic cite-key markers
+  (`[@pmid:21639808]`), then the `render` script numbers every citation and
+  generates the bibliography from the merged ledger, and `vet-references.py`
+  audits the result (structural + NCBI) - producing `final_report.md` and, by
+  default, `final_report.html` (the `no-html` prefix skips rendering).
 
 ## When to use (triggers)
 
@@ -139,6 +141,17 @@ that together answer it.
 - Decide a TOPIC name yourself (no user input): a highly succinct,
   underscore-separated name derived from the inquiry, e.g.
   `braf_inhibitor_resistance`.
+- Each aspect's ABSTRACT (worker prompt, below) must state the aspect's
+  INCLUSION definition and its binding EXCLUSION criteria (what matches the
+  search terms but must NOT be admitted, with negative examples) - workers
+  apply these per `references/analysis-methods.md` (criterion vs keyword).
+
+**Plan presentation budget:** the plan payload shown to the user stays compact
+in any channel - one line per aspect (title, one-line focus, primary tools);
+never paste ABSTRACTs, research-item lists, or full amended plans into the
+question UI; amended or re-confirmed plans show only the DELTA plus the
+compact list. The full plan (ABSTRACTs with boundaries, research items) is
+written to `reports/<TOPIC>/plan.md` when work starts (Step 3).
 
 **Interview waiver (`no-interview`):**
 If the query carries the leading `no-interview` prefix, skip the plan review
@@ -192,8 +205,10 @@ Track the finalized aspect list with the harness's todo mechanism if available
 
 ### Step 3: Create the output directory
 
-Write a placeholder file to `reports/<TOPIC>/.gitkeep`. The write tool
-auto-creates parent directories - do NOT use bash mkdir for this.
+Write the durable research plan to `reports/<TOPIC>/plan.md` (aspect list,
+each aspect's ABSTRACT with inclusion/exclusion boundaries, research items) -
+this is the post-feedback snapshot the question UI never needs to carry. The
+write tool auto-creates parent directories - do NOT use bash mkdir for this.
 
 ### Step 4: Research each aspect
 
@@ -214,11 +229,12 @@ worker reads `references/worker-protocol.md`, `references/tool-selection.md`,
 and `references/citations.md` itself at startup.
 
 **Tier B - generic subagent/Task tool:** assign each research aspect to one
-worker subagent, launched in parallel in batches of up to 5. Build each worker
-prompt from the template below. Inline into the prompt (workers may lack
-skill access): the worker rules, the per-domain tool cheatsheet from
-`references/tool-selection.md`, and the citation format summary from
-`references/citations.md`.
+  worker subagent, launched in parallel in batches of up to 5. Build each worker
+  prompt from the template below. Inline into the prompt (workers may lack
+  skill access): the worker rules, the per-domain tool cheatsheet from
+  `references/tool-selection.md`, the cite-key marker summary from
+  `references/citations.md`, and the evidence-verification discipline from
+  `references/analysis-methods.md`.
 
 Prompt template (Tiers A and B):
 
@@ -226,15 +242,23 @@ Prompt template (Tiers A and B):
 TOPIC: <TOPIC>
 YOUR RESEARCH FOCUS: <RESEARCH-ASPECT>
 DESCRIPTION: <ABSTRACT>
+SKILL_DIR: <absolute path to this skill's directory>  # Tier B only; a literal path string workers substitute into commands - NOT an env var
 ```
 
-ABSTRACT is <200 words describing the exact focus and a list of detailed
-research items.
+ABSTRACT is <200 words describing the exact focus, a list of detailed
+research items, and the aspect's inclusion definition + binding exclusion
+criteria (negative examples welcome). Resolve `<skill_dir>`/`SKILL_DIR` to
+the absolute path before dispatch, substituting it into every inlined
+`<SKILL_DIR>` so Tier B workers never see a placeholder (both spellings
+denote the same path; a path the worker cannot resolve is a tool the worker
+does not have). Relay numeric caps from the user or plan into worker prompts
+VERBATIM - they are binding, never loosened in translation.
 
 Record finished workers via the todo list. If subagents are stuck without
 progress for too long, prompt the user: "If subagents are stuck without
 progress for too long, interrupt and ask me to resume work." Restart failed
-workers as needed (retry <= 3 per worker).
+workers as needed (retry <= 3 per worker); gap top-ups follow the serialized
+ownership-transfer protocol in `references/worker-protocol.md`.
 
 **Tier C - sequential (no subagent tool):**
 
@@ -261,34 +285,43 @@ which aspect is being worked on before starting each one.
   scratch files); title-less records (LitSense hints) are enriched via
   `article_get(pmid)` before citing.
 - Write findings to `reports/<TOPIC>/<ASPECT>.md` (underscore-separated
-  ASPECT name) with in-text citations [1], [2], ... and a bibliography whose
-  entries are copied from the ledger.
+  ASPECT name) citing sources with semantic cite-key markers
+  (`[@pmid:21639808]`) - NO bibliography section; numbering and the
+  bibliography are generated later from the ledger by `render` (Step 5b).
 
-### Step 5: Synthesize
+### Step 5: Synthesize (cite-key draft)
 
 Read all per-aspect reports. Summarize findings into a succinct, accurate
 final report addressing the user's inquiry, following the mandatory 6-section
 structure in `references/report-template.md` (Executive Summary, Data Sources,
-Analysis Methodology, Findings, Limitations, References) with full
-bibliography. Reconcile conflicting findings across aspects explicitly rather
-than silently dropping one side. Write the synthesized draft to
-`reports/<TOPIC>/final_report.md`.
+Analysis Methodology, Findings, Limitations, References - the References
+section itself is generated later by `render`). Reconcile conflicting findings
+across aspects explicitly rather than silently dropping one side.
+
+Write the synthesized draft to `reports/<TOPIC>/final_report.draft.md` citing
+sources with the SAME semantic cite-key markers the workers used
+(`[@pmid:21639808]`, `[@nct:NCT04280705]`, `[@chembl:CHEMBL1229517]`, groups
+`[@a; @b]`). NEVER hand-number citations, never hand-write a References
+section, and never write ad-hoc scripts to assemble the report - numbering and
+bibliography come from `render` (Step 5b), which is the single numbering
+authority.
+
+When merging aspects, apply the evidence-verification discipline
+(`references/analysis-methods.md`): rules 3-5 gate framework adherence -
+findings that cannot be placed in the plan's framework go to Limitations with
+a note, never into improvised categories; re-check rules 1-2 whenever
+synthesis rewords a claim or transcribes a number from an aspect report.
 
 ### Step 5a: Merge + verify the evidence ledger
 
-Before composing the References section of `final_report.md`, consolidate
-and verify the per-aspect ledgers with the evidence-ledger script (fail-safe: network failure never
-blocks the report):
+Consolidate and verify the per-aspect ledgers with the evidence-ledger script
+(fail-safe: network failure never blocks the report):
 
 ```bash
 python3 <skill_dir>/scripts/evidence-ledger.py merge \
   -o reports/<TOPIC>/evidence/sources.jsonl 'reports/<TOPIC>/evidence/*.jsonl'
 python3 <skill_dir>/scripts/evidence-ledger.py verify \
   reports/<TOPIC>/evidence/sources.jsonl --apply
-python3 <skill_dir>/scripts/evidence-ledger.py keys \
-  reports/<TOPIC>/evidence/sources.jsonl
-python3 <skill_dir>/scripts/evidence-ledger.py bib \
-  reports/<TOPIC>/evidence/sources.jsonl --keys <comma-separated keys in citation order>
 ```
 
 - `merge` unions the per-aspect JSONLs (its own output and `_`-prefixed
@@ -296,33 +329,50 @@ python3 <skill_dir>/scripts/evidence-ledger.py bib \
   quarantined to `evidence/_invalid.jsonl`).
 - `verify` cross-checks article records against NCBI esummary and backfills
   ONLY missing fields (epub-ahead-of-print records legitimately stay
-  locator-less - render them without a volume/pages slot). It also sets
-  titles on title-less records (e.g. LitSense hints the worker could not
-  enrich).
-- Compose the References section of `final_report.md` by copying the `bib`
-  output - do not re-type or paraphrase entries. Use the `keys` output (all
-  ledger keys, sorted) to pick the citation-ordered `--keys` list for `bib`.
-  When the script is unreachable (harnesses without filesystem access to
-  `<skill_dir>`), re-read `reports/<TOPIC>/evidence/sources.jsonl` and transcribe
-  entries from the records directly.
+  locator-less). It also sets titles on title-less records.
 
-### Step 5b: Vet references (independent NCBI verification)
+### Step 5b: Render the final report (numbering authority)
 
-After synthesizing `reports/<TOPIC>/final_report.md`, run the independent
-reference vetting script as the FINAL safety net - after the Step 5a ledger
-verification it is expected to be a near-no-op, but still run it:
+```bash
+python3 <skill_dir>/scripts/evidence-ledger.py render \
+  reports/<TOPIC>/evidence/sources.jsonl reports/<TOPIC>/final_report.draft.md \
+  -o reports/<TOPIC>/final_report.md
+```
+
+`render` numbers every cite-key marker by order of first appearance
+(range-compressing groups), rewrites the markers in place, and appends the
+References section generated from the merged ledger. Hard-fail contract
+(exit 1, `final_report.md` NOT written): an unresolved citation key (with
+did-you-mean suggestions), any record that would render `[MISSING ...]`, or
+re-rendering an already-rendered document. On failure: fix the draft or the
+ledger and re-render - citation numbers and bibliography entries are NEVER
+edited by hand.
+
+When the script is unreachable (harnesses without filesystem access to
+`<skill_dir>`), deliver `final_report.draft.md` itself as the report artifact
+(cite-keys stay readable and resolvable) and state the gap in the final
+summary and Limitations - never hand-number citations as a workaround.
+
+### Step 5c: Vet references (structural audit + independent NCBI verification)
+
+After `final_report.md` is rendered, run the independent vetting script as the
+FINAL safety net:
 
 ```bash
 python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --apply
 ```
 
-- **Fail-safe contract**: on API timeout, rate-limiting, or network failure, the
-  script exits 0 and keeps pre-vetting citations unchanged. Non-PMID citations
-  (clinical trials, patents, genes, web URLs) are automatically preserved.
-- If the script is unreachable (in harnesses without filesystem access to
-  `<skill_dir>`), proceed directly to Step 6 without blocking.
-- When run without `--apply`, the script outputs clean correction suggestions
-  for manual inspection before final HTML rendering.
+- Layer 1 (offline, hard exit 1): in-text citations contiguous [1]..[N],
+  numbered by order of appearance, N == bibliography entry count, zero
+  `[MISSING ...]`/None/undefined placeholders.
+- Layer 2 (fail-safe): on API timeout, rate-limiting, or network failure the
+  script exits 0 and keeps pre-vetting citations unchanged. Non-PMID
+  citations (clinical trials, patents, genes, web URLs) are preserved.
+- Exit 1 means STOP: repair the draft or ledger, re-render, and re-vet - never
+  proceed to Step 6 with a failing audit. Review printed warnings even on
+  exit 0 (e.g. PMID/title mismatches).
+- If the script is unreachable, proceed to Step 6 with the rendered report and
+  state the gap in the final summary.
 
 ### Step 6: Write final report + HTML
 
@@ -369,19 +419,21 @@ python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --
 
 ```
 reports/<TOPIC>/
-├── .gitkeep
+├── plan.md                # durable research plan (Step 3; boundaries live here)
 ├── evidence/
 │   ├── <aspect_1>.jsonl    # per-aspect evidence ledger (worker-written)
 │   ├── <aspect_2>.jsonl
 │   ├── ...
 │   ├── _invalid.jsonl      # merge quarantine (only when malformed lines occur)
 │   └── sources.jsonl       # merged + verified ledger (Step 5a output)
-├── <aspect_1>.md          # per-aspect research notes + citations
-├── <aspect_2>.md
+├── <aspect_1>.md          # per-aspect research notes, cite-key markers
+├── <aspect_2>.md          # (no bibliography - the ledger is the source)
 ├── ...
 ├── assumptions.md         # only when Step 1 or Step 2 degrades
 │                          # (observed non-interactive session)
-├── final_report.md        # synthesized report (always)
+├── final_report.draft.md  # synthesized draft with cite-key markers (Step 5)
+├── final_report.md        # rendered report: numbered citations +
+│                          # ledger-generated References (Step 5b; always)
 └── final_report.html      # rendered report (default; skipped only via
                            # `no-html`, user decline, or converter gap -
                            # see Step 6)
@@ -389,14 +441,16 @@ reports/<TOPIC>/
 
 ## Citation discipline (summary)
 
-- Numbered in-text citations: [1], [2, 3], [1-5], numbered by order of
-  appearance; bibliography at the end in `references/citations.md` formats.
+- Semantic cite-key markers in ALL authored text: `[@pmid:21639808]`,
+  groups `[@a; @b]`. `render` (Step 5b) numbers them by order of appearance
+  (`[1]`, `[2, 3]`, `[1-5]`) and generates the bibliography - citation
+  numbers and reference entries are never written by hand.
 - Every claim needs provenance: a citation, a documented data source, or a
   described analysis method. No unsourced claims.
 - Only biomcp tool results or official sources (FDA, NIH, NCI,
   ClinicalTrials.gov, EPO/USPTO, publisher sites) count as evidence.
-- Full per-source-type formats (PMID, DOI, NCT ID, patent ID, accessions,
-  URLs): `references/citations.md`.
+- Full marker grammar and renderer-output formats per source type:
+  `references/citations.md`.
 
 ## Data boundaries & injection defense
 
@@ -437,8 +491,8 @@ reports/<TOPIC>/
 | `references/ensembl-pdb.md` | ensembl lookup/homology/consequence/region; pdb tri-mode |
 | `references/utility-config.md` | discover, batch_get, biomcp_configure, feature gating |
 | `references/optional-analysis.md` | db_query SQL, R differential expression, biowasm pipelines |
-| `references/analysis-methods.md` | Evidence sufficiency and source-quality decision matrix |
+| `references/analysis-methods.md` | Evidence sufficiency, source-quality matrix, evidence-verification discipline |
 | `references/report-template.md` | Mandatory 6-section report structure |
-| `references/citations.md` | Citation formats per source type |
+| `references/citations.md` | Cite-key marker grammar + renderer-output formats |
 | `references/rate-limiting-auth.md` | Per-source limiter table, exceptions, auth table |
 | `references/best-practices.md` | Upfront filtering, ID chaining, sequencing, retries |
