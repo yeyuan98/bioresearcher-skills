@@ -114,5 +114,5 @@ correct), arrays non-empty, dates plausible, and values in sane ranges.
 - [ ] IDs chained via tool cross-links, not re-searched
 - [ ] Calls sequential; no sleep timers (except HPA/GEO-download exceptions)
 - [ ] Retries capped at 3; gaps recorded
-- [ ] Evidence ledger updated after each call and passing `check` (exit 0)
+- [ ] Evidence ledger updated after each call and passing `check --markers <aspect>.md` (exit 0)
 - [ ] Findings + `[@key]` cite markers written to the aspect file

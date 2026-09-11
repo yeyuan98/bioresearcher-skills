@@ -206,8 +206,9 @@ Sequential mode trades latency for context - keep per-aspect tool calls lean
 
 - [ ] Output file exists at `reports/<TOPIC>/<ASPECT>.md`
 - [ ] Evidence ledger exists at `reports/<TOPIC>/evidence/<ASPECT>.jsonl`
-      and passes `evidence-ledger.py check` with exit 0 (Tier A without
-      Bash: re-read and verify by eye)
+      and passes `evidence-ledger.py check <file> --markers <ASPECT>.md`
+      with exit 0 (Tier A without Bash: re-read the ledger and match the
+      markers manually)
 - [ ] Every cite-key marker `[@...]` used in the aspect file resolves to a
       ledger record (no invented keys)
 - [ ] Every claim has a citation, source note, or method note
