@@ -36,13 +36,21 @@ DEFAULT_ICON_DATA_URI = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD
 
 
 def get_brand_icon_uri() -> str:
-    """Retrieve brand icon data URI with local repository fallback."""
-    repo_icon = Path(__file__).resolve().parents[3] / "connector" / "workbuddy" / "icon.jpg"
-    if repo_icon.is_file():
-        try:
-            return f"data:image/jpeg;base64,{base64.b64encode(repo_icon.read_bytes()).decode('ascii')}"
-        except OSError:
-            pass
+    """Retrieve brand icon data URI with local repository and packaged connector fallback."""
+    root = Path(__file__).resolve().parents[3]
+    candidates = [
+        root / "icon.png",
+        root / "connector" / "workbuddy" / "icon.png",
+        root / "icon.jpg",
+        root / "connector" / "workbuddy" / "icon.jpg",
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                mime = "image/png" if p.suffix == ".png" else "image/jpeg"
+                return f"data:{mime};base64,{base64.b64encode(p.read_bytes()).decode('ascii')}"
+            except OSError:
+                pass
     return DEFAULT_ICON_DATA_URI
 
 
@@ -1829,6 +1837,7 @@ def convert(markdown_path: Path, title: str) -> str:
     toc_html = md.toc or ""
 
     icon_uri = get_brand_icon_uri()
+    icon_mime = "image/png" if icon_uri.startswith("data:image/png") else "image/jpeg"
     header_card = build_header_card(effective_title, metadata, icon_uri)
 
     return f"""<!DOCTYPE html>
@@ -1837,7 +1846,7 @@ def convert(markdown_path: Path, title: str) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{html.escape(effective_title)}</title>
-<link rel="icon" type="image/jpeg" href="{icon_uri}">
+<link rel="icon" type="{icon_mime}" href="{icon_uri}">
 <style>{CSS}</style>
 </head>
 <body>

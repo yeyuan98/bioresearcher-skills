@@ -13,6 +13,16 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [1.11.1] - 2026-09-11
+
+### WorkBuddy Connector
+- Migrate connector root icon from `icon.jpg` to 512x512 RGBA `icon.png` with anti-aliased transparency, satisfying WorkBuddy Connector Marketplace audit rubric F4 ("连接器根目录缺少 icon.svg 或 icon.png").
+- Harden `scripts/ci/build-connector-workbuddy.mjs`: strictly disallow `icon.jpg`, validate 8-byte PNG signature (`89 50 4E 47 0D 0A 1A 0A`) and IHDR chunk (asserting exact 512x512 dimensions and 1KB-500KB size bounds), expand staging junk filter (`.git`, `.env`, `node_modules`, `*.pyc`, `*.swp`), and enforce post-tar content assertions.
+- Harden CI smoke gate (`.github/workflows/ci.yml`) to explicitly assert `bioresearcher/icon.png` inside the connector tarball and forbid `bioresearcher/icon.jpg`.
+- Update `skills/bioresearcher-deep-research/scripts/markdown-to-html.py` to resolve `icon.png` across development repository and packaged connector layouts, dynamically embedding `image/png` data URIs.
+- Update `demos/website/build.mjs` showroom assets to read `icon.png`, export `favicon.png` and `assets/icon.png`, and maintain backwards-compatible JPEG aliases for cached viewers.
+- Update `AGENTS.md` and `docs/connector-workbuddy.md` documentation with icon provenance, dimensions, and sha256 hash.
+
 ## [1.11.0] - 2026-09-11
 
 ### bioresearcher-deep-research 1.7.0

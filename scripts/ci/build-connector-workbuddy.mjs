@@ -65,27 +65,28 @@ else ok(`mcp.json single server "${servers[0]}"`);
 if (failures) { console.error("validation failed before staging"); process.exit(1); }
 
 // --- icon ------------------------------------------------------------------
-const ICONS = ["icon.svg", "icon.png", "icon.jpg"];
+if (existsSync(join(FLAVOR, "icon.jpg"))) {
+  fail("legacy icon.jpg detected in connector/workbuddy/; WorkBuddy audit rule F4 strictly requires icon.png or icon.svg");
+}
+const ICONS = ["icon.png", "icon.svg"];
 const present = ICONS.filter((f) => existsSync(join(FLAVOR, f)));
-if (present.length !== 1) fail(`exactly one icon file expected in connector/workbuddy/, found: ${present.join(", ") || "none"}`);
+if (present.length !== 1) fail(`exactly one icon file expected in connector/workbuddy/ (icon.png or icon.svg), found: ${present.join(", ") || "none"}`);
 const icon = present[0];
-if (icon === "icon.jpg") {
+if (icon === "icon.png") {
   const buf = readFileSync(join(FLAVOR, icon));
-  if (!(buf[0] === 0xff && buf[1] === 0xd8)) fail(`${icon}: missing JPEG magic bytes`);
-  if (buf.length < 1024 || buf.length > 200 * 1024) fail(`${icon}: ${buf.length} bytes outside 1KB-200KB`);
-  let dims = null;
-  for (let i = 2; i < buf.length - 9;) {
-    if (buf[i] !== 0xff) { i++; continue; }
-    const marker = buf[i + 1];
-    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
-    const seglen = buf.readUInt16BE(i + 2);
-    const sof = (marker >= 0xc0 && marker <= 0xcf) && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
-    if (sof) { dims = { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) }; break; }
-    i += 2 + seglen;
-  }
-  if (!dims) fail(`${icon}: no SOF marker (not a baseline JPEG?)`);
-  else if (dims.width !== 512 || dims.height !== 512) fail(`${icon}: ${dims.width}x${dims.height} != 512x512`);
-  else ok(`${icon} 512x512, magic+size valid (${buf.length} bytes)`);
+  const pngMagic = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buf.length < 8 || !buf.subarray(0, 8).equals(pngMagic)) fail(`${icon}: missing PNG magic signature`);
+  if (buf.length < 24 || buf.subarray(12, 16).toString("ascii") !== "IHDR") fail(`${icon}: missing IHDR chunk header`);
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  if (width !== 512 || height !== 512) fail(`${icon}: dimensions ${width}x${height} != 512x512`);
+  if (buf.length < 1024 || buf.length > 500 * 1024) fail(`${icon}: ${buf.length} bytes outside 1KB-500KB`);
+  ok(`${icon} 512x512, PNG magic+IHDR+size valid (${buf.length} bytes)`);
+} else if (icon === "icon.svg") {
+  const str = readFileSync(join(FLAVOR, icon), "utf8");
+  if (!str.includes("<svg") || !str.includes("</svg>")) fail(`${icon}: invalid SVG content`);
+  if (str.length < 100 || str.length > 200 * 1024) fail(`${icon}: SVG size ${str.length} bytes outside 100B-200KB`);
+  ok(`${icon} SVG content valid (${str.length} bytes)`);
 }
 if (failures) { console.error("validation failed before staging"); process.exit(1); }
 
@@ -125,7 +126,7 @@ const YAML_ESCAPES = { "\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t":
 const yamlQuote = (s) => `"${String(s).replace(/[\\"\n\r\t\u0000-\u001f]/g, (c) => YAML_ESCAPES[c] ?? `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`)}"`;
 // Local-build hygiene: never package editor/interpreter droppings that
 // .gitignore excludes (clean CI checkouts never have them anyway).
-const JUNK = /(^|\/)(__pycache__|\.DS_Store|\.ipynb_checkpoints|Thumbs\.db)(\/|$)|\.pyc$/;
+const JUNK = /(^|\/)(\.git|\.env|__pycache__|\.DS_Store|\.ipynb_checkpoints|node_modules|Thumbs\.db)(\/|$)|\.(pyc|swp|tmp)$/;
 for (const name of bundle) {
   cpSync(join(ROOT, "skills", name), join(stage, "skills", name), { recursive: true, filter: (p) => !JUNK.test(p) });
   const p = join(stage, "skills", name, "SKILL.md");
@@ -154,6 +155,12 @@ for (const name of bundle) {
 // --- packaged-tree sanity ------------------------------------------------------
 JSON.parse(readFileSync(join(stage, "connector-meta.json"), "utf8"));
 JSON.parse(readFileSync(join(stage, "mcp.json"), "utf8"));
+if (!existsSync(join(stage, "icon.png")) && !existsSync(join(stage, "icon.svg"))) {
+  fail("staged root missing icon.png or icon.svg (WorkBuddy rubric F4)");
+}
+if (existsSync(join(stage, "icon.jpg"))) {
+  fail("staged root contains forbidden icon.jpg");
+}
 for (const name of bundle) {
   if (!existsSync(join(stage, "skills", name, "SKILL.md"))) fail(`staged bundle missing skills/${name}/SKILL.md`);
 }
@@ -168,6 +175,13 @@ execFileSync("tar", ["--sort=name", "--mtime=@0", "--owner=0", "--group=0", "--n
 writeFileSync(tarball, execFileSync("gzip", ["-n", "-9", "-c", tarPath], { maxBuffer: 1 << 26 }));
 rmSync(tarPath);
 execFileSync("gzip", ["-t", tarball]);
+const entries = execFileSync("tar", ["-tf", tarball], { encoding: "utf8" }).trim().split("\n");
+if (!entries.includes("bioresearcher/icon.png") && !entries.includes("bioresearcher/icon.svg")) {
+  fail("tarball missing root icon: bioresearcher/icon.png or bioresearcher/icon.svg");
+}
+if (entries.includes("bioresearcher/icon.jpg")) {
+  fail("tarball contains forbidden bioresearcher/icon.jpg");
+}
 const tarBytes = readFileSync(tarball);
 const sha256 = createHash("sha256").update(tarBytes).digest("hex");
 ok(`tarball ${join(outDir, `bioresearcher-connector_workbuddy-v${version}.tar.gz`)}`);

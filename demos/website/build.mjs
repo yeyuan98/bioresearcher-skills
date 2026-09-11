@@ -13,7 +13,7 @@
  * Declared inputs (all committed; fail-fast: every missing input is
  * collected, then the build fails ONCE with the full list):
  *   VERSION, skills.json, per-skill SKILL.md frontmatter (skills dir),
- *   connector/workbuddy/skill-locales.json, connector/workbuddy/icon.jpg,
+ *   connector/workbuddy/skill-locales.json, connector/workbuddy/icon.png,
  *   demos/lib/biomcp-tools@1.4.0.json,
  *   demos/scenarios (per-scenario scenario.json),
  *   demos/artifacts (per-case result.json, provenance.json, outputs,
@@ -183,7 +183,7 @@ function loadInputs() {
   const version = need("VERSION");
   const skillsJson = need("skills.json");
   const locales = need("connector/workbuddy/skill-locales.json");
-  const icon = need("connector/workbuddy/icon.jpg");
+  const icon = need("connector/workbuddy/icon.png");
   const registry = need(path.join("demos", "lib", "biomcp-tools@1.4.0.json"));
   const stringsEn = need(path.join("demos", "website", "src", "strings.en.json"));
   const stringsZh = need(path.join("demos", "website", "src", "strings.zh.json"));
@@ -334,21 +334,21 @@ function layout({ S, lang, title, description, body, active, pagePath, headExtra
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="icon" type="image/jpeg" href="${root}favicon.jpg">
+<link rel="icon" type="image/png" href="${root}favicon.png">
 <link rel="stylesheet" href="${root}assets/style.css">
 ${pagePath ? `<link rel="alternate" hreflang="${lang}" href="${SITE_URL}/${lang}/${pagePath}">` : ""}
 ${pagePath ? `<link rel="alternate" hreflang="${lang === "zh" ? "en" : "zh"}" href="${SITE_URL}/${lang === "zh" ? "en" : "zh"}/${pagePath}">` : ""}
 ${pagePath ? `<link rel="alternate" hreflang="x-default" href="${SITE_URL}/en/${pagePath}">` : ""}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
-<meta property="og:image" content="${SITE_URL}/assets/icon.jpg">
+<meta property="og:image" content="${SITE_URL}/assets/icon.png">
 <meta name="twitter:card" content="summary">
 ${headExtra ?? ""}
 </head>
 <body>
 <header class="site-header">
   <div class="wrap header-row">
-    <a class="brand" href="${root}index.html"><img src="${root}assets/icon.jpg" alt="" class="brand-icon">BioResearcher</a>
+    <a class="brand" href="${root}index.html"><img src="${root}assets/icon.png" alt="" class="brand-icon">BioResearcher</a>
     ${navHtml(S, pagePath ? pagePath.split("/").length - 1 : 0, active)}
     ${switcher}
   </div>
@@ -376,7 +376,7 @@ function splashPage(data) {
   const en = data.strings.en;
   const zh = data.strings.zh;
   const body = `<div class="splash">
-  <img class="splash-icon" src="assets/icon.jpg" alt="BioResearcher logo">
+  <img class="splash-icon" src="assets/icon.png" alt="BioResearcher logo">
   <h1>BioResearcher <span class="ver">v${esc(data.version)}</span></h1>
   <div class="splash-cols">
     <div class="splash-col">
@@ -397,11 +397,11 @@ function splashPage(data) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BioResearcher</title>
 <meta name="description" content="${esc(en.splash.pitch)}">
-<link rel="icon" type="image/jpeg" href="favicon.jpg">
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="assets/style.css">
 <meta property="og:title" content="BioResearcher">
 <meta property="og:description" content="${esc(en.splash.pitch)}">
-<meta property="og:image" content="${SITE_URL}/assets/icon.jpg">
+<meta property="og:image" content="${SITE_URL}/assets/icon.png">
 <meta name="twitter:card" content="summary">
 </head>
 <body class="splash-body">
@@ -423,7 +423,7 @@ function notFoundPage(data) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 · BioResearcher</title><link rel="icon" type="image/jpeg" href="favicon.jpg"><link rel="stylesheet" href="assets/style.css"></head>
+<title>404 · BioResearcher</title><link rel="icon" type="image/png" href="favicon.png"><link rel="stylesheet" href="assets/style.css"></head>
 <body class="splash-body">${body}</body></html>
 `;
 }
@@ -728,6 +728,9 @@ function main() {
   const warnings = [];
 
   // 1) assets: icon + css + per-case artifact outputs (flattened).
+  fs.copyFileSync(data.icon, W("favicon.png"));
+  fs.copyFileSync(data.icon, W("assets/icon.png"));
+  // Backwards-compatible aliases for external caches:
   fs.copyFileSync(data.icon, W("favicon.jpg"));
   fs.copyFileSync(data.icon, W("assets/icon.jpg"));
   fs.writeFileSync(W("assets/style.css"), data.css);

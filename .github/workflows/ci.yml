@@ -65,7 +65,8 @@ jobs:
           test -s "$TARBALL"
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/connector-meta.json'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/mcp.json'
-          tar -tzf "$TARBALL" | grep -qx "bioresearcher/$(cd connector/workbuddy && ls icon.* | head -1)"
+          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/icon.png'
+          ! tar -tzf "$TARBALL" | grep -q 'bioresearcher/icon.jpg'
           N="$(node -p 'Object.keys(require("./connector/workbuddy/skill-locales.json").skills).length')"
           M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
           test "$N" -eq "$M"

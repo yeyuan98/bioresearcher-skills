@@ -68,27 +68,59 @@ version on each update (建议), which this coupling guarantees.
 
 ## Icon
 
-`connector/workbuddy/icon.jpg` — 512x512 optimized progressive JPEG
-(~27 KB; sha256 `ee70b528e0ef98d96b33fa4f06ea862481f1b9b88839218870faa251b9d8ef18`).
-WorkBuddy's icon spec allows SVG (recommended), PNG or JPG; JPG cannot be
-transparent, so the white background shows as a tile on dark UIs, and the
-spec's 建议 64x64 px for raster icons is deliberately exceeded (512x512
-renders crisply wherever the market displays it). The docs' directory tree
-literally shows `icon.svg`, so reviewer pushback is possible; if that
-happens, upgrade to a transparent PNG or a hand-drawn SVG in a later
-connector version (updates re-submit, ~10-15 min to propagate).
+`connector/workbuddy/icon.png` — 512x512 RGBA PNG with anti-aliased transparency
+(~160 KB; sha256 `913d2f0d37013cb1835d9d5fb44181fe078c78cd0503791928554c6d14ee8908`).
+WorkBuddy's static audit rule F4 strictly requires `icon.svg` or `icon.png` in
+the connector package root (`icon.jpg` fails the automated gate). The icon
+uses an alpha-blended transparent exterior background so it renders cleanly
+across light and dark market UIs without a white bounding tile. The 512x512
+resolution downsamples crisply to 48x48 and 64x64 on HiDPI displays while
+remaining sharp in connector detail modals.
 
 Icon provenance: prepared from the uncommitted logo master
 `Bioresearcher-Logo-v2.jpg` (1148x1148, outside this repo),
 sha256 `8976891037e8e3d0df3a3cc106805eab94b7a2645f79a2dea31d59edfb860415`:
 
-```bash
-python3 - <<'EOF'
+```python
 from PIL import Image
-Image.open("Bioresearcher-Logo-v2.jpg").convert("RGB") \
-     .resize((512, 512), Image.LANCZOS) \
-     .save("connector/workbuddy/icon.jpg", "JPEG", quality=88, optimize=True, progressive=True)
-EOF
+import numpy as np
+from collections import deque
+
+im = Image.open("Bioresearcher-Logo-v2.jpg")
+im_512 = im.resize((512, 512), Image.Resampling.LANCZOS).convert("RGB")
+arr = np.array(im_512)
+h, w, _ = arr.shape
+
+exterior = np.zeros((h, w), dtype=bool)
+q = deque()
+def is_bg(y, x):
+    return arr[y, x, 0] >= 235 and arr[y, x, 1] >= 235 and arr[y, x, 2] >= 235
+
+for x in range(w):
+    if is_bg(0, x): exterior[0, x] = True; q.append((0, x))
+    if is_bg(h - 1, x): exterior[h - 1, x] = True; q.append((h - 1, x))
+for y in range(h):
+    if not exterior[y, 0] and is_bg(y, 0): exterior[y, 0] = True; q.append((y, 0))
+    if not exterior[y, w - 1] and is_bg(y, w - 1): exterior[y, w - 1] = True; q.append((y, w - 1))
+
+while q:
+    y, x = q.popleft()
+    for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        ny, nx = y + dy, x + dx
+        if 0 <= ny < h and 0 <= nx < w and not exterior[ny, nx] and is_bg(ny, nx):
+            exterior[ny, nx] = True
+            q.append((ny, nx))
+
+rgba = np.zeros((h, w, 4), dtype=np.uint8)
+rgba[:, :, :3] = arr
+rgba[:, :, 3] = 255
+for y in range(h):
+    for x in range(w):
+        if exterior[y, x]:
+            m = min(arr[y, x, 0], arr[y, x, 1], arr[y, x, 2])
+            rgba[y, x, 3] = 0 if m >= 250 else int((250 - m) / 15.0 * 255)
+
+Image.fromarray(rgba, "RGBA").save("connector/workbuddy/icon.png", "PNG", optimize=True)
 ```
 
 ## Submission

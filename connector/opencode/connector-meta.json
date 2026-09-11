@@ -7,7 +7,7 @@
   "description_en": "Biomedical research plugin for OpenCode: biomcp MCP server tools for literature, clinical trials, genes, variants, drugs, diseases and patents, plus skills for publication-grade figures and deep-research subagent.",
   "source": "bioresearcher",
   "type": "plugin",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "harness": "opencode",
   "examples_zh": [
     "帮我做一个关于肿瘤免疫治疗的多方面文献综述并附引用",
