@@ -13,7 +13,7 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
-## [Unreleased]
+## [1.10.0] - 2026-09-11
 
 ### bioresearcher-deep-research 1.6.0
 
