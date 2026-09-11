@@ -2,7 +2,11 @@
   "captures": [
     {
       "tool": "variant_search",
-      "args": { "gene": "BRAF", "hgvsp": "V600E", "limit": 3 },
+      "args": {
+        "gene": "BRAF",
+        "hgvsp": "V600E",
+        "limit": 3
+      },
       "note": {
         "en": "Structured variant query: gene + protein change (never compound free text like \"BRAF V600E\").",
         "zh": "结构化变异检索：gene + 蛋白变化（切勿使用 “BRAF V600E” 这类复合自由文本）。"
@@ -11,21 +15,29 @@
     },
     {
       "tool": "article_search",
-      "args": { "query": "BRCA1 DNA repair", "limit": 3 },
-      "note": {
-        "en": "Federated PubMed search (Europe PMC / Semantic Scholar / PubTator / LitSense); returns PMIDs + titles.",
-        "zh": "PubMed 联邦检索（Europe PMC / Semantic Scholar / PubTator / LitSense），返回 PMID 与标题。"
+      "args": {
+        "query": "BRCA1 DNA repair",
+        "limit": 3
       },
-      "response": "[{\"doi\": \"10.1042/BJ20141077\", \"title\": \"Protein stability versus function: effects of destabilizing missense mutations on BRCA1 DNA repair activity.\", \"authors\": [\"David C. A. Gaboriau\", \"P. Rowling\", \"C. Morrison\", \"L. Itzhaki\"], \"journal\": \"Biochemical Journa…"
+      "note": {
+        "en": "Federated PubMed search (Europe PMC / Semantic Scholar / PubTator / LitSense); 1.4.0 responses carry full citation locators (volume/issue/pages).",
+        "zh": "PubMed 联邦检索（Europe PMC / Semantic Scholar / PubTator / LitSense）；1.4.0 响应自带完整引用定位字段（卷/期/页码）。"
+      },
+      "response": "[{\"pmid\": \"37272060\", \"doi\": \"10.1080/15476286.2023.2220210\", \"title\": \"Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.\", \"authors\": [\"Adamopoulos PG\", \"Athanasopoulou K\", \"…\"], \"journal\": \"RNA Biol\", \"volume\": \"20\", \"issue\": \"1\", \"pages\": \"281-295\", \"publication_date\": \"2023-01-01\", \"cited_by\": 4, \"source\": \"europepmc\"}]"
     },
     {
       "tool": "gene_get",
-      "args": { "symbol": "BRCA1", "sections": ["core"] },
+      "args": {
+        "symbol": "BRCA1",
+        "sections": [
+          "core"
+        ]
+      },
       "note": {
         "en": "Gene detail by HGNC symbol with section filtering (16 section values incl. all).",
         "zh": "按 HGNC 符号查询基因详情，可按 section 裁剪（16 个可选值，含 all）。"
       },
-      "response": "{\"symbol\": \"BRCA1\", \"name\": \"BRCA1 DNA repair associated\", \"summary\": \"This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability…"
+      "response": "{\"symbol\": \"BRCA1\", \"name\": \"BRCA1 DNA repair associated\", \"summary\": \"This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts a…\"}"
     }
   ]
 }

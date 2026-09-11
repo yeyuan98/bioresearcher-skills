@@ -2,7 +2,7 @@
 
 - Scenario: `agent-interview-en` (kind: agent, lang: en)
 - Outcome: **PASS**
-- Session: 2026-09-06T05:33:39.476Z → 2026-09-06T05:34:02.356Z
+- Session: 2026-09-11T13:31:14.409Z → 2026-09-11T13:31:47.415Z
 - Replay: `node demos/run-demo.mjs --only agent-interview-en --publish` (spends LLM tokens; manual-run only)
 
 ## Prompt / 提示词
@@ -26,27 +26,29 @@ Output (trimmed):
 
 # Bioresearcher Deep Research
 
-Reference-based biomedical research: interview the user, split the topic into
-research aspects, investigate each aspect with biomcp tools, then synthesize a
-succinct, accurately cited report. Harness-agnostic: works with or without a
-subagent/Task tool.
+Reference-based biomedical research: interview the user to clarify scope and
+align the research plan, split the topic into research aspects, investigate each
+aspect with biomcp tools, then synthesize a succinct, accurately cited report.
+Harness-agnostic: works with or without a subagent/Task tool.
 
 ## What it does
 
-- Decomposes a biomedical question (disease, drug, gene, variant, trial
-  landscape, patent space, dataset) into 2-5 independent research aspects.
+- Clarifies the research question and proposes a structured research plan
+  with 2-5 independent aspects for user feedback before execution.
 - Runs one focused worker per aspect - in parallel via the harness's
-… [trimmed 325 more line(s)]
+… [trimmed 409 more line(s)]
 ```
 
 ## Final answer (verbatim) / 最终回答（原文）
 
-Before starting the deep research run, I need to clarify the scope (Step 1 of the workflow). Please answer the following — one round, then I'll proceed:
+The skill's workflow requires a clarifying interview before research begins. Here are my questions:
 
-1. **Safety outcomes**: Which toxicities matter most — CRS/ICANS only, on-target/off-tumor toxicity, or the full safety spectrum (including neurotoxicity, hematologic toxicity, insertional oncogenesis concerns)?
-2. **Tumor scope**: Pan-solid-tumor overview, or specific indications (e.g., glioblastoma, pancreatic, ovarian, lung)? Should hematologic malignancy data be included as a comparator?
-3. **Time window**: Last 5 years, or all available evidence?
-4. **Evidence scope**: Clinical trials only, or also include reviews/meta-analyses, case reports, and regulatory (FDA) documents?
-5. **Output format**: Default is a full report with numbered citations as Markdown + rendered HTML under `reports/` — is that fine, or Markdown-only (`no-html`)?
+**Step 1: Clarifying questions — CAR-T therapy safety in solid tumors**
 
-I'll wait for your reply before decomposing the topic and launching the research.
+1. **Safety scope**: Should the report cover the full adverse-event spectrum (CRS, ICANS, on-target/off-tumor toxicity, hematologic toxicity, long-term toxicities), or focus on specific events?
+2. **Tumor types**: Any priority solid tumors (e.g., glioblastoma, pancreatic, ovarian, breast), or a pan-solid-tumor overview?
+3. **Time frame**: Last 5 years only, or include the full historical record (early-generation trials onward)?
+4. **Evidence base**: Clinical trials only (ClinicalTrials.gov + published results), or also include mechanistic/preclinical literature and FDA/EMA regulatory actions?
+5. **Output depth**: Concise brief (~1,500 words) or full report (~3,000+ words with HTML)?
+
+Please answer any or all — I'll propose a research plan next.

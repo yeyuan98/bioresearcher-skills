@@ -1,22 +1,22 @@
 {
   "id": "agent-deep-research-zh",
   "kind": "agent",
-  "name": "Deep research (Chinese prompt): tumor immunotherapy survey with cited report",
+  "name": "Deep research (Chinese prompt): tumor immunotherapy survey with ledger-rendered citations",
   "title_en": "Deep research — tumor immunotherapy survey driven by a Chinese prompt",
   "title_zh": "深度研究——中文提问的肿瘤免疫治疗文献综述",
-  "summary_en": "Same deep-research skill, Chinese-language request (the connector's canonical zh example): the agent answers and reports in Chinese while querying English biomedical sources, citing PMIDs.",
-  "summary_zh": "同一深度研究技能，中文提问（WorkBuddy 连接器的中文示例语料）：智能体检索英文生物医学数据源，以中文撰写综述并附 PMID 引用。",
+  "summary_en": "Same deep-research skill, Chinese-language request (the connector's canonical zh example): parallel workers build per-aspect evidence ledgers, the render script numbers every cite-key marker and generates the References section, and vet-references.py audits the result - the agent answers and reports in Chinese while querying English biomedical sources, citing PMIDs.",
+  "summary_zh": "同一深度研究技能，中文提问（WorkBuddy 连接器的中文示例语料）：并行工作节点构建逐方面证据账本，render 脚本统一为引用键编号并生成参考文献，vet-references.py 审计结果——智能体检索英文生物医学数据源，以中文撰写综述并附 PMID 引用。",
   "level": "L2",
   "lang": "zh",
-  "purpose": "Bilingual evidence: deep-research skill with a zh prompt; asserts PMID citations and Chinese final text; tool stream identical to the en path.",
-  "prompt": "no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的多方面文献综述并附引用。请用中文撰写报告，引用使用 PMID。",
-  "timeoutMs": 1500000,
+  "purpose": "Bilingual evidence: deep-research skill with a zh prompt; asserts the ledger citation pipeline, PMID citations and Chinese final text.",
+  "prompt": "no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的文献综述并附引用。最多 2 个研究方面，每个方面的工作节点最多调用 10 次 biomcp 工具。请用中文撰写报告，引用使用 PMID。",
+  "timeoutMs": 2100000,
   "publish": {
     "outputs": [
-      "reports/**/final_report.md",
-      "reports/**/final_report.html",
-      "reports/**/assumptions.md",
-      "reports/**/README.md"
+      "reports/**/*.md",
+      "reports/**/*.html",
+      "reports/**/evidence/sources.jsonl",
+      "subagents.json"
     ]
   },
   "checks": [
@@ -26,24 +26,32 @@
       "min": 1
     },
     {
-      "type": "group",
-      "desc": "the survey ran article searches — directly, or via parallel Task workers whose outputs cite PMIDs",
-      "anyOf": [
-        {
-          "type": "tool_seq",
-          "seq": [
-            ["article_search", "*"]
-          ],
-          "mode": "subsequence"
-        },
-        {
-          "type": "group",
-          "allOf": [
-            { "type": "tool_count", "tool": "task", "min": 1 },
-            { "type": "text", "source": "tool:task", "op": "regex", "expect": "PMID" }
-          ]
-        }
-      ]
+      "type": "tool_count",
+      "tool": "task",
+      "min": 1,
+      "desc": "parallel worker dispatch (Tier A/B) is mandatory when a subagent tool exists (deep-research 1.7.0 Step 4)"
+    },
+    {
+      "type": "text",
+      "scope": "all",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "(^|\\n)pmid:\\d+",
+      "desc": "tier-independent literature proof: ledger keys (add echo / check stdout) contain line-start pmid: entries - live dispatch runs keep article_search inside worker streams, invisible to the parent log"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[evidence-ledger\\] render: \\d+ citation\\(s\\) numbered",
+      "desc": "render verb success banner: the numbering authority generated the citations + References section (FAILED banners must not match)"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[vet-references\\] Structural audit: PASS",
+      "desc": "the Step 5c offline structural audit passed: contiguous [1]..[N], N == bibliography count, zero placeholders"
     },
     {
       "type": "text",
@@ -64,6 +72,11 @@
       "op": "regex",
       "expect": "final_report\\.html",
       "desc": "HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output"
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-citation-pipeline-artifacts (inspect reports/<TOPIC>/final_report.draft.md, final_report.md and evidence/sources.jsonl): (a) the draft still contains [@key] cite-key markers - proof it was authored key-based, never hand-numbered; (b) the References section is ledger-generated Vancouver style (consistent author initials, journal, year, PMID/DOI per entry); (c) in-text citations are contiguous [1]..[N] numbered by order of first appearance."
     }
   ]
 }

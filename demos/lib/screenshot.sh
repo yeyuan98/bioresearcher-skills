@@ -13,8 +13,11 @@ height=$((width * 2))
 
 tmp=$(mktemp /tmp/demos-shot-XXXXXX.png)
 trap 'rm -f "$tmp"' EXIT
+# --virtual-time-budget lets the report's inline JS (ToC scroll-spy, citation
+# badges) settle before the capture; the hero card itself is pure CSS.
 chromium --headless --disable-gpu --no-sandbox --hide-scrollbars \
-  --window-size="${width},${height}" --screenshot="$tmp" \
+  --window-size="${width},${height}" --virtual-time-budget=4000 \
+  --screenshot="$tmp" \
   "file://$(realpath "$in")" >/dev/null 2>&1
 
 python3 - "$tmp" "$out" "$width" <<'PYEOF'
@@ -30,6 +33,11 @@ if bbox_rows:
     im = im.crop((0, 0, gray.width, bottom))
 if im.width > max_w:
     im = im.resize((max_w, int(im.height * max_w / im.width)), Image.LANCZOS)
-im.save(dst, "PNG", optimize=True)
+# Honor the destination extension (.jpg/.jpeg -> optimized JPEG, else PNG) so
+# committed artifact screenshots keep their referenced format.
+if dst.lower().endswith((".jpg", ".jpeg")):
+    im.save(dst, "JPEG", quality=85, optimize=True)
+else:
+    im.save(dst, "PNG", optimize=True)
 print(f"{dst}: {im.width}x{im.height}")
 PYEOF

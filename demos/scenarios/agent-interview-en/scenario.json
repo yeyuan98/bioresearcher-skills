@@ -38,6 +38,12 @@
       "type": "no_such_tool",
       "tool": ["biomcp_article_search", "biomcp_trial_search", "biomcp_gene_get"],
       "desc": "no research queries during the interview turn"
+    },
+    {
+      "type": "tool_count",
+      "tool": "bash",
+      "max": 0,
+      "desc": "no shell during the interview turn - ledger scripts and rendering start only after the scope is agreed"
     }
   ]
 }

@@ -1,18 +1,18 @@
 {
   "artifactLang": "zh",
   "fanout": {
-    "en": "Mixed: one direct article_search pass + one Task worker; synthesis in Chinese",
-    "zh": "混合模式：一次直接 article_search 检索 + 一个 Task 工作节点；以中文汇总"
+    "en": "Parallel fan-out via the harness Task tool (2 Chinese-titled subagent workers captured live)",
+    "zh": "经宿主 Task 工具并行扇出（2 个中文标题的子代理工作节点，实时捕获）"
   },
   "findings": {
     "en": [
-      "Chinese prompt (the WorkBuddy connector's canonical zh example, extended): queried English sources, reported in Chinese.",
-      "Two aspects under light-research: immune checkpoint inhibitors + cell therapy / emerging modalities.",
+      "Chinese prompt (the WorkBuddy connector's canonical zh example, extended with an explicit call budget): queried English sources, reported in Chinese.",
+      "Two Chinese-titled parallel workers (ICB literature worker + CAR-T literature worker) built per-aspect evidence ledgers; render numbered 52 citations from the merged ledger and vet-references passed its structural audit.",
       "Objective check asserted Chinese text in the final answer (regex [\\u4e00-\\u9fff]) — bilingual behavior is verified, not claimed."
     ],
     "zh": [
-      "中文提问（WorkBuddy 连接器中文示例语料扩展版）：检索英文数据源，以中文产出报告。",
-      "light-research 模式选取两个研究方面：免疫检查点抑制剂 + 细胞治疗/新兴治疗模式。",
+      "中文提问（WorkBuddy 连接器中文示例语料扩展版，附带显式调用预算）：检索英文数据源，以中文产出报告。",
+      "两个中文标题的并行 worker（「ICB 文献研究」「CAR-T 文献研究」）构建逐方面证据账本；render 从合并账本统一编号 52 处引用，vet-references 结构审计通过。",
       "客观校验断言最终回答含中文（正则 [\\u4e00-\\u9fff]）——双语行为是验证出来的，不是宣称的。"
     ]
   },

@@ -10,20 +10,18 @@
   "biomcpPin": null,
   "skillsDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/skills",
   "skills": {
-    "bioresearcher-deep-research": "a610e80077f9b629beadb2f7698feb818296312baa834fe5fd266aebd9d7caa7",
-    "bioresearcher-onboard": "7c9ce1c7ccf35df89dcb7facfa0cdc731268b3df689dcf91300354061993f4dc",
+    "bioresearcher-deep-research": "8996e44ea0104504ea23fd492cc4de3162c4212a7796755ba236a202fe07a56a",
+    "bioresearcher-onboard": "a60d6ccc853455f2e63cb6208707856302770fbf865a35543cdfa276ff40b093",
     "bioresearcher-plot-making": "4bce943e9500b2857837d8d63dc3e1f1b3fdb67d031506ee649ecda1991400eb",
     "bioresearcher-pubmed-weekly": "65058dff6ef441b34daff2570a70bdbe0b74e726539ba18cec96153c852d8532",
     "bioresearcher-python-setup-uv": "1b7fd43c22d33d0f1141dcbbe78416edd4ccdc36bf4fc56bf669a0771a296edd"
   },
-  "scenarioSha256": "ad840cb096b2cf5dfac058fa4a0ed0c153b6b5c72115668f7a19a58b28990fbe",
+  "scenarioSha256": "26e9f473af30871be5d17c8eaa55d5ac26b4855bb4f70f5bfd96e0db0a77efe1",
   "startedAt": "2026-09-06T06:24:34.524Z",
   "endedAt": "2026-09-06T06:42:18.443Z",
   "durationSec": 1064,
   "modelCostUsd": null,
-  "outcome": "PASS",
-  "publishedAt": "2026-09-06T06:42:18.450Z",
-  "notes": {
-    "rubric": "adjudicated SATISFIED"
-  }
+  "outcome": "PASS*",
+  "republishedAt": "2026-09-11T13:31:54.175Z",
+  "republishNote": "re-published 2026-09-11 from the original completed session (demos/.runs/agent-plot-making-en/20260906-142434-r1) after the scenario publish glob was broadened to include fig1_kras_landscape.svg; prompt/checks/timeout unchanged. gitCommit/opencodeVersion/startedAt/endedAt/durationSec describe the ORIGINAL 2026-09-06 run; scenarioSha256 was re-stamped at re-publish time per the artifact-sha gate."
 }

@@ -1,7 +1,7 @@
 {
   "test": "agent-interview-en",
   "rep": 1,
-  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-interview-en/20260906-133339-r1",
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-interview-en/20260911-213114-r1",
   "reused": false,
   "outcome": "PASS",
   "reason": null,
@@ -18,20 +18,36 @@
       "type": "text",
       "desc": "the final assistant message must be (or contain) the clarifying-question batch",
       "status": "pass",
-      "detail": "regex \"\\\\?\" on \"final\" (984 chars)"
+      "detail": "regex \"\\\\?\" on \"final\" (928 chars)"
     },
     {
       "type": "text",
       "desc": "research must not have run yet - the interview turn comes first (skip only via the no-interview prefix)",
       "status": "pass",
-      "detail": "not_contains \"final_report\" on \"final\" (984 chars)"
+      "detail": "not_contains \"final_report\" on \"final\" (928 chars)"
     },
     {
       "type": "no_such_tool",
       "desc": "no research queries during the interview turn",
       "status": "pass",
       "detail": "none of [biomcp_article_search, biomcp_trial_search, biomcp_gene_get] was called"
+    },
+    {
+      "type": "tool_count",
+      "desc": "no shell during the interview turn - ledger scripts and rendering start only after the scope is agreed",
+      "status": "pass",
+      "detail": "count=0 of \"bash\"; bounds [-inf, 0]"
     }
   ],
-  "gradedAt": "2026-09-06T05:34:02.357Z"
+  "gradedAt": "2026-09-11T13:31:47.417Z",
+  "subagents": {
+    "extractedAt": "2026-09-11T13:31:47.415Z",
+    "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-interview-en/20260911-213114-r1",
+    "dbPath": "/home/administrator/.local/share/opencode/opencode.db",
+    "parentSessions": [
+      "ses_f6f55b236ffeZMzk0qyzpy6ERX"
+    ],
+    "sessions": [],
+    "error": null
+  }
 }

@@ -8,16 +8,16 @@
     "en": [
       "No no-interview prefix: the skill must ask its clarifying questions before researching.",
       "Even under non-interactive `opencode run --auto`, the agent posted ONE batch of questions and started NO research.",
-      "Objective checks: final answer contains '?'; contains no 'final_report'; none of article_search / trial_search / gene_get was called."
+      "Objective checks: final answer contains '?'; contains no 'final_report'; none of article_search / trial_search / gene_get was called; zero bash calls — ledger scripts and rendering start only after the scope is agreed."
     ],
     "zh": [
       "未加 no-interview 前缀：技能必须先提出澄清问题再开题。",
       "即便在非交互的 `opencode run --auto` 模式下，智能体也只发出一整批问题、未启动任何检索。",
-      "客观校验：最终回答含「?」；不含「final_report」；article_search / trial_search / gene_get 均未被调用。"
+      "客观校验：最终回答含「?」；不含「final_report」；article_search / trial_search / gene_get 均未被调用；bash 调用数为 0——账本脚本与渲染只在方案确认后开始。"
     ]
   },
   "evidence": {
     "type": "interview",
-    "excerpt": "Before starting the deep research run, I need to clarify the scope (Step 1 of the workflow). Please answer the following — one round, then I'll proceed:\n\n1. **Safety outcomes**: Which toxicities matter most — CRS/ICANS only, on-target/off-tumor toxicity, or the full safety spectrum (including neurotoxicity, hematologic toxicity, insertional oncogenesis concerns)?\n2. **Tumor scope**: Pan-solid-tumor overview, or specific indications (e.g., glioblastoma, pancreatic, ovarian, lung)? …\n3. **Time window**: Last 5 years, or all available evidence?\n4. **Evidence scope**: Clinical trials only, or also include reviews/meta-analyses, case reports, and regulatory (FDA) documents?\n5. **Output format**: Default is a full report with numbered citations as Markdown + rendered HTML under `reports/` — is that fine, or Markdown-only (`no-html`)?\n\nI'll wait for your reply before decomposing the topic and launching the research.\n\n(Opening + all five questions verbatim from the session transcript; ellipsis only shortens the question list inside Q2.)"
+    "excerpt": "The skill's workflow requires a clarifying interview before research begins. Here are my questions:\n\n**Step 1: Clarifying questions — CAR-T therapy safety in solid tumors**\n\n1. **Safety scope**: Should the report cover the full adverse-event spectrum (CRS, ICANS, on-target/off-tumor toxicity, hematologic toxicity, long-term toxicities), or focus on specific events?\n2. **Tumor types**: Any priority solid tumors (e.g., glioblastoma, pancreatic, ovarian, breast), or a pan-solid-tumor overview?\n3. **Time frame**: Last 5 years only, or include the full historical record (early-generation trials onward)?\n4. **Evidence base**: Clinical trials only (ClinicalTrials.gov + published results), or also include mechanistic/preclinical literature and FDA/EMA regulatory actions?\n5. **Output depth**: Concise brief (~1,500 words) or full report (~3,000+ words with HTML)?\n\nPlease answer any or all — …\n\n(Opening + all five questions verbatim from the 2026-09-11 session transcript; ellipsis only shortens the closing.)"
   }
 }

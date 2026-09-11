@@ -7,12 +7,12 @@
   "findings": {
     "en": [
       "The WorkBuddy connector's third zh example (“查找 BRAF V600E 变异的相关药物与临床试验”) executed at the raw MCP layer.",
-      "Four keyless calls chain variant -> gene -> drugs -> trials in 9 seconds, token-free.",
+      "Four keyless calls chain variant -> gene -> drugs -> trials in 11 seconds, token-free.",
       "Same probe mechanics as the EN tour; bilingual notes captured with each response."
     ],
     "zh": [
       "WorkBuddy 连接器第三条中文示例语料（“查找 BRAF V600E 变异的相关药物与临床试验”）在 MCP 原始层的真实执行。",
-      "四步免密钥调用链：变异 → 基因 → 药物 → 临床试验，共 9 秒，零 token。",
+      "四步免密钥调用链：变异 → 基因 → 药物 → 临床试验，共 11 秒，零 token。",
       "与英文巡览同款探针机制；每条响应附中英双语注释。"
     ]
   },
@@ -22,22 +22,22 @@
       [
         "variant_search",
         "pass",
-        "2210"
+        "2028"
       ],
       [
         "gene_get",
         "pass",
-        "189"
+        "1392"
       ],
       [
         "gene_drugs",
         "pass",
-        "954"
+        "2297"
       ],
       [
         "trial_search",
         "pass",
-        "1377"
+        "2061"
       ]
     ],
     "samples": [
@@ -50,7 +50,7 @@
           "en": "Drugs targeting BRAF (OpenTargets).",
           "zh": "作用于 BRAF 靶点的药物（OpenTargets）。"
         },
-        "response": "[{\"drug_name\":\"BELVARAFENIB\",\"source\":\"opentargets\",\"action_type\":\"Small molecule\"},{\"drug_name\":\"PLIXORAFENIB\",…},{\"drug_name\":\"SORAFENIB\",…}]"
+        "response": "[{\"drug_name\":\"BELVARAFENIB\",\"source\":\"opentargets\",\"action_type\":\"Small molecule\"},{\"drug_name\":\"PLIXORAFENIB\",\"source\":\"opentargets\",\"action_type\":\"Small molecule\"},{\"drug_name\":\"SORAFENIB\",\"source\"…}"
       },
       {
         "tool": "trial_search",
@@ -62,7 +62,7 @@
           "en": "Interventional trials touching BRAF melanoma.",
           "zh": "涉及 BRAF 黑色素瘤的介入性临床试验。"
         },
-        "response": "{\"studies\":[{\"nct_id\":\"NCT01597908\",\"title\":\"Dabrafenib Plus Trametinib vs Vemurafenib Alone in Unresectable or Metastatic BRAF V600E/K Cutaneous Melanoma\",\"status\":\"COMPLETED\",…}]}"
+        "response": "{\"studies\":[{\"nct_id\":\"NCT03415126\",\"title\":\"A Study of ASN007 in Patients With Advanced Solid Tumors\",\"status\":\"COMPLETED\",\"interventions\":[\"DRUG: ASN007: ascending doses\",\"DRUG: ASN007 RD\"]},{\"nct_i…}"
       }
     ]
   }

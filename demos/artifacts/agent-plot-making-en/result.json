@@ -2,8 +2,8 @@
   "test": "agent-plot-making-en",
   "rep": 1,
   "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-plot-making-en/20260906-142434-r1",
-  "reused": false,
-  "outcome": "PASS",
+  "reused": true,
+  "outcome": "PASS*",
   "reason": null,
   "rubricPending": true,
   "rubricFlags": [
@@ -76,14 +76,24 @@
       "flag": "verify-structural-figure-publication-quality"
     }
   ],
-  "gradedAt": "2026-09-06T06:42:18.447Z",
+  "gradedAt": "2026-09-11T13:31:54.167Z",
+  "subagents": {
+    "extractedAt": "2026-09-11T13:31:54.159Z",
+    "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-plot-making-en/20260906-142434-r1",
+    "dbPath": "/home/administrator/.local/share/opencode/opencode.db",
+    "parentSessions": [
+      "ses_f8a9c1de6ffepDkBU2YYxiwVHm"
+    ],
+    "sessions": [],
+    "error": null
+  },
   "adjudications": [
     {
       "flag": "verify-structural-figure-publication-quality",
       "verdict": "SATISFIED",
-      "note": "fig1_kras_landscape.png/.pdf/.svg + LEGENDS.md produced; final QA gates in transcript: collisions 0 fail/0 warn PASS, pdf_text min 5.2pt PASS, panel alignment PASS (fail 0, warn 0, 4 comparisons); session iterated through 2 collision-audit FIX rounds before PASS",
+      "note": "fig1_kras_landscape.png/.pdf/.svg + LEGENDS.md produced; final QA gates in transcript: collisions 0 fail/0 warn PASS, pdf_text min 5.2pt PASS, panel alignment PASS (fail 0, warn 0, 4 comparisons); session iterated through 2 collision-audit FIX rounds before PASS [re-recorded at re-publish; original adjudication 2026-09-06]",
       "by": "demos author",
-      "at": "2026-09-06T06:42:38.855078+00:00"
+      "at": "2026-09-11T14:22:00+00:00"
     }
   ]
 }

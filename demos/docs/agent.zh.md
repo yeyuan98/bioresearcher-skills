@@ -31,11 +31,17 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 
 ## 2. 核心特性
 
-- **引用可核查的深度研究**：每条论断带编号引用，收集 PMID / DOI / NCT /
-  专利号；不使用模型内部知识充数，证据缺失时明确说明。
+- **引用可核查、机器生成而非手工拼装**：worker 触及的每条可引用来源都落入
+  逐侧面**证据账本**（`reports/<TOPIC>/evidence/*.jsonl`，字段逐字复制自
+  biomcp 输出）；报告草稿以语义引用键标记（`[@pmid:21639808]`）撰写，
+  `render` 脚本是唯一编号权威——按首次出现顺序统一编号并生成 Vancouver
+  参考文献表，不同步或手工输入的引用在结构上不可能存在。独立的
+  `vet-references.py` 再对渲染后报告做终审（[1]..[N] 连续、N 与文献表
+  条数一致、NCBI esummary 交叉核验）（真实运行见
+  [案例 6.2](#62-案例深度研究英文并行扇出)）。
 - **访谈优先**：默认先在一轮内集中提出澄清问题（研究问题、范围、时间窗、
-  结局指标、输出格式），确认后才开题——非交互模式下同样保持该行为
-  （见 [案例 6.4](#64-案例访谈优先先问后做)）。
+  结局指标、输出格式），并对齐研究方案后才开题——非交互模式下同样保持
+  该行为（见 [案例 6.4](#64-案例访谈优先先问后做)）。
 - **并行扇出 + 顺序回退**：宿主提供子代理/Task 工具时按研究侧面并行调度
   worker；没有时自动顺序执行——同一技能在两类宿主下均可运行
   （真实并行证据见 [案例 6.2](#62-案例深度研究英文并行扇出)）。
@@ -79,11 +85,19 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 
 ### 3.2 工作流（以深度研究为例）
 
-六步：① 澄清访谈（`no-interview` 前缀可跳过）→ ② 主题分解与方案对齐（`light-research`
-前缀只取前两个）→ ③ 每侧面一个 worker 并行/顺序
-调研（按 `references/tool-selection.md` 选择工具，收集标识符）→ ④ 汇总为
-`reports/<TOPIC>/final_report.md`（编号引用 + 文献表）→ ⑤ 默认渲染
-`final_report.html`（`no-html` 前缀跳过）→ ⑥ 交付。Worker 契约见
+① 澄清访谈（`no-interview` 前缀可跳过）→ ② 主题分解为 2–5 个侧面并与
+用户对齐研究方案（`light-research` 前缀只取前两个）→ ③ 把研究方案落盘为
+`reports/<TOPIC>/plan.md` → ④ 每侧面一个 worker——宿主提供子代理/Task
+工具时**必须并行派发**——每个 worker 按 `references/tool-selection.md`
+查询 biomcp，把每条可引用来源追加进
+`reports/<TOPIC>/evidence/<aspect>.jsonl`（逐字复制工具字段、绝不编造），
+写出带引用键标记的侧面笔记，并通过逐侧面 `check --markers` 完成门禁 →
+⑤ 编排者以同样的 `[@key]` 标记汇总 `final_report.draft.md` → ⑤a 合并
+各侧面账本为 `evidence/sources.jsonl` 并对文章记录做 NCBI esummary
+核验（只补缺失字段）→ ⑤b `render` 统一编号并生成参考文献表（唯一编号
+权威；有未解析键则硬失败）→ ⑤c `vet-references.py` 审计渲染后报告
+（离线结构审计 + 独立 NCBI 核验）→ ⑥ 交付 `final_report.md` 与默认开启
+的 `final_report.html`（`no-html` 前缀跳过）。Worker 契约见
 `skills/bioresearcher-deep-research/references/worker-protocol.md`
 （不重委派、不编造、不回退内部知识、每条论断带引用）。
 
@@ -131,7 +145,7 @@ MCP 服务器本身的文档另见 [MCP 文档](./mcp.zh.md)。
 
 | 技能 | 输出 |
 |---|---|
-| deep-research | `reports/<TOPIC>/final_report.md` + `final_report.html`（默认开）+ 各侧面文件 + （免访谈降级时）`assumptions.md` |
+| deep-research | `reports/<TOPIC>/plan.md` + `evidence/<aspect>.jsonl`（逐侧面账本）+ `evidence/sources.jsonl`（合并 + 已核验）+ 引用键草稿 `final_report.draft.md` + 渲染后 `final_report.md`（编号引用 + 生成的参考文献表）+ `final_report.html`（默认开）+ 各侧面笔记 +（免访谈降级时）`assumptions.md` |
 | plot-making | `figures/<主题>/figN.*.pdf/.svg/.png` + `LEGENDS.md` + QA 审计 JSON（`*.alignment.json` 等） |
 | pubmed-weekly | `combined.xlsx`（`PubMed Articles` 与 `Deleted PMIDs` 两个 sheet） |
 | python-setup-uv | 项目本地 `.venv/`（uv 管理） |
@@ -150,7 +164,7 @@ Claude Code 插件内置 `bioresearcher-dr-worker`（`.claude-plugin/agents/`）
 
 | 宿主 | 技能 | MCP | 备注 |
 |---|---|---|---|
-| opencode | ✅ 项目级 `.opencode/skills/` | ✅ `opencode.json` | 本仓库 Demo 的实证宿主（v1.18.29） |
+| opencode | ✅ 项目级 `.opencode/skills/` | ✅ `opencode.json` | 本仓库 Demo 的实证宿主（v1.18.30；保留的 2026-09-06 pubmed-weekly 采集运行于 v1.18.29） |
 | Claude Code | ✅ 插件或 `.claude/skills/` | ✅ 插件捆绑 / `.mcp.json` | 插件额外提供 dr-worker 并行扇出 |
 | Codex / Cursor / Gemini CLI | ✅ `.codex/skills/` / `.cursor/` / `.gemini/skills/` | ✅ 各自 MCP 配置 | Gemini 亦可 `gemini skills install <repo>`（预览通道命令） |
 | ZCode / Pi / CodeBuddy | ✅ | ✅ | 由 onboard 技能注册 |
@@ -210,54 +224,71 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 ## 6. 应用案例与 Demo
 
-所有案例为 `demos/run-demo.mjs` 驱动的**真实运行**（opencode v1.18.29；
-被测 skills 树钉扎于提交 `3380cc6`，见各 `provenance.json`），非手写示例。每个目录含：双语 README、会话记录
+所有案例为 `demos/run-demo.mjs` 驱动的**真实运行**（opencode v1.18.30），
+非手写示例。2026-09-11 刷新重跑了 6.2/6.3/6.4 与 MCP 探针（被测对象为
+deep-research **1.7.0** + biomcp **1.4.0**，提交 `d818c85`，见各
+`provenance.json`）；6.5 保留 2026-09-06 原始运行（提交 `3380cc6`）；
+6.6 同样保留 2026-09-06 原始会话（仅因发布 glob 修正而重新发布——提示词
+与校验未变；其溯源同时记录原始运行字段与重新发布说明）——两者技能未变、
+溯源信息自洽。每个目录含：双语 README、会话记录
 `transcript.md`、客观校验 `result.json`、溯源 `provenance.json` 与产出文件。
 
 ### 6.1 案例总览表
 
 | 案例 | 语言 | 结果 | 耗时 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|---|
-| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-en) |
-| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-zh) |
-| 6.4 访谈优先 | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-interview-en) |
+| 6.2 深度研究（BRCA1 DNA 修复调研） | EN | PASS（rubric 裁定 SATISFIED） | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-en) |
+| 6.3 深度研究（肿瘤免疫治疗综述） | ZH | PASS（rubric 裁定 SATISFIED） | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-deep-research-zh) |
+| 6.4 访谈优先 | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-interview-en) |
 | 6.5 PubMed 周更解析 | EN | PASS（rubric 裁定 SATISFIED） | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-plot-making-en) |
+| 6.6 发表级结构生物学绘图 | EN | PASS（rubric 裁定 SATISFIED） | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/agent-plot-making-en) |
 | 6.7 文档化案例（WorkBuddy / onboard） | ZH/EN | —（非运行） | — | 见 6.7 小节 |
 
 （仓库内浏览请用相对路径 `../artifacts/<案例名>/`。）
 
 ### 6.2 案例：深度研究（英文，并行扇出）
 
-**提示词**：`no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.`
+**提示词**：`no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Keep it to at most 2 research aspects and at most 10 biomcp tool calls per aspect worker. Cite sources with PMIDs.`
 
 智能体加载技能 → 冒烟测试 MCP 连接（`biomcp_gene_search`）→ **两个 Task
-子代理并行**分别调研「HR 机制前沿」与「PARPi 临床转化」→ 汇总渲染
-`final_report.html`。客观校验：技能加载 ≥1、PMID 出现在最终回答、
-HTML 产出在工具输出中出现、（直接或经 worker 的）文献检索发生。
-产出：[final_report.md](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair/final_report.md)
+子代理并行**（"BRCA1 HR mechanisms" 与 "BRCA1 PARPi resistance"）——各自
+把来源追加进逐方面证据账本并通过 `check --markers` 完成门禁 → 编排者合并
+并 NCBI 核验账本（`sources.jsonl`：34 条，33/33 个标记全部解析）、以 `[@pmid:...]` 引用键起草、
+`render` 统一编号 30 处引用并生成 Vancouver 参考文献表（来源提供时含卷/期/页码）、
+`vet-references.py` 结构审计通过、渲染交互式 HTML 报告。客观校验：技能
+加载 ≥1；Task 派发 ≥1；工具输出中出现账本键（`pmid:...`）；
+`[evidence-ledger] render:` 成功横幅；`[vet-references] Structural
+audit: PASS`；最终回答含 PMID；`final_report.html` 产出。
+产出：[final_report.md](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/final_report.md)
+· [引用键草稿](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/final_report.draft.md)
+· [合并账本](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/evidence/sources.jsonl)
 · [渲染截图](../artifacts/agent-deep-research-en/screenshots/final_report-top.jpg)
 · [会话记录](../artifacts/agent-deep-research-en/transcript.md)
 
 ### 6.3 案例：深度研究（中文提问，中文报告）
 
-**提示词**：`no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的多方面文献综述并附引用。请用中文撰写报告，引用使用 PMID。`
-（基于 WorkBuddy 连接器的中文示例语料扩展：显式指定技能、中文撰写与
-PMID 引用。）
+**提示词**：`no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的文献综述并附引用。最多 2 个研究方面，每个方面的工作节点最多调用 10 次 biomcp 工具。请用中文撰写报告，引用使用 PMID。`
+（基于 WorkBuddy 连接器的中文示例语料扩展：显式指定技能、中文撰写、PMID
+引用与调用预算。）
 
-智能体检索英文数据源，以中文产出《肿瘤免疫治疗多方面文献综述》（执行摘要、
-检查点抑制剂与细胞治疗两个侧面、统一文献表，PMID 编号引用）。
+两个中文标题的并行 worker（"ICB 文献研究 worker"、"CAR-T 文献研究
+worker"）从英文数据源构建账本；`render` 从合并账本统一编号 52 处引用，
+`vet-references.py` 审计通过。报告以中文撰写（执行摘要、检查点抑制剂与
+CAR-T 两个侧面），引用英文来源并附 PMID。
 额外校验：最终回答必须包含中文（正则 `[\u4e00-\u9fff]`）。
 产出：[final_report.md](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/final_report.md)
+· [引用键草稿](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/final_report.draft.md)
+· [合并账本](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/evidence/sources.jsonl)
 · [渲染截图](../artifacts/agent-deep-research-zh/screenshots/final_report-top.jpg)
 
 ### 6.4 案例：访谈优先（先问后做）
 
 **提示词**：`Using the bioresearcher-deep-research skill, run a deep research report on CAR-T therapy safety in solid tumors.`（无前缀。）
 
-非交互 `--auto` 模式下，智能体仍先集中提出澄清问题、**未启动任何检索**
-（校验：最终回答含 `?`；不含 `final_report`；`article_search` /
-`trial_search` / `gene_get` 均未被调用）。这是「访谈优先」特性的回归证据。
+非交互 `--auto` 模式下，智能体仍先集中提出澄清问题、**未启动任何检索与
+脚本**（校验：最终回答含 `?`；不含 `final_report`；`article_search` /
+`trial_search` / `gene_get` 均未被调用；`bash` 调用数为 0——账本脚本与
+渲染只在方案确认后开始）。这是「访谈优先」特性的回归证据。
 产出：[transcript.md](../artifacts/agent-interview-en/transcript.md)
 
 ### 6.5 案例：PubMed 周更解析
@@ -309,8 +340,12 @@ WorkBuddy 连接器另附官方中文描述与中文示例语料。
 可以，见 4.5 宿主矩阵与第 5 章对应渠道。
 
 **Q4：智能体会编造文献吗？**
-深度研究契约禁止回退内部知识：每条论断需带编号引用（PMID/DOI/NCT/专利号），
-证据缺失必须显式说明；worker 查询失败记「证据缺口」后继续。
+不会——而且不只靠约定。deep-research 1.5+ 的引用链路全程以键为准：
+worker 把每条可引用来源追加进证据账本，草稿以 `[@pmid:...]` 引用键撰写，
+`render` 脚本是唯一编号权威（任何没有账本记录的键都会硬失败）；
+`vet-references.py` 再对渲染后报告做终审（[1]..[N] 连续、N 与文献表条数
+一致、NCBI esummary 交叉核验）。手工拼装参考文献在结构上不可能；证据
+缺失显式说明，查询失败记「证据缺口」。
 
 **Q5：中国大陆网络环境能否使用？**
 可以。onboard/uv 技能与 WorkBuddy 连接器均支持 npmmirror/国内镜像；上游
@@ -326,8 +361,9 @@ GitHub 不渲染仓库内 HTML。请看每个案例的 `screenshots/` 截图，�
 本地打开；HTML 原文件在 `outputs/` 中。
 
 **Q8：Demo 会花多少 token / 时间？**
-实测（opencode v1.18.29）：访谈案例 23 s；PubMed 解析 56 s；深度研究英文
-515 s、中文 814 s；结构绘图（含装依赖）1064 s。复现命令见 `demos/README.md`；
+实测（opencode v1.18.30，deep-research 1.7.0 并行派发）：访谈案例 33 s；
+PubMed 解析 56 s（2026-09-06 运行）；深度研究英文 545 s、中文 649 s；
+结构绘图（含装依赖）1064 s（均为 2026-09-06 运行）。复现命令见 `demos/README.md`；
 MCP 直连探针不耗 token。
 
 **Q9：插件与手动注册的 MCP 会冲突吗？**

@@ -1,12 +1,14 @@
 {
   "test": "agent-deep-research-zh",
   "rep": 1,
-  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-deep-research-zh/20260906-141051-r1",
-  "reused": false,
-  "outcome": "PASS",
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-deep-research-zh/20260911-214453-r1",
+  "reused": true,
+  "outcome": "PASS*",
   "reason": null,
-  "rubricPending": false,
-  "rubricFlags": [],
+  "rubricPending": true,
+  "rubricFlags": [
+    "verify-citation-pipeline-artifacts (inspect reports/<TOPIC>/final_report.draft.md, final_report.md and evidence/sources.jsonl): (a) the draft still contains [@key] cite-key markers - proof it was authored key-based, never hand-numbered; (b) the References section is ledger-generated Vancouver style (consistent author initials, journal, year, PMID/DOI per entry); (c) in-text citations are contiguous [1]..[N] numbered by order of first appearance."
+  ],
   "checks": [
     {
       "type": "tool_count",
@@ -15,57 +17,67 @@
       "detail": "count=1 of \"skill\"; bounds [1, inf]"
     },
     {
-      "type": "group",
-      "desc": "the survey ran article searches — directly, or via parallel Task workers whose outputs cite PMIDs",
+      "type": "tool_count",
+      "desc": "parallel worker dispatch (Tier A/B) is mandatory when a subagent tool exists (deep-research 1.7.0 Step 4)",
       "status": "pass",
-      "detail": "anyOf matched: arm1[fail] tool_seq subsequence not matched; biomcp stream: biomcp_gene_search:completed; arm2[pass] allOf matched: arm1[pass] count=2 of \"task\"; bounds [1, inf]; arm2[pass] regex \"PMID\" on \"tool:task\" (1023 chars)",
-      "arms": [
-        {
-          "type": "tool_seq",
-          "desc": null,
-          "status": "fail",
-          "detail": "tool_seq subsequence not matched; biomcp stream: biomcp_gene_search:completed"
-        },
-        {
-          "type": "group",
-          "desc": null,
-          "status": "pass",
-          "detail": "allOf matched: arm1[pass] count=2 of \"task\"; bounds [1, inf]; arm2[pass] regex \"PMID\" on \"tool:task\" (1023 chars)",
-          "arms": [
-            {
-              "type": "tool_count",
-              "desc": null,
-              "status": "pass",
-              "detail": "count=2 of \"task\"; bounds [1, inf]"
-            },
-            {
-              "type": "text",
-              "desc": null,
-              "status": "pass",
-              "detail": "regex \"PMID\" on \"tool:task\" (1023 chars)"
-            }
-          ]
-        }
-      ]
+      "detail": "count=2 of \"task\"; bounds [1, inf]"
+    },
+    {
+      "type": "text",
+      "desc": "tier-independent literature proof: ledger keys (add echo / check stdout) contain line-start pmid: entries - live dispatch runs keep article_search inside worker streams, invisible to the parent log",
+      "status": "pass",
+      "detail": "regex \"(^|\\\\n)pmid:\\\\d+\" on \"tool:*\" (326570 chars)"
+    },
+    {
+      "type": "text",
+      "desc": "render verb success banner: the numbering authority generated the citations + References section (FAILED banners must not match)",
+      "status": "pass",
+      "detail": "regex \"\\\\[evidence-ledger\\\\] render: \\\\d+ citation\\\\(s\\\\) numbered\" on \"tool:*\" (100681 chars)"
+    },
+    {
+      "type": "text",
+      "desc": "the Step 5c offline structural audit passed: contiguous [1]..[N], N == bibliography count, zero placeholders",
+      "status": "pass",
+      "detail": "regex \"\\\\[vet-references\\\\] Structural audit: PASS\" on \"tool:*\" (100681 chars)"
     },
     {
       "type": "text",
       "desc": null,
       "status": "pass",
-      "detail": "regex \"PMID\" on \"final\" (647 chars)"
+      "detail": "regex \"PMID\" on \"final\" (773 chars)"
     },
     {
       "type": "text",
       "desc": "final answer must contain Chinese text (zh prompt => zh report)",
       "status": "pass",
-      "detail": "regex \"[\\\\u4e00-\\\\u9fff]\" on \"final\" (647 chars)"
+      "detail": "regex \"[\\\\u4e00-\\\\u9fff]\" on \"final\" (773 chars)"
     },
     {
       "type": "text",
       "desc": "HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output",
       "status": "pass",
-      "detail": "regex \"final_report\\\\.html\" on \"tool:*\" (75850 chars)"
+      "detail": "regex \"final_report\\\\.html\" on \"tool:*\" (100681 chars)"
+    },
+    {
+      "type": "rubric",
+      "desc": null,
+      "status": "manual",
+      "detail": "unadjudicated rubric flag: verify-citation-pipeline-artifacts (inspect reports/<TOPIC>/final_report.draft.md, final_report.md and evidence/sources.jsonl): (a) the draft still contains [@key] cite-key markers - proof it was authored key-based, never hand-numbered; (b) the References section is ledger-generated Vancouver style (consistent author initials, journal, year, PMID/DOI per entry); (c) in-text citations are contiguous [1]..[N] numbered by order of first appearance.",
+      "flag": "verify-citation-pipeline-artifacts (inspect reports/<TOPIC>/final_report.draft.md, final_report.md and evidence/sources.jsonl): (a) the draft still contains [@key] cite-key markers - proof it was authored key-based, never hand-numbered; (b) the References section is ledger-generated Vancouver style (consistent author initials, journal, year, PMID/DOI per entry); (c) in-text citations are contiguous [1]..[N] numbered by order of first appearance."
     }
   ],
-  "gradedAt": "2026-09-06T06:24:25.437Z"
+  "gradedAt": "2026-09-11T13:56:07.663Z",
+  "subagents": {
+    "note": "subagents/ already present (capture reused)",
+    "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-deep-research-zh/20260911-214453-r1"
+  },
+  "adjudications": [
+    {
+      "flag": "verify-citation-pipeline-artifacts",
+      "verdict": "SATISFIED",
+      "note": "final_report.draft.md carries 94 [@pmid:...] cite-key marker groups (rendered md has zero [@ leftovers); References section is ledger-generated Vancouver with journal/year/DOI/PMID per entry; in-text citations contiguous [1]..[52] with 52 matching reference entries; Chinese report text with English-source citations (ICB + CAR-T aspect ledgers unioned in evidence/sources.jsonl)",
+      "by": "demos author",
+      "at": "2026-09-11T14:21:20+00:00"
+    }
+  ]
 }

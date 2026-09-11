@@ -1,19 +1,19 @@
 {
   "artifactLang": "en",
   "fanout": {
-    "en": "Parallel fan-out via the harness Task tool (2 subagent workers in the transcript)",
-    "zh": "经宿主 Task 工具并行扇出（会话记录中有 2 个子代理工作节点）"
+    "en": "Parallel fan-out via the harness Task tool (2 subagent workers, captured live from the opencode session DB)",
+    "zh": "经宿主 Task 工具并行扇出（2 个子代理工作节点，实时捕获自 opencode 会话库）"
   },
   "findings": {
     "en": [
       "Loaded the deep-research skill and smoke-tested the MCP connection (biomcp_gene_search) before any research.",
-      "Fanned out two parallel Task workers: HR mechanism frontier + PARPi clinical translation; both wrote cited aspect files.",
-      "Synthesized final_report.md with numbered citations and rendered final_report.html (default-on) — PMIDs cited throughout."
+      "Fanned out two parallel Task workers (BRCA1 HR mechanisms + BRCA1 PARPi resistance); each appended every citable source to a per-aspect evidence ledger and passed the check --markers completion gate.",
+      "Orchestrator merged + NCBI-verified the ledgers (sources.jsonl: 34 records, 33/33 markers resolved), drafted with [@pmid:...] cite-key markers; render numbered all 30 citations and generated the Vancouver References with citation locators (volume/issue/pages) wherever the source provides them; vet-references structural audit PASS; interactive HTML rendered by default."
     ],
     "zh": [
       "加载深度研究技能，并在开题前用 biomcp_gene_search 冒烟测试 MCP 连接。",
-      "两个 Task 子代理并行工作：「HR 机制前沿」与「PARPi 临床转化」，各自写出带引用的方面文件。",
-      "汇总为带编号引用的 final_report.md 并默认渲染 final_report.html——全文引用 PMID。"
+      "两个 Task 子代理并行工作（「BRCA1 HR 机制」与「BRCA1 PARPi 耐药」）；各自把可引用来源追加进逐方面证据账本，并通过 check --markers 完成门禁。",
+      "编排者合并并 NCBI 核验账本（sources.jsonl：34 条，33/33 个标记全部解析），以 [@pmid:...] 引用键起草；render 统一编号 30 处引用并生成 Vancouver 参考文献（来源提供时含卷/期/页码）；vet-references 结构审计 PASS；默认渲染交互式 HTML。"
     ]
   },
   "evidence": {

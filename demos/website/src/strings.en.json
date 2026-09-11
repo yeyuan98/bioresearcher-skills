@@ -155,11 +155,11 @@
       },
       {
         "q": "Can the agent fabricate references?",
-        "a": "The deep-research contract forbids internal-knowledge fallback: every claim needs a numbered citation (PMID/DOI/NCT/patent ID), missing evidence is stated, and failed queries are recorded as evidence gaps."
+        "a": "No — and not merely by instruction. Since deep-research 1.5+ the citation pipeline is key-based end-to-end: workers append every citable source to an evidence ledger, the draft is authored with [@pmid:...] cite-key markers, and the render script is the single numbering authority (it hard-fails on any key without a ledger record); an independent auditor then re-checks the rendered report (contiguous [1]..[N], NCBI cross-check). Hand-assembled bibliographies are structurally impossible."
       },
       {
         "q": "How many tokens / how long do runs take?",
-        "a": "Measured (opencode 1.18.29): interview 23 s; PubMed parse 56 s; deep research EN 515 s / ZH 814 s; structural figure incl. dependency install 1064 s. The MCP probes are token-free."
+        "a": "Measured (opencode 1.18.30, deep-research 1.7.0 with parallel dispatch): interview 33 s; PubMed parse 56 s; deep research EN 545 s / ZH 649 s; structural figure incl. dependency install 1064 s. The MCP probes are token-free."
       },
       {
         "q": "What about data privacy?",
@@ -215,7 +215,7 @@
   },
   "demos": {
     "title": "Demo cases",
-    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.29; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
+    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.30; refreshed 2026-09-11 against deep-research 1.7.0 + biomcp 1.4.0; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
     "htmlNote": "The embedded reports below are the byte-exact HTML artifacts committed to the repo — the site renders the original files, it does not re-render them.",
     "replayAll": "Replay guide and artifact index:",
     "pass": "PASS",

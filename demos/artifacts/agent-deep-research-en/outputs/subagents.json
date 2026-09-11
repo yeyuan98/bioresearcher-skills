@@ -1,0 +1,76 @@
+{
+  "extractedAt": "2026-09-11T13:41:28.473Z",
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-deep-research-en/20260911-213213-r1",
+  "dbPath": "/home/administrator/.local/share/opencode/opencode.db",
+  "parentSessions": [
+    "ses_f6f54c9c3ffe3sVE5ybliJ4YW4"
+  ],
+  "sessions": [
+    {
+      "id": "ses_f6f535326ffeTd6whQUi58G2Ww",
+      "parentID": "ses_f6f54c9c3ffe3sVE5ybliJ4YW4",
+      "agent": "general",
+      "title": "Aspect 1: BRCA1 HR mechanisms (@general subagent)",
+      "timeCreated": 1789133630681,
+      "timeUpdated": 1789133980864,
+      "durationMs": 350183,
+      "messages": 21,
+      "parts": 94,
+      "toolHistogram": {
+        "biomcp_article_search:completed": 6,
+        "bash:completed": 10,
+        "grep:completed": 1,
+        "biomcp_article_get:completed": 1,
+        "write:completed": 1
+      },
+      "tokensTotal": 1099006,
+      "textChars": 56670,
+      "evidenceLedgerBanners": [
+        "[evidence-ledger] add: 6 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/hr_mechanisms.jso",
+        "[evidence-ledger] add: derived keys: pmid:41935526, pmid:41512859, pmid:41484372, pmid:41394680, pmid:40548939, pmid:398",
+        "[evidence-ledger] add: 3 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/hr_mechanisms.jso",
+        "[evidence-ledger] add: derived keys: pmid:38985307, pmid:40153609, pmid:41134662",
+        "[evidence-ledger] add: 5 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/hr_mechanisms.jso",
+        "[evidence-ledger] add: derived keys: pmid:42581048, pmid:42401588, pmid:42581301, pmid:42475683, pmid:41463377",
+        "[evidence-ledger] add: 1 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/hr_mechanisms.jso",
+        "[evidence-ledger] add: derived keys: pmid:37638744",
+        "[evidence-ledger] add: derived keys: pmid:41917467",
+        "[evidence-ledger] check: 15 record(s) across 1 type(s) (article:15); quarantined 0; OK",
+        "[evidence-ledger] check: markers: 0 problem(s) across 1 file(s); OK"
+      ]
+    },
+    {
+      "id": "ses_f6f530bdeffeycW3155fEKWjmK",
+      "parentID": "ses_f6f54c9c3ffe3sVE5ybliJ4YW4",
+      "agent": "general",
+      "title": "Aspect 2: BRCA1 PARPi resistance (@general subagent)",
+      "timeCreated": 1789133648929,
+      "timeUpdated": 1789133916590,
+      "durationMs": 267661,
+      "messages": 19,
+      "parts": 85,
+      "toolHistogram": {
+        "biomcp_article_search:completed": 5,
+        "bash:completed": 7,
+        "biomcp_trial_search:completed": 1,
+        "write:completed": 1,
+        "edit:completed": 3
+      },
+      "tokensTotal": 971107,
+      "textChars": 39196,
+      "evidenceLedgerBanners": [
+        "[evidence-ledger] add: 8 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/parpi_resistance_",
+        "[evidence-ledger] add: derived keys: pmid:41686836, pmid:42590926, pmid:42451670, pmid:42314345, pmid:42283711, pmid:422",
+        "[evidence-ledger] add: 5 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/parpi_resistance_",
+        "[evidence-ledger] add: derived keys: pmid:42490812, pmid:42116135, pmid:42465024, pmid:41243967, pmid:41900841",
+        "[evidence-ledger] add: 4 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/parpi_resistance_",
+        "[evidence-ledger] add: derived keys: pmid:39985088, pmid:40392598, pmid:38989145, pmid:41772736",
+        "[evidence-ledger] add: 2 record(s) accepted, 0 rejected -> reports/brca1_dna_repair_landscape/evidence/parpi_resistance_",
+        "[evidence-ledger] add: derived keys: nct:NCT04090567, nct:NCT05378204",
+        "[evidence-ledger] check: 19 record(s) across 2 type(s) (article:17, trial:2); quarantined 0; OK",
+        "[evidence-ledger] check: markers: 0 problem(s) across 1 file(s); OK"
+      ]
+    }
+  ],
+  "error": null
+}

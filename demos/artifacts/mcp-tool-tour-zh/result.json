@@ -1,7 +1,7 @@
 {
   "test": "mcp-tool-tour-zh",
   "rep": 1,
-  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/mcp-tool-tour-zh/20260906-133313-r1",
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/mcp-tool-tour-zh/20260911-213057-r1",
   "reused": false,
   "outcome": "PASS",
   "reason": null,
@@ -39,5 +39,5 @@
       "detail": "ok (no isError, all expectations matched)"
     }
   ],
-  "gradedAt": "2026-09-06T05:33:22.485Z"
+  "gradedAt": "2026-09-11T13:31:08.701Z"
 }
