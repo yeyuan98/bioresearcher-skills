@@ -182,7 +182,7 @@ attempt 3: alternate tool/source (see references/tool-selection.md routing)
 - Launch workers in parallel in batches of up to 5.
 - Track each aspect in the todo list; mark complete when its output file
   exists with cite-key markers throughout AND its evidence ledger file
-  exists, passes `check` (exit 0), and covers every cited key.
+  exists, passes `check --markers` (exit 0), and covers every cited key.
 - If a worker fails or stalls, restart it (same prompt), max 3 restarts.
 - Tell the user up front: "If subagents are stuck without progress for too
   long, interrupt and ask me to resume work."
