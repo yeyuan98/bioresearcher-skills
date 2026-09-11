@@ -98,9 +98,10 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
 - Repo SKILL.md files stay strict-6; WorkBuddy-required frontmatter keys are
   added to STAGED copies only by
   `scripts/ci/build-connector-workbuddy.mjs`.
-- Icon source of truth: `connector/workbuddy/icon.jpg` (512x512 JPG
-  prepared from the uncommitted logo master; provenance + prep command in
-  docs/connector-workbuddy.md).
+- Icon source of truth: `connector/workbuddy/icon.png` (512x512 PNG
+  with anti-aliased transparency, prepared from the uncommitted logo master;
+  provenance + prep command in docs/connector-workbuddy.md; satisfies
+  WorkBuddy audit rule F4).
 - No credentials, tokens, or real API keys in any connector file.
 
 ## OpenCode connector / plugin

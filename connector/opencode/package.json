@@ -1,6 +1,6 @@
 {
   "name": "opencode-bioresearcher",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "description": "Biomedical research plugin for OpenCode: biomcp MCP server tools, scientific plotting skills, and deep-research subagent",
   "type": "module",
   "main": "index.js",
