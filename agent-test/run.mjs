@@ -1293,16 +1293,19 @@ function evalCheck(check, parsed, subParsed) {
       return result(check, "error", `invalid scope ${JSON.stringify(check.scope)} (parent|subagents|all)`);
     }
     if (scope === "parent") return fn(check, parsed, subParsed);
-    if (!subParsed?.available) {
-      return result(check, "fail", `scope "${scope}" requires subagent capture, none available (${subParsed?.reason ?? "subagents/ absent"}); run live or use --extract-subagents`);
+    if (scope === "subagents" && !subParsed?.available) {
+      return result(check, "fail", `scope "subagents" requires subagent capture, none available (${subParsed?.reason ?? "subagents/ absent"}); run live or use --extract-subagents`);
     }
+    const subEvents = subParsed?.available ? subParsed.events : [];
+    const subCalls = subParsed?.available ? subParsed.toolCalls : [];
+    const subTexts = subParsed?.available ? subParsed.texts : [];
     const eff = scope === "subagents"
-      ? { events: subParsed.events, parsedCount: subParsed.events.length, toolCalls: subParsed.toolCalls, texts: subParsed.texts, endsWithStop: true, apiError: null }
+      ? { events: subEvents, parsedCount: subEvents.length, toolCalls: subCalls, texts: subTexts, endsWithStop: true, apiError: null }
       : {
-          events: [...parsed.events, ...subParsed.events],
-          parsedCount: parsed.parsedCount + subParsed.events.length,
-          toolCalls: [...parsed.toolCalls, ...subParsed.toolCalls].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
-          texts: [...parsed.texts, ...subParsed.texts],
+          events: [...parsed.events, ...subEvents],
+          parsedCount: parsed.parsedCount + subEvents.length,
+          toolCalls: [...parsed.toolCalls, ...subCalls].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
+          texts: [...parsed.texts, ...subTexts],
           endsWithStop: parsed.endsWithStop,
           apiError: parsed.apiError,
         };

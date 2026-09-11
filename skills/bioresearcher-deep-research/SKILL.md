@@ -143,6 +143,11 @@ run the sequential tier below without fabrication - evidence gathering is
 unavailable until the server is wired (run the `bioresearcher-onboard`
 skill or see Prerequisites).
 
+**Tier dispatch hierarchy:** When a subagent tool (`task` or `Task`) is
+available in the harness, parallel worker dispatch (Tier A or Tier B) is
+MANDATORY to maintain research parallelism and isolated worker contexts.
+Tier C is strictly a degraded fallback when no subagent tool exists.
+
 **Tier A - dedicated worker subagent (preferred when available):** if the
 harness offers the `bioresearcher-dr-worker` subagent type (installed with
 the bioresearcher Claude Code plugin; scoped name
@@ -182,8 +187,9 @@ Record finished workers via the todo list. If subagents are stuck without
 progress for too long, prompt the user: "If subagents are stuck without
 progress for too long, interrupt and ask me to resume work."
 
-**Tier C - sequential (no subagent tool):**
-Process aspects one at a time in the main conversation per `references/worker-protocol.md`.
+**Tier C - sequential (strictly when no subagent tool exists):**
+If the harness has no subagent tool (`task` / `Task`), process aspects one at a
+time in the main conversation per `references/worker-protocol.md`.
 
 **Worker completion gate (all tiers):**
 When each worker finishes, before marking the aspect complete in the todo list, run:
