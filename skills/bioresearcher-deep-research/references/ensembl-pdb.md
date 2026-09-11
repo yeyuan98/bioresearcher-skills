@@ -132,3 +132,5 @@ Structure workflow:
   the workspace matters.
 - Chain ensembl_lookup -> gene_get for human annotation; ensembl_region ->
   variant_get for variant detail; pdb citation sections -> article_get.
+  Never copy `summary.title` (structure title) or `summary.authors` (depositors)
+  into `article` records; deposition titles and authors belong to the coordinate entry.

@@ -68,6 +68,8 @@ QUESTION TYPE
 ├─ Orthologues / consequences / regions / structures
 │   → ensembl_lookup / ensembl_homology / ensembl_consequence / ensembl_region
 │   → pdb (query | pdb_id | pdb_id+download)
+│      - Cite structure: dataset [@pdb:XXXX]
+│      - Cite paper: chain summary.pmid -> article_get(pmid) -> article [@pmid:XXXX]
 │   → details: references/ensembl-pdb.md
 │
 ├─ Ambiguous / multi-entity free text ("BRAF V600E melanoma")

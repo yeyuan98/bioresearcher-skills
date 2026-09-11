@@ -18,6 +18,7 @@ TOPIC: <TOPIC>
 YOUR RESEARCH FOCUS: <RESEARCH-ASPECT>
 DESCRIPTION: <ABSTRACT>
 SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
+EXECUTION RULE: Do NOT read or inspect evidence-ledger.py or other skill scripts; all schemas and commands are fully specified here.
 ```
 
 - ABSTRACT: <200 words describing the exact focus, a list of detailed
@@ -101,9 +102,10 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       {"schema":"bioresearcher-evidence/1","type":"gene","ids":{"ncbi_gene":"673","hgnc":"HGNC:1097"},"title":"B-Raf proto-oncogene, serine/threonine kinase","meta":{"symbol":"BRAF"},"url":"https://www.ncbi.nlm.nih.gov/gene/673","provenance":[...]}
       {"schema":"bioresearcher-evidence/1","type":"variant","ids":{"clinvar":"13961","rs":"rs113488022"},"title":"NM_004333.6(BRAF):c.1799T>A","meta":{"gene":"BRAF","protein_change":"V600E","significance":"Pathogenic"},"provenance":[...]}
       {"schema":"bioresearcher-evidence/1","type":"drug","ids":{"chembl":"CHEMBL1229517"},"title":"vemurafenib","meta":{"indication":"BRAF V600E-mutant melanoma","source_section":"FDA label (drug_get safety section)"},"provenance":[...]}
-      {"schema":"bioresearcher-evidence/1","type":"disease","ids":{"mondo":"MONDO:0002025"},"title":"Cutaneous melanoma","url":"https://monarchinitiative.org/MONDO:0002025","provenance":[...]}
-      {"schema":"bioresearcher-evidence/1","type":"dataset","ids":{"geo":"GSE12345"},"title":"Series title","provenance":[...]}
-      {"schema":"bioresearcher-evidence/1","type":"web","ids":{"url":"https://..."},"title":"Page Title","meta":{"organization":"FDA","accessed":"2026-09-10"},"provenance":[...]}
+       {"schema":"bioresearcher-evidence/1","type":"disease","ids":{"mondo":"MONDO:0002025"},"title":"Cutaneous melanoma","url":"https://monarchinitiative.org/MONDO:0002025","provenance":[...]}
+       {"schema":"bioresearcher-evidence/1","type":"dataset","ids":{"geo":"GSE12345"},"title":"Series title","provenance":[...]}
+       {"schema":"bioresearcher-evidence/1","type":"dataset","ids":{"pdb":"6N65"},"title":"KRAS G-quadruplex G16T mutant","meta":{"method":"X-RAY DIFFRACTION","resolution":"1.6 Å"},"url":"https://www.rcsb.org/structure/6N65","provenance":[...]}
+       {"schema":"bioresearcher-evidence/1","type":"web","ids":{"url":"https://..."},"title":"Page Title","meta":{"organization":"FDA","accessed":"2026-09-10"},"provenance":[...]}
       {"schema":"bioresearcher-evidence/1","type":"other","ids":{"url":"https://..."},"title":"Any other citable source (FDA page, guideline, ...)","provenance":[...]}
       ```
 
@@ -115,15 +117,32 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       take the standard retry ladder (rule 6), then leave the record in the
       ledger with a gap note in the aspect file - the orchestrator's verify
       step backfills what it can.
+    - PDB dual-entity discipline: when querying `pdb`, distinguish between
+      citing the macromolecular structure and citing the associated publication:
+      - To cite the published paper: set `type: "article"` with `ids.pmid` (or
+        `ids.doi`). NEVER copy `summary.title` (structure title) or
+        `summary.authors` (deposition list) from the PDB result into the
+        article record. Enrich via `article_get(pmid)` for canonical article
+        metadata, or leave title/authors null for orchestrator verification.
+      - To cite the 3D structure itself: set `type: "dataset"` with `ids.pdb:
+        "<PDB_ID>"` and `title: summary.title`. Canonical key derived:
+        `pdb:<PDB_ID>`. Marker: `[@pdb:<PDB_ID>]`.
     - With Bash available (the orchestrator provides `SKILL_DIR` in the
       prompt): append with
       `python3 <SKILL_DIR>/scripts/evidence-ledger.py add <file> --stdin`,
       substituting the SKILL_DIR value from your prompt LITERALLY - it is a
       path string, NOT an environment variable (`$SKILL_DIR` in a shell
-      resolves to nothing and breaks the call). Pass a JSON ARRAY of the
-      batch's records (a heredoc works well), or equivalently
-      `add <file> @<batch.json>` with an array file. Both validate,
-      normalize, and accept every record in one call, and the banner echoes
+      resolves to nothing and breaks the call). Pass records via a shell heredoc
+      or with an array/JSONL file (`add <file> @<batch.json>`):
+      ```bash
+      python3 <SKILL_DIR>/scripts/evidence-ledger.py add reports/<TOPIC>/evidence/<YOUR-FOCUS>.jsonl --stdin << 'EOF'
+      [
+        {"schema":"bioresearcher-evidence/1","type":"article","ids":{"pmid":"..."},"title":"...","provenance":[{"aspect":"<YOUR-FOCUS>","tool":"article_search","args":{},"retrieved_at":"<ISO>"}]}
+      ]
+      EOF
+      ```
+      (A JSON array `[...]`, a single JSON object `{...}`, or newline-delimited JSONL lines are all accepted by `--stdin` or `@<file>`).
+      Both validate, normalize, and accept every record in one call, and the banner echoes
       the derived canonical keys - cite those keys. Re-adding the same key
       MERGES fill-only (never overwrites a non-null value): later adds for
       the same source are safe and expected (e.g. enriching a record after a
@@ -136,9 +155,13 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
       timestamp. Fields the tool did not return stay null; values inferred
       from your own query parameters (e.g. a phase filter) may enter `meta`
       ONLY with the filter captured in `provenance.args` and the inference
-      disclosed in the report. Without Bash ONLY (e.g. the Claude plugin
-      worker): write raw JSONL lines with the Write tool; the orchestrator's
-      merge validates them.
+      disclosed in the report. When querying ClinicalTrials.gov
+      (`trial_search` / `biomcp_trial_search`), use exact uppercase underscore
+      enum values for `status`: `RECRUITING`, `ACTIVE_NOT_RECRUITING`,
+      `COMPLETED`, `TERMINATED` (commas or spaces in status trigger HTTP 400
+      Bad Request from ClinicalTrials.gov). Without Bash ONLY (e.g. the Claude
+      plugin worker): write raw JSONL lines with the Write tool and re-read the
+      ledger to match markers; the orchestrator validates via `check` upon return.
     - BEFORE reporting completion, run
       `python3 <SKILL_DIR>/scripts/evidence-ledger.py check <file> --markers <YOUR-FOCUS>.md` -
       it must exit 0: no quarantined lines, and every `[@key]` marker in
@@ -155,13 +178,28 @@ SKILL_DIR: <absolute skill dir>   # Tier B only; resolve before dispatch
 
 Aspect-file ownership is SERIALIZED, never concurrent: a top-up worker
 adopts the original worker's contract only after that worker has terminated.
-The orchestrator dispatches it with the prior worker's evidence-gaps list:
+The orchestrator dispatches it when `evidence-ledger.py check` fails or for evidence gaps:
 
-- Append to the SAME per-aspect ledger via `add` (upsert merge is safe).
-- Update the SAME aspect .md via read-then-targeted edits confined to the
-  gap sections - never rewrite unrelated content, other aspects, or the
-  orchestrator's draft.
+- Target scope: touch ONLY `reports/<TOPIC>/<ASPECT>.md` and
+  `reports/<TOPIC>/evidence/<ASPECT>.jsonl`. Never edit other aspects or the
+  synthesis draft.
+- For unresolved markers: fetch canonical metadata via biomcp (`article_get`,
+  `trial_get`) and append via `add`. If no valid source exists, remove or
+  qualify the claim in `<ASPECT>.md` and document the gap under `## Evidence Gaps`.
+  Never invent or guess cite-keys.
+- For quarantined lines: fix the JSON formatting in the ledger.
 - End with `check <file> --markers <aspect>.md` (exit 0) before reporting.
+
+### Remediation worker prompt template
+
+```md
+TOPIC: <TOPIC>
+YOUR RESEARCH FOCUS: <RESEARCH-ASPECT> (REMEDIATION)
+DIAGNOSTIC OUTPUT:
+<stdout and stderr from: evidence-ledger.py check reports/<TOPIC>/evidence/<ASPECT>.jsonl --markers reports/<TOPIC>/<ASPECT>.md>
+TASK: Resolve quarantined lines in reports/<TOPIC>/evidence/<ASPECT>.jsonl and fetch canonical metadata for unresolved markers via biomcp. Touch no other aspects or synthesis files. End with `evidence-ledger.py check` (must exit 0).
+SKILL_DIR: <absolute path to this skill's directory>
+```
 
 ## Retry ladder (per query)
 
