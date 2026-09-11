@@ -116,16 +116,23 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 以下全部来自 [mcp-tool-tour-en](../artifacts/mcp-tool-tour-en/README.md)
 与 [mcp-tool-tour-zh](../artifacts/mcp-tool-tour-zh/README.md) 的真实运行
-（响应为节选；完整样本见各目录 `outputs/capture.jsonl`）：
+（响应为节选——部分字段被裁剪、标题中的格式标签被去除以便阅读；每条
+样本标注其来源巡览；逐字节完整的配对见各目录 `outputs/capture.jsonl`）：
 
 **文献检索** `article_search` `{query:"BRCA1 DNA repair", limit:3}` →
 
 ```json
-[{"doi": "10.1042/BJ20141077",
-  "title": "Protein stability versus function: effects of destabilizing missense mutations on BRCA1 DNA repair activity.",
-  "authors": ["David C. A. Gaboriau", "P. Rowling", "C. Morrison", "L. Itzhaki"],
-  "journal": "Biochemical Journal", …}]
+[{"pmid": "37272060", "pmcid": "PMC10243389",
+  "doi": "10.1080/15476286.2023.2220210",
+  "title": "Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.",
+  "authors": ["Adamopoulos PG", "Athanasopoulou K", "…"],
+  "journal": "RNA Biol", "volume": "20", "issue": "1", "pages": "281-295",
+  "publication_date": "2023-01-01", "cited_by": 4, "is_open_access": true,
+  "source": "europepmc"}, …]
 ```
+
+（1.4.0 响应自带完整引用定位字段——卷 / 期 / 页码——深度研究的证据账本
+正是用它们渲染 Vancouver 参考文献。）
 
 **基因详情** `gene_get` `{symbol:"BRCA1", sections:["core"]}` →
 
@@ -142,12 +149,12 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
   "gnomad_af": 0.00000397994}]
 ```
 
-**临床试验** `trial_search` `{query:"BRAF melanoma", limit:3}` →
+**临床试验** `trial_search` `{query:"BRAF melanoma", limit:3}`（取自中文巡览）→
 
 ```json
-{"studies": [{"nct_id": "NCT01597908",
-  "title": "Dabrafenib Plus Trametinib vs Vemurafenib Alone in Unresectable or Metastatic BRAF V600E/K Cutaneous Melanoma",
-  "status": "COMPLETED", "interventions": ["DRUG: Dabrafenib", …]}, …]}
+{"studies": [{"nct_id": "NCT03415126",
+  "title": "A Study of ASN007 in Patients With Advanced Solid Tumors",
+  "status": "COMPLETED", "interventions": ["DRUG: ASN007: ascending doses", …]}, …]}
 ```
 
 **疾病本体** `disease_search` `{query:"melanoma", limit:3}` →
@@ -272,8 +279,8 @@ npx -y biomcp@1.4.0 doctor --client opencode   # 也支持 claude-code/codex/…
 
 | 场景 | 调用 | 结果 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|
-| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（43 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-en) |
-| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（9 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-zh) |
+| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（40 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/mcp-tool-tour-en) |
+| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（11 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/mcp-tool-tour-zh) |
 
 英文巡览验证 `tools/list` 暴露全部 41 个钉扎核心工具；每个调用的完整
 请求/响应（含断言）在 `outputs/capture.jsonl` 与 `transcript.md`。

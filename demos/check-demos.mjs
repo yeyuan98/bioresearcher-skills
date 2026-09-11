@@ -21,18 +21,32 @@
  *                   the vendored copy can never drift.
  *  5. scenarios   — scenario.json schema: id == dirname, kind, prompt/checks
  *                   (agent) or probe[] (mcp-probe), bilingual titles,
- *                   opencode.json present for agent kind.
+ *                   opencode.json present for agent kind; agent check specs
+ *                   validated against the 13-type grader contract (types,
+ *                   scope values, group arms, subagent_count bounds - the
+ *                   same validator class demos/run-demo.mjs applies before
+ *                   any token-spawning spawn).
  *  6. hermetic    — demos runtime code (*.mjs) never references agent-test/
  *                   paths (self-containment lint).
  *  7. caps        — committed demos/ tree <= 3 MiB and <= 150 files
  *                   (repo-lean policy; .runs/ and data/ excluded).
  *  8. artifacts   — every non-empty demos/artifacts/<dir>/ carries README.md,
- *                   transcript.md, result.json, provenance.json.
+ *                   transcript.md, result.json, provenance.json; and each
+ *                   provenance.json scenarioSha256 equals the sha256 of the
+ *                   CURRENT scenarios/<dir>/scenario.json (an artifact whose
+ *                   manifest was edited after capture is stale by
+ *                   definition - re-run --publish to refresh it).
+ *  9. permalinks  — same-repo GitHub permalinks in demos/ markdown resolve
+ *                   not only to paths that exist but to commit SHAs that
+ *                   exist in this repository (git cat-file; skipped
+ *                   gracefully outside a git checkout).
  */
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname, relative, resolve } from "node:path";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 const DEMOS = dirname(fileURLToPath(import.meta.url));
 const REPO = dirname(DEMOS);
@@ -84,6 +98,7 @@ function headingsOf(text) {
 }
 
 let linkCount = 0;
+const permalinkShas = new Set();
 for (const file of mdFiles) {
   const rel = relative(REPO, file);
   // Curated transcripts embed LLM-authored markdown verbatim: they are
@@ -114,11 +129,16 @@ for (const file of mdFiles) {
       if (/^[a-z]+:\/\//i.test(href) || href.startsWith("#") || href.startsWith("mailto:")) {
         // Same-repo absolute links: at least the path portion must exist in
         // the current tree (catches stale-tree permalinks 404ing by path).
-        const gm = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/[^/]+\/(.+?)(?:\/?#|$)/);
+        // Bare tree/<sha> links (no path) skip the path check but still
+        // contribute their SHA to the permalink-existence gate below.
+        const gm = href.match(/^https:\/\/github\.com\/yeyuan98\/bioresearcher-skills\/(?:tree|blob)\/([0-9a-f]{7,40})(?:\/(.+?))?(?:\/?#|$)/);
         if (gm) {
           linkCount++;
-          const target = join(REPO, decodeURIComponent(gm[1].split("#")[0]));
-          if (!existsSync(target)) fail("links", `${rel}: same-repo permalink path does not exist in this tree: ${href}`);
+          permalinkShas.add(gm[1]);
+          if (gm[2]) {
+            const target = join(REPO, decodeURIComponent(gm[2].split("#")[0]));
+            if (!existsSync(target)) fail("links", `${rel}: same-repo permalink path does not exist in this tree: ${href}`);
+          }
         }
         continue;
       }
@@ -136,6 +156,26 @@ for (const file of mdFiles) {
   }
 }
 if (mdFiles.length) ok("links", `${mdFiles.length} md file(s), ${linkCount} relative link(s) resolve, no duplicate headings`);
+
+/* ------------------------------------------------- gate 9: permalink commit SHAs */
+/* A permalink whose commit SHA is absent from the repository 404s on GitHub
+ * even though the path exists in the current tree (e.g. after a rebase
+ * rewrote the pack commit). Verify each referenced SHA resolves to a commit;
+ * skip gracefully outside a git checkout (tarball builds). */
+{
+  const shas = [...permalinkShas];
+  if (shas.length && existsSync(join(REPO, ".git"))) {
+    let verified = 0;
+    for (const sha of shas) {
+      const r = spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO, timeout: 15000 });
+      if (r.status === 0) verified++;
+      else fail("permalinks", `same-repo permalink commit ${sha} does not exist in this repository (rebased away? point the permalinks at a commit that is merged)`);
+    }
+    if (verified) ok("permalinks", `${verified}/${shas.length} distinct permalink commit SHA(s) resolve in this repository`);
+  } else if (shas.length) {
+    ok("permalinks", `skipped (${shas.length} SHA(s); no .git directory)`);
+  }
+}
 
 /* ---------------------------------------------------- gate 2: zh/en parity */
 
@@ -216,6 +256,49 @@ if (!existsSync(vendoredPath)) {
 
 /* --------------------------------------------------- gate 5: scenario schema */
 
+/* Mirror of demos/run-demo.mjs validateSpec (kept in sync deliberately: the
+ * runner cannot be imported here without executing it, so the validator is
+ * vendored the same way the biomcp registry is). Catches check typos in CI
+ * that would otherwise surface only during a token-spawning manual run. */
+const GRADER_CHECK_TYPES = new Set([
+  "tool_seq", "group", "text", "number_near", "text_number_count", "args", "args_rel",
+  "json_path", "tool_count", "no_such_tool", "status", "subagent_count", "rubric",
+]);
+function validateChecksSpec(spec) {
+  if (!Array.isArray(spec.checks)) return "checks must be an array";
+  const walk = (check, where) => {
+    if (!check || typeof check !== "object" || Array.isArray(check)) return `${where}: check is not an object`;
+    if (check.scope !== undefined && !["parent", "subagents", "all"].includes(check.scope)) {
+      return `${where}: invalid scope ${JSON.stringify(check.scope)} (parent|subagents|all)`;
+    }
+    if (check.type === "group") {
+      const hasAny = Array.isArray(check.anyOf);
+      const hasAll = Array.isArray(check.allOf);
+      if (hasAny === hasAll) return `${where}: group requires exactly one of anyOf|allOf (non-empty array)`;
+      const arms = hasAny ? check.anyOf : check.allOf;
+      for (let i = 0; i < arms.length; i++) {
+        const e = walk(arms[i], `${where}.arm${i + 1}`);
+        if (e) return e;
+      }
+      return null;
+    }
+    if (!GRADER_CHECK_TYPES.has(check.type)) return `${where}: unknown check type ${JSON.stringify(check.type)}`;
+    if (check.type === "subagent_count") {
+      if (check.min === undefined && check.max === undefined) return `${where}: subagent_count requires min and/or max`;
+      for (const k of ["min", "max"]) {
+        if (check[k] !== undefined && !Number.isInteger(check[k])) return `${where}: subagent_count ${k} must be an integer`;
+      }
+      if (check.agent !== undefined && typeof check.agent !== "string") return `${where}: subagent_count agent must be a string`;
+    }
+    return null;
+  };
+  for (let i = 0; i < spec.checks.length; i++) {
+    const e = walk(spec.checks[i], `checks[${i}]`);
+    if (e) return e;
+  }
+  return null;
+}
+
 const scenariosRoot = join(DEMOS, "scenarios");
 const scenarioDirs = existsSync(scenariosRoot)
   ? readdirSync(scenariosRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
@@ -238,6 +321,10 @@ for (const name of scenarioDirs) {
   if (kind === "agent") {
     if (typeof spec.prompt !== "string" || !spec.prompt) problems.push("missing prompt");
     if (!Array.isArray(spec.checks) || spec.checks.length === 0) problems.push("missing checks[]");
+    else {
+      const specErr = validateChecksSpec(spec);
+      if (specErr) problems.push(specErr);
+    }
     if (!existsSync(join(dir, "opencode.json"))) problems.push("missing opencode.json");
     if (Array.isArray(spec.publish?.outputs)) {
       for (const g of spec.publish.outputs) {
@@ -307,6 +394,7 @@ const artifactDirs = existsSync(artifactsRoot)
   : [];
 let artifactsOk = 0;
 let artifactsChecked = 0;
+const sha256OfFile = (f) => createHash("sha256").update(readFileSync(f)).digest("hex");
 for (const name of artifactDirs) {
   const dir = join(artifactsRoot, name);
   const files = walk(dir);
@@ -316,6 +404,24 @@ for (const name of artifactDirs) {
   const missing = need.filter((f) => !existsSync(join(dir, f)));
   if (missing.length) fail("artifacts", `${name}/ missing ${missing.join(", ")}`);
   else artifactsOk++;
+  // The captured run is pinned to the manifest bytes it was driven by; a
+  // mismatch means the scenario was edited after capture (stale artifact).
+  const provPath = join(dir, "provenance.json");
+  const manifestPath = join(scenariosRoot, name, "scenario.json");
+  if (existsSync(provPath) && existsSync(manifestPath)) {
+    let provSha = null;
+    try {
+      provSha = JSON.parse(readFileSync(provPath, "utf8")).scenarioSha256 ?? null;
+    } catch {
+      fail("artifacts", `${name}/provenance.json unparseable`);
+    }
+    if (provSha) {
+      const actualSha = sha256OfFile(manifestPath);
+      if (provSha !== actualSha) {
+        fail("artifacts", `${name}/ was captured against a DIFFERENT scenario.json (provenance ${provSha.slice(0, 12)}… != current ${actualSha.slice(0, 12)}…) — re-run with --publish to refresh the artifact`);
+      }
+    }
+  }
 }
 if (artifactsChecked) ok("artifacts", `${artifactsOk}/${artifactsChecked} artifact dir(s) complete`);
 

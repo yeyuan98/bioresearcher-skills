@@ -1,22 +1,22 @@
 {
   "id": "agent-deep-research-en",
   "kind": "agent",
-  "name": "Deep research: BRCA1 DNA repair survey with cited report",
+  "name": "Deep research: BRCA1 DNA repair survey with ledger-rendered citations",
   "title_en": "Deep research — BRCA1 DNA repair literature survey (English)",
   "title_zh": "深度研究——BRCA1 DNA 修复文献调研（英文）",
-  "summary_en": "The bioresearcher-deep-research skill interviews-free light path decomposes a topic, queries PubMed via the biomcp MCP server, and writes a cited Markdown + HTML report (reports/<topic>/final_report.md/.html).",
-  "summary_zh": "bioresearcher-deep-research 技能的免访谈轻量路径：分解主题、经 biomcp MCP 服务检索 PubMed、产出带编号引用的 Markdown + HTML 报告（reports/<topic>/final_report.md/.html）。",
+  "summary_en": "The bioresearcher-deep-research skill's interview-free light path decomposes a topic, dispatches parallel workers that append every citable source to a per-aspect evidence ledger, synthesizes a cite-key draft, then the ledger script renders the numbered citations + References (single numbering authority) and vet-references.py audits them - producing reports/<topic>/final_report.md and, by default, final_report.html.",
+  "summary_zh": "bioresearcher-deep-research 技能的免访谈轻量路径：分解主题、并行派发工作节点（把每条可引用来源追加到逐方面证据账本）、以引用键草稿汇总，再由账本脚本统一编号渲染引用与参考文献（唯一编号权威）并经 vet-references.py 审计——产出 reports/<topic>/final_report.md 及默认开启的 final_report.html。",
   "level": "L2",
   "lang": "en",
-  "purpose": "Flagship agent demo: deep-research skill + keyless biomcp MCP server; article_search-driven BRCA1 DNA repair survey citing PMIDs, default-on HTML rendering.",
-  "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.",
-  "timeoutMs": 900000,
+  "purpose": "Flagship agent demo: deep-research skill + keyless biomcp MCP server; evidence-ledger citation pipeline (worker ledgers -> merge/verify -> render -> vet) with default-on HTML rendering.",
+  "prompt": "no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Keep it to at most 2 research aspects and at most 10 biomcp tool calls per aspect worker. Cite sources with PMIDs.",
+  "timeoutMs": 2100000,
   "publish": {
     "outputs": [
-      "reports/**/final_report.md",
-      "reports/**/final_report.html",
-      "reports/**/assumptions.md",
-      "reports/**/README.md"
+      "reports/**/*.md",
+      "reports/**/*.html",
+      "reports/**/evidence/sources.jsonl",
+      "subagents.json"
     ]
   },
   "checks": [
@@ -26,24 +26,32 @@
       "min": 1
     },
     {
-      "type": "group",
-      "desc": "the survey ran article searches — directly, or via parallel Task workers whose outputs cite PMIDs",
-      "anyOf": [
-        {
-          "type": "tool_seq",
-          "seq": [
-            ["article_search", "*"]
-          ],
-          "mode": "subsequence"
-        },
-        {
-          "type": "group",
-          "allOf": [
-            { "type": "tool_count", "tool": "task", "min": 1 },
-            { "type": "text", "source": "tool:task", "op": "regex", "expect": "PMID" }
-          ]
-        }
-      ]
+      "type": "tool_count",
+      "tool": "task",
+      "min": 1,
+      "desc": "parallel worker dispatch (Tier A/B) is mandatory when a subagent tool exists (deep-research 1.7.0 Step 4)"
+    },
+    {
+      "type": "text",
+      "scope": "all",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "(^|\\n)pmid:\\d+",
+      "desc": "tier-independent literature proof: ledger keys (add echo / check stdout) contain line-start pmid: entries - live dispatch runs keep article_search inside worker streams, invisible to the parent log"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[evidence-ledger\\] render: \\d+ citation\\(s\\) numbered",
+      "desc": "render verb success banner: the numbering authority generated the citations + References section (FAILED banners must not match)"
+    },
+    {
+      "type": "text",
+      "source": "tool:*",
+      "op": "regex",
+      "expect": "\\[vet-references\\] Structural audit: PASS",
+      "desc": "the Step 5c offline structural audit passed: contiguous [1]..[N], N == bibliography count, zero placeholders"
     },
     {
       "type": "text",
@@ -57,6 +65,11 @@
       "op": "regex",
       "expect": "final_report\\.html",
       "desc": "HTML rendering is default-on; a successful conversion rung must surface final_report.html in tool output"
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "verify-citation-pipeline-artifacts (inspect reports/<TOPIC>/final_report.draft.md, final_report.md and evidence/sources.jsonl): (a) the draft still contains [@key] cite-key markers - proof it was authored key-based, never hand-numbered; (b) the References section is ledger-generated Vancouver style (consistent author initials, journal, year, PMID/DOI per entry); (c) in-text citations are contiguous [1]..[N] numbered by order of first appearance."
     }
   ]
 }

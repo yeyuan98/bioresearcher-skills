@@ -12,6 +12,10 @@ BioResearcher 双语文档共享术语锚点。中文译名以 WorkBuddy 连接�
 | MCP (Model Context Protocol) | MCP（模型上下文协议） | 本项目使用 stdio JSON-RPC 传输 |
 | biomcp-ts / biomcp | biomcp-ts MCP 服务 / biomcp 包 | npm 包名 `biomcp`，本仓库钉扎 `1.4.0` |
 | deep research | 深度研究 | `bioresearcher-deep-research` 技能：访谈→方案对齐→分解→并行调研→引用报告 |
+| evidence ledger | 证据账本 | `reports/<TOPIC>/evidence/*.jsonl`：worker 逐条追加的可引用来源记录（字段逐字复制自工具输出），是引用的唯一事实来源 |
+| cite-key marker | 引用键标记 | `[@pmid:21639808]`、组 `[@a; @b]`：草稿中的语义引用写法，编号一律由 `render` 生成 |
+| render (numbering authority) | render（唯一编号权威） | `evidence-ledger.py render`：按首次出现为引用键编号、压缩区间、生成 Vancouver 参考文献表 |
+| vet-references / structural audit | 引用终审 / 结构审计 | `vet-references.py`：[1]..[N] 连续性、N 与文献表条数一致、NCBI esummary 交叉核验 |
 | aspect (research aspect) | 研究侧面（连接器文案作「研究方面」） | 深度研究把主题拆成 2–5 个独立侧面，每侧面一个 worker |
 | fan-out / sequential fallback | 并行扇出 / 顺序回退 | 有子代理（Task）工具时并行；否则顺序执行 |
 | interview (Step 1-2) | 访谈（第一至二步） | 深度研究强制先集中提问澄清并对齐方案，除非 `no-interview` 前缀 |

@@ -777,13 +777,16 @@ function main() {
   fs.writeFileSync(W("sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapUrls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n")}\n</urlset>\n`);
   fs.writeFileSync(W(".nojekyll"), "");
 
-  // 4) tripwire: embedded artifact HTML must stay self-contained.
+  // 4) tripwire: embedded artifact HTML must stay self-contained — no
+  //    remotely LOADED assets (<img>/<script>/<iframe>/<link> src|href).
+  //    Plain outbound text anchors (doi.org, pubmed — auto-linkified by the
+  //    1.2.0+ report renderer) are citations, not asset dependencies.
   for (const c of data.cases) {
     const p = path.join(outDir, "assets", c.id, "final_report.html");
     if (!fs.existsSync(p)) continue;
     const text = fs.readFileSync(p, "utf8");
-    if (/(src|href)\s*=\s*["'](https?:)?\/\//i.test(text)) {
-      warnings.push(`tripwire: ${c.id}/final_report.html contains remote src/href references`);
+    if (/<(?:img|script|iframe|source|link|video|audio|track|embed|object)\b[^>]*(src|href|data)\s*=\s*["']\s*(?:https?:)?\/\//i.test(text)) {
+      warnings.push(`tripwire: ${c.id}/final_report.html loads remote assets`);
     }
   }
 
@@ -803,6 +806,10 @@ function main() {
   for (const file of htmlFiles.sort()) {
     let text = fs.readFileSync(file, "utf8");
     text = text.replace(/<meta\b[^>]*>/gi, "").replace(/<link\b[^>]*>/gi, "");
+    // Embedded artifact reports ship interactive-citation inline <script>
+    // whose template strings contain href="' + expr + '" fragments; those
+    // are code, not links — strip script blocks before scanning.
+    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
     for (const m of text.matchAll(/(?:href|src)\s*=\s*"([^"]+)"/g)) {
       const href = m[1];
       if (/^(https?:|mailto:|data:)/i.test(href) || href.startsWith("#")) continue;

@@ -1,0 +1,82 @@
+{
+  "extractedAt": "2026-09-11T13:55:53.971Z",
+  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/agent-deep-research-zh/20260911-214453-r1",
+  "dbPath": "/home/administrator/.local/share/opencode/opencode.db",
+  "parentSessions": [
+    "ses_f6f4932e7ffebVwTcBlp576Xx9"
+  ],
+  "sessions": [
+    {
+      "id": "ses_f6f47f699ffeoiJpOzP6S54mtL",
+      "parentID": "ses_f6f4932e7ffebVwTcBlp576Xx9",
+      "agent": "general",
+      "title": "ICB 文献研究 worker (@general subagent)",
+      "timeCreated": 1789134375270,
+      "timeUpdated": 1789134762217,
+      "durationMs": 386947,
+      "messages": 24,
+      "parts": 106,
+      "toolHistogram": {
+        "bash:completed": 11,
+        "biomcp_article_search:completed": 8,
+        "biomcp_article_get:completed": 2,
+        "write:completed": 1
+      },
+      "tokensTotal": 1479127,
+      "textChars": 46591,
+      "evidenceLedgerBanners": [
+        "[evidence-ledger] add: 3 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/checkpoint_inhibitors.js",
+        "[evidence-ledger] add: derived keys: pmid:23772560, pmid:23066344, pmid:24204168",
+        "[evidence-ledger] add: derived keys: pmid:42426954, pmid:42399508, pmid:42482656",
+        "[evidence-ledger] add: 1 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/checkpoint_inhibitors.js",
+        "[evidence-ledger] add: derived keys: pmid:20525992",
+        "[evidence-ledger] add: 5 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/checkpoint_inhibitors.js",
+        "[evidence-ledger] add: derived keys: pmid:26899259, pmid:27438833, pmid:27167347, pmid:27502705, pmid:27597930",
+        "[evidence-ledger] add: derived keys: pmid:22658128",
+        "[evidence-ledger] add: 4 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/checkpoint_inhibitors.js",
+        "[evidence-ledger] add: derived keys: pmid:28822576, pmid:30361170, pmid:30096704, pmid:28961465",
+        "[evidence-ledger] add: derived keys: pmid:42228982, pmid:42168665, pmid:42133101, pmid:42026114",
+        "[evidence-ledger] add: derived keys: pmid:41483376, pmid:39954220, pmid:30209062, pmid:40091029, pmid:41349248",
+        "[evidence-ledger] add: 2 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/checkpoint_inhibitors.js",
+        "[evidence-ledger] add: derived keys: pmid:25399552, pmid:27013881",
+        "[evidence-ledger] check: 28 record(s) across 1 type(s) (article:28); quarantined 0; OK",
+        "[evidence-ledger] check: markers: 0 problem(s) across 1 file(s); OK"
+      ]
+    },
+    {
+      "id": "ses_f6f47c6a9ffe6yytIypn1waYWT",
+      "parentID": "ses_f6f4932e7ffebVwTcBlp576Xx9",
+      "agent": "general",
+      "title": "CAR-T 文献研究 worker (@general subagent)",
+      "timeCreated": 1789134387542,
+      "timeUpdated": 1789134753672,
+      "durationMs": 366130,
+      "messages": 26,
+      "parts": 100,
+      "toolHistogram": {
+        "biomcp_article_search:completed": 8,
+        "bash:completed": 13,
+        "biomcp_article_get:error": 1,
+        "biomcp_article_get:completed": 1,
+        "write:completed": 1
+      },
+      "tokensTotal": 1448541,
+      "textChars": 43670,
+      "evidenceLedgerBanners": [
+        "[evidence-ledger] add: 4 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/car_t_cell_therapy.jsonl",
+        "[evidence-ledger] add: derived keys: pmid:41940327, pmid:41858754, pmid:39413830, pmid:34625231",
+        "[evidence-ledger] add: 2 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/car_t_cell_therapy.jsonl",
+        "[evidence-ledger] add: derived keys: pmid:34061452, pmid:34508031",
+        "[evidence-ledger] add: 6 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/car_t_cell_therapy.jsonl",
+        "[evidence-ledger] add: derived keys: doi:10.1016/s1470-2045(18)30864-7, doi:10.1182/blood.2022018893, doi:10.1182/blood-",
+        "[evidence-ledger] add: 7 record(s) accepted, 0 rejected -> reports/tumor_immunotherapy/evidence/car_t_cell_therapy.jsonl",
+        "[evidence-ledger] add: derived keys: doi:10.1002/hon.2595, doi:10.3390/jcm12196124, doi:10.3960/jslrt.25072, doi:10.1038",
+        "[evidence-ledger] add: derived keys: pmid:42477682, pmid:42574910, pmid:42294616, pmid:42220535, pmid:41993194, pmid:417",
+        "[evidence-ledger] add: derived keys: doi:10.3390/biom15101407, pmid:41584599, doi:10.1007/s12672-025-04195-3, doi:10.101",
+        "[evidence-ledger] check: 29 record(s) across 1 type(s) (article:29); quarantined 0; OK",
+        "[evidence-ledger] check: markers: 0 problem(s) across 1 file(s); OK"
+      ]
+    }
+  ],
+  "error": null
+}

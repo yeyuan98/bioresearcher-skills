@@ -2,8 +2,8 @@
   "bioresearcher-deep-research": {
     "demo": "agent-deep-research-en",
     "outputs": {
-      "en": "reports/<TOPIC>/final_report.md + final_report.html (default on) + per-aspect files",
-      "zh": "reports/<TOPIC>/final_report.md + final_report.html（默认开启）+ 各研究方面文件"
+      "en": "reports/<TOPIC>/: plan.md + evidence/ ledger (per-aspect .jsonl + merged sources.jsonl) + cite-key draft + rendered final_report.md (numbered citations + generated References) + final_report.html (default on)",
+      "zh": "reports/<TOPIC>/：plan.md + evidence/ 证据账本（逐方面 .jsonl 与合并 sources.jsonl）+ 引用键草稿 + 渲染后 final_report.md（编号引用 + 生成的参考文献）+ final_report.html（默认开启）"
     }
   },
   "bioresearcher-onboard": {

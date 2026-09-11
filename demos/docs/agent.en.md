@@ -34,12 +34,21 @@ documented separately in the [MCP doc](./mcp.en.md).
 
 ## 2. Core features
 
-- **Verifiable citations**: every claim carries a numbered citation (PMID /
-  DOI / NCT / patent IDs); no internal-knowledge fallback, and missing
-  evidence is stated explicitly.
+- **Verifiable citations, generated not hand-assembled**: every potentially
+  citable source a worker touches lands in a per-aspect **evidence ledger**
+  (`reports/<TOPIC>/evidence/*.jsonl`, fields copied verbatim from biomcp
+  output); the report draft is authored with semantic cite-key markers
+  (`[@pmid:21639808]`), and the ledger script `render` is the single
+  numbering authority — it numbers every marker by first appearance and
+  generates the Vancouver References section, so out-of-sync or hand-typed
+  citations are structurally impossible. An independent auditor
+  (`vet-references.py`) then re-checks the rendered report (contiguous
+  [1]..[N], N == bibliography count, NCBI esummary cross-check) before
+  delivery (true run: [case 6.2](#62-case-deep-research-english-parallel-fan-out)).
 - **Interview-first**: by default the agent asks its clarifying questions as
-  one batch (question, scope, time window, outcome, output format) before
-  researching — even in non-interactive mode (see [case 6.4](#64-case-interview-first)).
+  one batch (question, scope, time window, outcome, output format) and aligns
+  the research-area plan with you before researching — even in non-interactive
+  mode (see [case 6.4](#64-case-interview-first)).
 - **Parallel fan-out with sequential fallback**: when the harness provides a
   subagent/Task tool, aspect workers run in parallel; otherwise the same
   skill runs them sequentially (true parallel evidence in
@@ -88,13 +97,23 @@ Distribution: skills CLI · Claude plugin marketplace (bundled MCP+subagent) ·
 
 ### 3.2 Workflow (deep research)
 
-Six steps: ① clarifying interview (skippable via `no-interview`) →
-② decompose topic and align research area plan (`light-research` keeps the
-top two) → ③ one worker per aspect, parallel or sequential (tool choice per
-`references/tool-selection.md`, collecting identifiers) → ④ synthesize
-`reports/<TOPIC>/final_report.md` (numbered citations + bibliography) →
-⑤ render `final_report.html` by default (`no-html` skips) → ⑥ deliver. The
-worker contract lives in
+① clarifying interview (skippable via `no-interview`) → ② decompose the
+topic into 2–5 aspects and align the research-area plan with the user
+(`light-research` keeps the top two) → ③ write the durable plan to
+`reports/<TOPIC>/plan.md` → ④ one worker per aspect — parallel dispatch is
+mandatory when the harness provides a subagent/Task tool — each worker
+queries biomcp per `references/tool-selection.md` and appends every citable
+source to `reports/<TOPIC>/evidence/<aspect>.jsonl` (verbatim tool fields,
+never invented), writes cite-key-marked aspect notes, and passes a per-aspect
+`check --markers` completion gate → ⑤ the orchestrator synthesizes
+`final_report.draft.md` with the same `[@key]` markers → ⑤a merge the
+per-aspect ledgers into `evidence/sources.jsonl` and verify article records
+against NCBI esummary (fill-only backfill) → ⑤b `render` numbers every
+marker and generates the References section (single numbering authority;
+hard-fails on unresolved keys) → ⑤c `vet-references.py` audits the rendered
+report (offline structural audit + independent NCBI verification) → ⑥
+deliver `final_report.md` and, by default, `final_report.html` (`no-html`
+skips). The worker contract lives in
 `skills/bioresearcher-deep-research/references/worker-protocol.md`
 (no re-delegation, no fabrication, no internal-knowledge fallback, every
 claim cited).
@@ -143,7 +162,7 @@ Case-sensitive, leading tokens (trailing `:` tolerated):
 
 | Skill | Output |
 |---|---|
-| deep-research | `reports/<TOPIC>/final_report.md` + `final_report.html` (default on) + per-aspect files (+ `assumptions.md` on interview degradation) |
+| deep-research | `reports/<TOPIC>/plan.md` + `evidence/<aspect>.jsonl` (per-aspect ledgers) + `evidence/sources.jsonl` (merged + verified) + cite-key `final_report.draft.md` + rendered `final_report.md` (numbered citations + generated References) + `final_report.html` (default on) + per-aspect notes (+ `assumptions.md` on interview degradation) |
 | plot-making | `figures/<topic>/figN.*.pdf/.svg/.png` + `LEGENDS.md` + QA audit JSON (`*.alignment.json`, …) |
 | pubmed-weekly | `combined.xlsx` (sheets `PubMed Articles` and `Deleted PMIDs`) |
 | python-setup-uv | Project-local `.venv/` (uv-managed) |
@@ -164,7 +183,7 @@ fallback.
 
 | Harness | Skills | MCP | Notes |
 |---|---|---|---|
-| opencode | ✅ project `.opencode/skills/` | ✅ `opencode.json` | The empirically proven harness for these demos (v1.18.29) |
+| opencode | ✅ project `.opencode/skills/` | ✅ `opencode.json` | The empirically proven harness for these demos (v1.18.30; the retained 2026-09-06 pubmed-weekly capture ran on v1.18.29) |
 | Claude Code | ✅ plugin or `.claude/skills/` | ✅ bundled / `.mcp.json` | Plugin adds the dr-worker parallel fan-out |
 | Codex / Cursor / Gemini CLI | ✅ `.codex/skills/` / `.cursor/` / `.gemini/skills/` | ✅ per-harness MCP config | Gemini also `gemini skills install <repo>` (preview channel) |
 | ZCode / Pi / CodeBuddy | ✅ | ✅ | Registered by the onboard skill |
@@ -224,50 +243,68 @@ git clone https://github.com/yeyuan98/bioresearcher-skills .opencode/skills/bior
 
 ## 6. Application cases and demos
 
-All cases are **true runs** driven by `demos/run-demo.mjs` (opencode v1.18.29; the
-skills tree under test is pinned at commit `3380cc6` — see each
-`provenance.json`) — not hand-written examples. Each artifact dir carries:
-a bilingual README, the session `transcript.md`, objective `result.json`,
-`provenance.json`, and the produced outputs.
+All cases are **true runs** driven by `demos/run-demo.mjs` (opencode v1.18.30)
+— not hand-written examples. The 2026-09-11 refresh re-ran cases 6.2/6.3/6.4
+and the MCP probes against deep-research **1.7.0** + biomcp **1.4.0**
+(commit `d818c85`, per-`provenance.json`); case 6.5 retains its original
+2026-09-06 run (commit `3380cc6`) and case 6.6 keeps its original 2026-09-06
+session (re-published after a publish-glob fix only — prompt/checks unchanged;
+its provenance carries both the original run fields and the re-publish note) —
+their skills are unchanged and their provenances stay self-describing. Each
+artifact dir carries: a bilingual README, the
+session `transcript.md`, objective `result.json`, `provenance.json`, and the
+produced outputs.
 
 ### 6.1 Case overview
 
 | Case | Lang | Outcome | Duration | Demo link (GitHub permalink) |
 |---|---|---|---|---|
-| 6.2 deep research (BRCA1 DNA repair) | EN | PASS | 515 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-en) |
-| 6.3 deep research (tumor immunotherapy) | ZH | PASS | 814 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-deep-research-zh) |
-| 6.4 interview-first | EN | PASS | 23 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-interview-en) |
+| 6.2 deep research (BRCA1 DNA repair) | EN | PASS (rubric SATISFIED) | 545 s | [demos/artifacts/agent-deep-research-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-en) |
+| 6.3 deep research (tumor immunotherapy) | ZH | PASS (rubric SATISFIED) | 649 s | [demos/artifacts/agent-deep-research-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-deep-research-zh) |
+| 6.4 interview-first | EN | PASS | 33 s | [demos/artifacts/agent-interview-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-interview-en) |
 | 6.5 PubMed weekly parse | EN | PASS (rubric SATISFIED) | 56 s | [demos/artifacts/agent-pubmed-weekly-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-pubmed-weekly-en) |
-| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/agent-plot-making-en) |
+| 6.6 publication-grade structural figure | EN | PASS (rubric SATISFIED) | 1064 s | [demos/artifacts/agent-plot-making-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/agent-plot-making-en) |
 | 6.7 documented cases (WorkBuddy / onboard) | ZH/EN | — (non-run) | — | see §6.7 |
 
 (When browsing the repo, use relative paths `../artifacts/<case>/`.)
 
 ### 6.2 Case: deep research (English, parallel fan-out)
 
-**Prompt**: `no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Cite sources with PMIDs.`
+**Prompt**: `no-interview light-research: Using the bioresearcher-deep-research skill, survey the recent article landscape on BRCA1 DNA repair. Keep it to at most 2 research aspects and at most 10 biomcp tool calls per aspect worker. Cite sources with PMIDs.`
 
 The agent loads the skill → smoke-tests the MCP connection
-(`biomcp_gene_search`) → fans out **two parallel Task workers** ("HR mechanism
-frontier" and "PARPi clinical translation") → synthesizes and renders
-`final_report.html`. Objective checks: skill loaded; PMIDs in the final
-answer; `final_report.html` surfaced in tool output; article searches ran
-(directly or via workers). Outputs:
-[final_report.md](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair/final_report.md) ·
+(`biomcp_gene_search`) → fans out **two parallel Task workers** ("BRCA1 HR
+mechanisms" and "BRCA1 PARPi resistance") — each appends its sources to a
+per-aspect evidence ledger and passes the `check --markers` completion gate →
+the orchestrator merges + NCBI-verifies the ledgers (`sources.jsonl`: 34
+records, 33/33 markers resolved), drafts with `[@pmid:...]` cite-key markers, `render` numbers all 30
+citations and generates the Vancouver References (citation locators — volume/issue/pages — wherever the source provides them), `vet-references.py` passes its structural audit, and the
+interactive HTML report is rendered. Objective checks: skill loaded; ≥1 Task
+dispatch; ledger keys (`pmid:...`) in tool output; the
+`[evidence-ledger] render:` success banner; `[vet-references] Structural
+audit: PASS`; PMIDs in the final answer; `final_report.html` surfaced.
+Outputs:
+[final_report.md](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/final_report.md) ·
+[cite-key draft](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/final_report.draft.md) ·
+[merged ledger](../artifacts/agent-deep-research-en/outputs/reports/brca1_dna_repair_landscape/evidence/sources.jsonl) ·
 [rendered screenshot](../artifacts/agent-deep-research-en/screenshots/final_report-top.jpg) ·
 [transcript](../artifacts/agent-deep-research-en/transcript.md)
 
 ### 6.3 Case: deep research (Chinese prompt, Chinese report)
 
-**Prompt**: `no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的多方面文献综述并附引用。请用中文撰写报告，引用使用 PMID。`
+**Prompt**: `no-interview light-research: 使用 bioresearcher-deep-research 技能，帮我做一个关于肿瘤免疫治疗（tumor immunotherapy）的文献综述并附引用。最多 2 个研究方面，每个方面的工作节点最多调用 10 次 biomcp 工具。请用中文撰写报告，引用使用 PMID。`
 (extends the WorkBuddy connector's canonical zh example with explicit skill,
-language, and PMID instructions).
+language, PMID, and call-budget instructions).
 
-The agent queries English sources and writes the report in Chinese (executive
-summary; checkpoint-inhibitor and cell-therapy aspects; unified bibliography
-with numbered PMIDs). Extra check: the final answer must contain Chinese text
-(regex `[\u4e00-\u9fff]`). Outputs:
+Two Chinese-titled parallel workers ("ICB 文献研究 worker", "CAR-T 文献研究
+worker") build ledgers from English sources; `render` numbers 52 citations
+from the merged ledger and `vet-references.py` passes. The report is written
+in Chinese (executive summary; checkpoint-inhibitor and CAR-T aspects) with
+PMID-cited English sources. Extra check: the final answer must contain Chinese
+text (regex `[\u4e00-\u9fff]`). Outputs:
 [final_report.md](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/final_report.md) ·
+[cite-key draft](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/final_report.draft.md) ·
+[merged ledger](../artifacts/agent-deep-research-zh/outputs/reports/tumor_immunotherapy/evidence/sources.jsonl) ·
 [rendered screenshot](../artifacts/agent-deep-research-zh/screenshots/final_report-top.jpg)
 
 ### 6.4 Case: interview-first
@@ -275,9 +312,11 @@ with numbered PMIDs). Extra check: the final answer must contain Chinese text
 **Prompt**: `Using the bioresearcher-deep-research skill, run a deep research report on CAR-T therapy safety in solid tumors.` (no prefix.)
 
 Even under non-interactive `--auto`, the agent posts its clarifying-question
-batch and starts **no research** (checks: final answer contains `?`; contains
-no `final_report`; none of `article_search` / `trial_search` / `gene_get` was
-called). Regression evidence for the interview-first feature. Output:
+batch and starts **no research and no scripts** (checks: final answer
+contains `?`; contains no `final_report`; none of `article_search` /
+`trial_search` / `gene_get` was called; zero `bash` calls — ledger scripts
+and rendering start only after the scope is agreed). Regression evidence for
+the interview-first feature. Output:
 [transcript](../artifacts/agent-interview-en/transcript.md)
 
 ### 6.5 Case: PubMed weekly parse
@@ -333,9 +372,14 @@ No — every demo here ran keyless. Exceptions and limit-raising keys:
 Yes — see the matrix in §4.5 and the matching channel in §5.
 
 **Q4: Can the agent fabricate references?**
-The deep-research contract forbids internal-knowledge fallback: every claim
-needs a numbered citation (PMID/DOI/NCT/patent ID), missing evidence must be
-stated, and failed queries are recorded as evidence gaps.
+No — and not merely by instruction. Since deep-research 1.5+ the citation
+pipeline is key-based end-to-end: workers append every citable source to an
+evidence ledger, the draft is authored with `[@pmid:...]` cite-key markers,
+and the `render` script is the single numbering authority (it hard-fails on
+any key without a ledger record); `vet-references.py` then audits the
+rendered report (contiguous [1]..[N], N == bibliography count, NCBI esummary
+cross-check). Hand-assembled bibliographies are structurally impossible;
+missing evidence is stated as evidence gaps, and failed queries are recorded.
 
 **Q5: Does it work from mainland China?**
 Yes — onboard/uv skills and the WorkBuddy connector support npmmirror/China
@@ -351,10 +395,10 @@ GitHub does not render committed HTML. See each case's `screenshots/`, or
 clone and open locally; the HTML file itself is in `outputs/`.
 
 **Q8: How many tokens / how long do demos take?**
-Measured (opencode v1.18.29): interview 23 s; PubMed parse 56 s; deep
-research EN 515 s / ZH 814 s; structural figure (incl. dependency install)
-1064 s. Replay commands are in `demos/README.md`; the MCP probes are
-token-free.
+Measured (opencode v1.18.30, deep-research 1.7.0 with parallel dispatch):
+interview 33 s; PubMed parse 56 s (2026-09-06 run); deep research EN 545 s /
+ZH 649 s; structural figure (incl. dependency install) 1064 s (both 2026-09-06 runs). Replay
+commands are in `demos/README.md`; the MCP probes are token-free.
 
 **Q9: Do the plugin-bundled and manually registered MCP servers conflict?**
 Differently-configured servers do not deduplicate — keep one and disable the

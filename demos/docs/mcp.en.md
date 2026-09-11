@@ -124,16 +124,24 @@ the [biomcp-ts source](https://github.com/yeyuan98/biomcp-ts)):
 
 All from the true runs [mcp-tool-tour-en](../artifacts/mcp-tool-tour-en/README.md)
 and [mcp-tool-tour-zh](../artifacts/mcp-tool-tour-zh/README.md) (responses
-excerpted; full samples in each `outputs/capture.jsonl`):
+excerpted — some fields trimmed and title formatting tags stripped for
+readability; each sample notes its tour; full byte-exact pairs in each
+`outputs/capture.jsonl`):
 
 **Articles** `article_search` `{query:"BRCA1 DNA repair", limit:3}` →
 
 ```json
-[{"doi": "10.1042/BJ20141077",
-  "title": "Protein stability versus function: effects of destabilizing missense mutations on BRCA1 DNA repair activity.",
-  "authors": ["David C. A. Gaboriau", "P. Rowling", "C. Morrison", "L. Itzhaki"],
-  "journal": "Biochemical Journal", …}]
+[{"pmid": "37272060", "pmcid": "PMC10243389",
+  "doi": "10.1080/15476286.2023.2220210",
+  "title": "Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.",
+  "authors": ["Adamopoulos PG", "Athanasopoulou K", "…"],
+  "journal": "RNA Biol", "volume": "20", "issue": "1", "pages": "281-295",
+  "publication_date": "2023-01-01", "cited_by": 4, "is_open_access": true,
+  "source": "europepmc"}, …]
 ```
+
+(1.4.0 responses carry full citation locators — volume / issue / pages — which
+the deep-research evidence ledger renders into Vancouver references.)
 
 **Gene detail** `gene_get` `{symbol:"BRCA1", sections:["core"]}` →
 
@@ -150,12 +158,12 @@ excerpted; full samples in each `outputs/capture.jsonl`):
   "gnomad_af": 0.00000397994}]
 ```
 
-**Trials** `trial_search` `{query:"BRAF melanoma", limit:3}` →
+**Trials** `trial_search` `{query:"BRAF melanoma", limit:3}` (zh tour) →
 
 ```json
-{"studies": [{"nct_id": "NCT01597908",
-  "title": "Dabrafenib Plus Trametinib vs Vemurafenib Alone in Unresectable or Metastatic BRAF V600E/K Cutaneous Melanoma",
-  "status": "COMPLETED", "interventions": ["DRUG: Dabrafenib", …]}, …]}
+{"studies": [{"nct_id": "NCT03415126",
+  "title": "A Study of ASN007 in Patients With Advanced Solid Tumors",
+  "status": "COMPLETED", "interventions": ["DRUG: ASN007: ascending doses", …]}, …]}
 ```
 
 **Diseases** `disease_search` `{query:"melanoma", limit:3}` →
@@ -286,8 +294,8 @@ Two probe scenarios (token-free, pure direct network calls):
 
 | Scenario | Calls | Outcome | Demo link (GitHub permalink) |
 |---|---|---|---|
-| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (43 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-en) |
-| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (9 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2d4ab09d272b87c9dcf04cb55b46ab274892ebc5/demos/artifacts/mcp-tool-tour-zh) |
+| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (40 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/mcp-tool-tour-en) |
+| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (11 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/NEWPACKSHA/demos/artifacts/mcp-tool-tour-zh) |
 
 The EN tour verifies `tools/list` exposes all 41 pinned core tools; every
 call's full request/response (with assertions) is in `outputs/capture.jsonl`

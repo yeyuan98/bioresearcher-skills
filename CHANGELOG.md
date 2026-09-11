@@ -13,6 +13,58 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
+## [Unreleased]
+
+### Demos (partner pack refresh)
+
+Refresh the true-run demo pack to the current skill generation (deep-research
+1.7.0 + biomcp 1.4.0); nothing under `skills/` changes.
+
+- `demos/run-demo.mjs`: port subagent observability from `agent-test/run.mjs`
+  (DELTA 7) — live progress poller + stall warnings, post-run extraction of
+  worker sessions from the host opencode SQLite DB into
+  `<runDir>/subagents/` + `timeline.jsonl` + `subagents.json`, scope-aware
+  checks (`parent|subagents|all`), a 13th check type `subagent_count`,
+  `--extract-subagents <DIR>` postmortem mode, and hermetic check-spec
+  validation (`--dry-run` and pre-spawn). Without this, deep-research 1.7.0's
+  mandatory parallel dispatch kept worker `article_search` calls invisible to
+  the demo grader.
+- Scenario manifests: `agent-deep-research-en/zh` re-targeted at the evidence
+  ledger + cite-key pipeline (tier-independent `pmid:` ledger-key proof with
+  `scope: "all"`, `[evidence-ledger] render: N citation(s) numbered` success
+  banner, `[vet-references] Structural audit: PASS`, mandatory-dispatch
+  `task` proof, a manual rubric verifying the cite-key draft / Vancouver
+  References / contiguity, prompt call budgets, `timeoutMs` 2100000, and
+  publish globs covering `plan.md`, `evidence/sources.jsonl`,
+  `final_report.draft.md`, aspect notes, and `subagents.json`);
+  `agent-interview-en` gains a zero-`bash` check (no scripts during the
+  interview turn).
+- `demos/check-demos.mjs`: three new gates — agent check-spec validation
+  against the 13-type grader contract (mirror of the runner validator),
+  artifact `scenarioSha256` == current `scenarios/<id>/scenario.json` sha256
+  (stale-by-definition artifacts fail; this caught 6 committed artifacts
+  whose manifests had drifted post-capture), and same-repo permalink commit
+  SHAs must resolve in the repository (`git cat-file`, skipped outside a
+  checkout).
+- True-run refresh (2026-09-11, opencode 1.18.30, repo `d818c85`): re-ran
+  `mcp-tool-tour-en/zh` against biomcp@1.4.0 (the committed captures were
+  still 1.1.1 responses behind the 1.4.0 docs claims), `agent-interview-en`,
+  and both flagship deep-research cases — the new artifacts showcase the full
+  pipeline (plan.md, per-aspect ledgers, merged+verified `sources.jsonl`,
+  cite-key draft, ledger-rendered Vancouver references with
+  volume/issue/pages, vet-audit PASS, interactive HTML hero/ToC/citation
+  tooltips); new screenshots; `agent-plot-making-en` re-published from its
+  original completed session (publish-glob fix only, prompt/checks
+  unchanged); `agent-pubmed-weekly-en` intentionally retained as its
+  2026-09-06 capture (skill unchanged, provenance self-describing).
+- Docs/website: `demos/docs/agent.{zh,en}.md` §2/§3.2/§4.3 rewritten for the
+  ledger pipeline, §6 narratives + FAQ Q4/Q8 refreshed, glossary gains
+  evidence-ledger/cite-key/render/vet terms; `demos/docs/mcp.{zh,en}.md`
+  quote the richer 1.4.0 responses (article locators); website cases /
+  `skills-extra.json` / FAQ strings / `mcp-captures.json` regenerated from
+  the new captures; `demos/lib/screenshot.sh` honors the destination format
+  (.jpg) and waits for inline JS before capture.
+
 ## [1.11.1] - 2026-09-11
 
 ### WorkBuddy Connector

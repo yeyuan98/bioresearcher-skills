@@ -22,42 +22,42 @@
       [
         "article_search",
         "pass",
-        "610"
+        "4453"
       ],
       [
         "gene_get",
         "pass",
-        "188"
+        "1570"
       ],
       [
         "variant_search",
         "pass",
-        "2230"
+        "2277"
       ],
       [
         "trial_search",
         "pass",
-        "1537"
+        "1767"
       ],
       [
         "disease_search",
         "pass",
-        "526"
+        "2492"
       ],
       [
         "patent_search",
         "pass",
-        "2518"
+        "18654"
       ],
       [
         "gtex_expression",
         "pass",
-        "849"
+        "2953"
       ],
       [
         "pdb",
         "pass",
-        "1026"
+        "3144"
       ]
     ],
     "samples": [
@@ -85,7 +85,7 @@
           "en": "ClinicalTrials.gov search returning NCT IDs.",
           "zh": "ClinicalTrials.gov 检索，返回 NCT 编号。"
         },
-        "response": "{\"studies\": [{\"nct_id\": \"NCT00543205\", \"title\": \"Pharmacokinetics of G3139 in Subjects With Advanced Melanoma…\", \"status\": \"TERMINATED\", …}"
+        "response": "{\"studies\":[{\"nct_id\":\"NCT03068455\",\"title\":\"An Investigational Immuno-therapy Study of Nivolumab Combined With Ipilimumab Compared to Nivolumab by Itself After Complete Surgical Removal of Stage IIIb…}"
       }
     ]
   }

@@ -44,25 +44,35 @@ All artifacts are **true runs** with commit + sha256 provenance per directory
 运行**结果，每个目录带提交号与 sha256 溯源、双语 README、会话记录、客观
 校验与产出文件。
 
-> **Provenance note / 溯源说明** — the `gitCommit` recorded in each
-> `provenance.json` is the repo HEAD **at run time** (`3380cc6`): it pins the
-> exact `skills/` tree under test (per-skill sha256) and the scenario manifest
-> (`scenarioSha256`). The `demos/` pack itself landed in the follow-up commit
-> `2d4ab09`; the GitHub permalinks in the docs point at that pack commit.
-> / 各 `provenance.json` 记录的 `gitCommit` 是**运行时刻**的仓库 HEAD
-> （`3380cc6`），钉扎被测 `skills/` 树（逐技能 sha256）与场景清单
-> （`scenarioSha256`）；`demos/` 目录本身由后续提交 `2d4ab09` 引入，文档中的
-> GitHub 固定链接指向该打包提交。
+> **Provenance note / 溯源说明** — the pack has two capture dates. The
+> 2026-09-11 refresh re-ran the two deep-research cases, the interview case,
+> and both MCP probes against deep-research **1.7.0** + biomcp **1.4.0**
+> (repo HEAD at run time: `d818c85`; the refreshed artifacts are permalinked
+> at the refresh pack commit). `agent-pubmed-weekly-en` retains its original
+> 2026-09-06 run (`3380cc6`) — its skill is unchanged and its provenance
+> stays self-describing; `agent-plot-making-en` was re-published from its
+> original completed session after a publish-glob fix (prompt/checks
+> unchanged). Every `provenance.json` records the exact `gitCommit`, per
+> skill sha256, and `scenarioSha256`; `check-demos.mjs` fails if an
+> artifact's manifest sha no longer matches its capture.
+> / 本目录有两次采集时点。2026-09-11 刷新重跑了两个深度研究案例、访谈案例
+> 与两个 MCP 探针（被测对象 deep-research **1.7.0** + biomcp **1.4.0**，
+> 运行时仓库 HEAD `d818c85`；刷新产物的固定链接指向刷新打包提交）。
+> `agent-pubmed-weekly-en` 保留 2026-09-06 原始运行（`3380cc6`，技能未变、
+> 溯源自洽）；`agent-plot-making-en` 在发布 glob 修正后从原始完整会话
+> 重新发布（提示词与校验未变）。各 `provenance.json` 记录确切的
+> `gitCommit`、逐技能 sha256 与 `scenarioSha256`；清单 sha 与采集不一致时
+> `check-demos.mjs` 会直接判失败。
 
 | Scenario | Kind | Lang | Outcome | Wall time |
 |---|---|---|---|---|
-| [agent-deep-research-en](./artifacts/agent-deep-research-en/README.md) | agent (opencode + skills + MCP) | EN | PASS | 515 s |
-| [agent-deep-research-zh](./artifacts/agent-deep-research-zh/README.md) | agent | ZH | PASS | 814 s |
-| [agent-interview-en](./artifacts/agent-interview-en/README.md) | agent | EN | PASS | 23 s |
+| [agent-deep-research-en](./artifacts/agent-deep-research-en/README.md) | agent (opencode + skills + MCP) | EN | PASS (rubric SATISFIED) | 545 s |
+| [agent-deep-research-zh](./artifacts/agent-deep-research-zh/README.md) | agent | ZH | PASS (rubric SATISFIED) | 649 s |
+| [agent-interview-en](./artifacts/agent-interview-en/README.md) | agent | EN | PASS | 33 s |
 | [agent-pubmed-weekly-en](./artifacts/agent-pubmed-weekly-en/README.md) | agent | EN | PASS (rubric SATISFIED) | 56 s |
 | [agent-plot-making-en](./artifacts/agent-plot-making-en/README.md) | agent | EN | PASS (rubric SATISFIED) | 1064 s |
-| [mcp-tool-tour-en](./artifacts/mcp-tool-tour-en/README.md) | mcp-probe (no LLM) | EN | PASS | 43 s |
-| [mcp-tool-tour-zh](./artifacts/mcp-tool-tour-zh/README.md) | mcp-probe | ZH | PASS | 9 s |
+| [mcp-tool-tour-en](./artifacts/mcp-tool-tour-en/README.md) | mcp-probe (no LLM) | EN | PASS | 40 s |
+| [mcp-tool-tour-zh](./artifacts/mcp-tool-tour-zh/README.md) | mcp-probe | ZH | PASS | 11 s |
 
 ## Replay / 复现
 
@@ -82,19 +92,25 @@ validates this pack hermetically via `--list`, `--dry-run`, and
 token 与网络），与移植来源 `agent-test/` 套件一致；CI 仅以 `--list`、
 `--dry-run` 与 `check-demos.mjs` 做封闭校验。
 
-Replaying a rubric scenario (`agent-pubmed-weekly-en`,
-`agent-plot-making-en`) overwrites its `result.json` and **drops the manual
-adjudications** recorded there — re-verify the output against
-`expected-summary.json` / the QA gates and re-record the adjudication entry
-after replay. / 重放带 rubric 的两个场景会覆盖 `result.json` 并**丢失人工
-裁定记录**——重放后请对照 `expected-summary.json` / QA 门禁重新核验并补录
-裁定条目。
+Replaying a rubric scenario (`agent-deep-research-en/zh`,
+`agent-pubmed-weekly-en`, `agent-plot-making-en`) overwrites its
+`result.json` and **drops the manual adjudications** recorded there —
+re-verify the outputs against the rubric flags / `expected-summary.json` /
+the QA gates and re-record the adjudication entry after replay. For
+expensive scenarios, replay first WITHOUT `--publish`, inspect the run, then
+re-invoke with `--publish` (completed reps are resumed, so grading +
+publishing never re-spends tokens). / 重放带 rubric 的场景会覆盖
+`result.json` 并**丢失人工裁定记录**——重放后请对照 rubric 标志 /
+`expected-summary.json` / QA 门禁重新核验并补录裁定条目。高成本场景建议先
+不带 `--publish` 重放、检查后再补一次 `--publish`（已完成的 rep 会被复用，
+评分与发布不重复消耗 token）。
 
 ## Layout / 目录
 
 ```
 demos/
-├── run-demo.mjs     # runner + 12-check grader (vendored port of agent-test/run.mjs)
+├── run-demo.mjs     # runner + 13-check grader (incl. subagent capture and
+│                    #   scope-aware checks; vendored port of agent-test/run.mjs)
 ├── check-demos.mjs  # CI-safe gate for this pack
 ├── lib/             # mcp-probe.mjs (stdio JSON-RPC client), publish.mjs (curator),
 │                    # biomcp-tools@1.4.0.json (vendored registry, CI-diffed), screenshot.sh
