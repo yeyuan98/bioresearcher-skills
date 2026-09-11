@@ -15,12 +15,12 @@ BioResearcher 是一套面向生物医学研究的**智能体技能包（Agent S
 检索、发表级科研绘图、PubMed 周更批量处理、Python 环境引导与 MCP 运行时
 自动开通。
 
-当前版本：仓库 v1.10.0，包含 5 个技能（每个技能独立 semver）：
+当前版本：仓库 v1.11.0，包含 5 个技能（每个技能独立 semver）：
 
 | 技能 | 版本 | 功能 |
 |---|---|---|
-| `bioresearcher-deep-research` | 1.3.0 | 深度研究编排器：澄清问题并对齐研究方案 → 把主题拆成 2–5 个研究侧面 → 并行（或顺序）调研 → PubMed E-utilities 自动核验补全引用 → 产出带编号引用的 Markdown + HTML 报告（支持一键回跳阅读锚点） |
-| `bioresearcher-onboard` | 1.1.0 | 项目本地运行时引导：在 `.bioresearcher-runtime/` 下载便携 Node.js 22、供应商化 biomcp（自动探测官方源或 npmmirror 镜像）、按需启用 R/Biowasm/SQLite，并把服务注册进 OpenCode、Claude Code、Cursor、ZCode、Pi、CodeBuddy 或 WorkBuddy |
+| `bioresearcher-deep-research` | 1.7.0 | 深度研究编排器：澄清问题并对齐研究方案 → 把主题拆成 2–5 个研究侧面 → 并行（或顺序）调研 → PubMed E-utilities 自动核验补全引用 → 产出带编号引用的 Markdown + HTML 报告（支持一键回跳阅读锚点） |
+| `bioresearcher-onboard` | 1.1.1 | 项目本地运行时引导：在 `.bioresearcher-runtime/` 下载便携 Node.js 22、供应商化 biomcp（自动探测官方源或 npmmirror 镜像）、按需启用 R/Biowasm/SQLite，并把服务注册进 OpenCode、Claude Code、Cursor、ZCode、Pi、CodeBuddy 或 WorkBuddy |
 | `bioresearcher-plot-making` | 1.0.0 | 生物医学科研绘图路由与引擎：按数据类型选择规范，产出发表级复合图（蛋白-结合体结构、构象动态、文献方法综述、病例登记、证据表），内置三层 QA 门禁 |
 | `bioresearcher-pubmed-weekly` | 1.0.0 | 下载并解析 NCBI 上周 PubMed updatefiles（纯 Python 流式解析器，同时处理 `<PubmedArticle>` 与 `<DeleteCitation>`），汇总为一个 Excel 工作簿 |
 | `bioresearcher-python-setup-uv` | 1.1.0 | 用 uv 引导项目本地 Python 环境（官方源或国内镜像） |
