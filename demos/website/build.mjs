@@ -14,7 +14,7 @@
  * collected, then the build fails ONCE with the full list):
  *   VERSION, skills.json, per-skill SKILL.md frontmatter (skills dir),
  *   connector/workbuddy/skill-locales.json, connector/workbuddy/icon.png,
- *   demos/lib/biomcp-tools@1.4.0.json,
+ *   demos/lib/biomcp-tools@1.6.0.json,
  *   demos/scenarios (per-scenario scenario.json),
  *   demos/artifacts (per-case result.json, provenance.json, outputs,
  *   screenshots),
@@ -151,7 +151,7 @@ const CASE_ORDER = [
 
 // Tool catalog domain grouping (must exactly partition the registry core).
 const CORE_DOMAINS = [
-  ["articles", ["article_search", "article_get"]],
+  ["articles", ["article_search", "article_get", "preprint_fulltext", "journal_metrics"]],
   ["genes", ["gene_search", "gene_get", "gene_diseases", "gene_drugs", "gene_trials", "gene_articles", "gene_enrich"]],
   ["variants", ["variant_search", "variant_get", "variant_oncokb", "variant_trials"]],
   ["drugs", ["drug_search", "drug_get", "drug_trials"]],
@@ -184,7 +184,7 @@ function loadInputs() {
   const skillsJson = need("skills.json");
   const locales = need("connector/workbuddy/skill-locales.json");
   const icon = need("connector/workbuddy/icon.png");
-  const registry = need(path.join("demos", "lib", "biomcp-tools@1.4.0.json"));
+  const registry = need(path.join("demos", "lib", "biomcp-tools@1.6.0.json"));
   const stringsEn = need(path.join("demos", "website", "src", "strings.en.json"));
   const stringsZh = need(path.join("demos", "website", "src", "strings.zh.json"));
   const skillsExtra = need(path.join("demos", "website", "src", "skills-extra.json"));

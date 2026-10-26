@@ -9,8 +9,8 @@
 
 ## 1. What it does
 
-biomcp-ts (npm package `biomcp`, pinned here to **1.4.0**) is an MCP server
-for biomedical data: it exposes 41 core + 15 optional tools over stdio
+biomcp-ts (npm package `biomcp`, pinned here to **1.6.0**) is an MCP server
+for biomedical data: it exposes 43 core + 15 optional tools over stdio
 JSON-RPC to any agent harness, spanning articles, clinical trials, genes,
 variants, drugs, diseases, patents, omics databases, GTEx, Ensembl/PDB —
 all public sources, **keyless by default**.
@@ -19,16 +19,17 @@ all public sources, **keyless by default**.
 - Upstreams: NCBI E-utilities (PubMed/GEO/SRA/GenBank), ClinicalTrials.gov,
   MyGene/MyVariant, OpenTargets, GTEx, Ensembl, RCSB PDB, Google Patents
   (plus optional EPO OPS / USPTO with credentials), Semantic Scholar, …
-- Evidence: this page's `tools/list` probe confirms the server exposes the
-  **41 pinned core tools** (matching `scripts/ci/biomcp-tools.json`)
+- Evidence: this page's `tools/list` probe confirms the pinned core tool set
+  (matches `scripts/ci/biomcp-tools.json`; the committed captures still show
+  the 41 tools of biomcp 1.4.0, pending the true-run refresh to 1.6.0's 43)
 
 ## 2. Core features
 
-- **Keyless by default**: all 41 core tools work with zero configuration and
+- **Keyless by default**: all 43 core tools work with zero configuration and
   zero credentials (enhancements optional, §5.3)
 - **In-process per-source rate limiting**: no client-side sleeps/throttles
   needed (numbers in §3.3)
-- **Deterministic version pinning**: `npx -p biomcp@1.4.0` — exact version,
+- **Deterministic version pinning**: `npx -p biomcp@1.6.0` — exact version,
   avoids npx-cache drift and the bare-`npx biomcp` peer-dep trap (Q1)
 - **Diagnostics**: `biomcp doctor` environment check (never starts the
   server); `biomcp_configure` interactively manages optional credentials
@@ -37,8 +38,9 @@ all public sources, **keyless by default**.
   (Biowasm) / SQL database (mysql2) register at server start when enabled
 - **Mainland-China friendly**: npmmirror install support; HTTP(S)_PROXY
   honored via undici
-- **Baked-in timeouts**: per-tool budgets (articles 30 s, patent_search 60 s,
-  patent_get 120 s) so one slow source cannot stall a session
+- **Baked-in timeouts**: per-tool budgets (article_search 30 s, article_get
+  60 s, patent_search 60 s, patent_get 120 s, plus 40-45 s budgets on the
+  entity/trial tools) so one slow source cannot stall a session
 
 ## 3. Technical architecture
 
@@ -67,9 +69,9 @@ implementation ships in `demos/lib/mcp-probe.mjs` (single-file, zero deps).
 
 | Variant | Command array |
 |---|---|
-| All features (db + R analysis) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-| Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","biomcp"]` |
-| Core only | `["npx","-y","-p","biomcp@1.4.0","biomcp"]` |
+| All features (db + R analysis) | `["npx","-y","-p","biomcp@1.6.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+| Core + R analysis (no db) | `["npx","-y","-p","biomcp@1.6.0","-p","webr@0.6","biomcp"]` |
+| Core only | `["npx","-y","-p","biomcp@1.6.0","biomcp"]` |
 
 Requires Node.js >= 22.13. The `-p` exact pin resolves peer deps with the
 package (bare `npx biomcp` fails: the npx cache cannot resolve peer deps).
@@ -231,7 +233,7 @@ auto-detects npmmirror).
 ```json
 {"$schema": "https://opencode.ai/config.json",
  "mcp": {"biomcp": {"type": "local",
-   "command": ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]}}}
+   "command": ["npx", "-y", "-p", "biomcp@1.6.0", "biomcp"]}}}
 ```
 
 With the server named `biomcp`, tools surface as `biomcp_article_search`,
@@ -243,7 +245,7 @@ bioresearcher@bioresearcher-skills`; bundled core-only server, tools as
 
 ```json
 {"mcpServers": {"biomcp": {"type": "stdio", "command": "npx",
-  "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"], "timeout": 120000}}}
+  "args": ["-y", "-p", "biomcp@1.6.0", "biomcp"], "timeout": 120000}}}
 ```
 
 A manual registration and the plugin-bundled server do not deduplicate when
@@ -275,7 +277,7 @@ interactively by `biomcp_configure`; restart to apply).
 ### 5.4 Health check (doctor)
 
 ```bash
-npx -y biomcp@1.4.0 doctor --client opencode   # also claude-code/codex/…
+npx -y biomcp@1.6.0 doctor --client opencode   # also claude-code/codex/…
 ```
 
 Diagnostics only (Node version, npx, network); never starts the server;
@@ -312,7 +314,7 @@ Higher-level agent cases (deep research, plotting, …): [Agent doc §6](./agent
 
 **Q1: Why not bare `npx biomcp`?**
 The npx cache cannot resolve peer deps (webr, mysql2, …) — pin with
-`-p biomcp@1.4.0 -p webr@0.6 …` (§3.2).
+`-p biomcp@1.6.0 -p webr@0.6 …` (§3.2).
 
 **Q2: Do I need keys?**
 No by default; `variant_oncokb` requires an OncoKB token, and DisGeNET falls
@@ -347,9 +349,10 @@ your local environment or `.biomcp.json`.
 >= 22.13 (with npx).
 
 **Q10: How is the version pinned/upgraded?**
-All wiring pins `biomcp@1.4.0` exactly; upgrades ride this repo's releases
-(the pinned registry `scripts/ci/biomcp-tools.json` updates with the pin, and
-the demos' vendored copy is CI-checked byte-identical).
+All wiring now pins `biomcp@1.6.0` (the pinned registry
+`scripts/ci/biomcp-tools.json` updates with the pin, and the demos' vendored
+copy is CI-checked byte-identical); the captured scenarios below still ran
+at 1.4.0 pending the true-run refresh. Upgrades ride this repo's releases.
 
 **Q11: Mainland-China network?**
 See §5.5 — npmmirror for install, proxy for upstream APIs.
@@ -363,7 +366,7 @@ this repo's skills and docs are Apache-2.0 as well.
 - Upstream source and full tool contracts: <https://github.com/yeyuan98/biomcp-ts>
 - Wiring/auth/rate-limit source of truth: repo `docs/biomcp-ts-setup.md`
 - Pinned registry: `scripts/ci/biomcp-tools.json` (demo copy
-  `demos/lib/biomcp-tools@1.4.0.json`, CI-verified identical)
+  `demos/lib/biomcp-tools@1.6.0.json`, CI-verified identical)
 - Migration map: repo `docs/migration-from-plugin.md`
 - Agent (skills layer) doc: [agent.en.md](./agent.en.md); glossary:
   [glossary.md](./glossary.md)

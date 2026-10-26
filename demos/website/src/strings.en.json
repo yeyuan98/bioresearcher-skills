@@ -15,7 +15,7 @@
   "notfoundHome": "Back to home",
   "home": {
     "heroTitle": "BioResearcher — biomedical research agent",
-    "heroSub": "5 skills · 41 + 15 MCP tools · works in opencode, Claude Code, WorkBuddy and every harness that reads SKILL.md.",
+    "heroSub": "5 skills · 43 + 15 MCP tools · works in opencode, Claude Code, WorkBuddy and every harness that reads SKILL.md.",
     "cta": "Get started",
     "ctaDemos": "See the demos",
     "cardsTitle": "Highlights",
@@ -25,7 +25,7 @@
         "body": "Every claim carries numbered citations (PMID / DOI / NCT / patent IDs); evidence gaps are stated, never fabricated."
       },
       {
-        "title": "Keyless biomedical data · 41+15 tools",
+        "title": "Keyless biomedical data · 43+15 tools",
         "body": "Articles, trials, genes, variants, drugs, diseases, patents, omics — zero configuration, zero credentials by default."
       },
       {
@@ -58,7 +58,7 @@
       },
       {
         "title": "MCP server",
-        "body": "biomcp-ts: 41 core + 15 optional tools over stdio, keyless by default.",
+        "body": "biomcp-ts: 43 core + 15 optional tools over stdio, keyless by default.",
         "href": "mcp.html"
       },
       {
@@ -123,7 +123,7 @@
     "chinaBody": "The onboarding skill auto-detects network conditions and switches to the npmmirror registry for Node and biomcp downloads; the uv skill supports China PyPI mirrors; the WorkBuddy connector uses npmmirror by default. Upstream biomedical APIs (NCBI, ClinicalTrials.gov, MyGene…) are global endpoints — set HTTP(S)_PROXY on restricted networks.",
     "doctorTitle": "Verify the server",
     "doctorBody": "Diagnostics only (never starts the server); exit code 0 = healthy.",
-    "doctorCode": "npx -y biomcp@1.4.0 doctor --client opencode",
+    "doctorCode": "npx -y biomcp@1.6.0 doctor --client opencode",
     "more": "Full onboarding chapter (manual wiring, permissions, timeouts):",
     "moreLink": "agent doc §5"
   },
@@ -196,14 +196,14 @@
   },
   "mcp": {
     "title": "The MCP server: biomcp-ts",
-    "intro": "biomcp-ts (npm package biomcp, pinned 1.4.0) is an MCP server for biomedical data: 41 core + 15 optional tools over stdio JSON-RPC, spanning articles, trials, genes, variants, drugs, diseases, patents, omics databases, GTEx and Ensembl/PDB — keyless by default, rate-limited in-process.",
+    "intro": "biomcp-ts (npm package biomcp, pinned 1.6.0) is an MCP server for biomedical data: 43 core + 15 optional tools over stdio JSON-RPC, spanning articles, trials, genes, variants, drugs, diseases, patents, omics databases, GTEx and Ensembl/PDB — keyless by default, rate-limited in-process.",
     "catalogTitle": "Tool catalog",
     "coreTitle": "Core tools",
     "optionalTitle": "Optional tools",
     "optionalNote": "env-gated, register at server start",
     "wiringTitle": "Wiring (opencode)",
     "wiringBody": "With the server named biomcp, tools surface as biomcp_article_search, biomcp_gene_get, … Exact version pinning via -p is mandatory (bare npx biomcp cannot resolve peer deps).",
-    "wiringCode": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": { \"biomcp\": { \"type\": \"local\",\n    \"command\": [\"npx\", \"-y\", \"-p\", \"biomcp@1.4.0\", \"biomcp\"] } }\n}",
+    "wiringCode": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": { \"biomcp\": { \"type\": \"local\",\n    \"command\": [\"npx\", \"-y\", \"-p\", \"biomcp@1.6.0\", \"biomcp\"] } }\n}",
     "wiringMore": "Full wiring matrix (Claude Code, Codex, Cursor, …)",
     "capturesTitle": "True captures",
     "capturesIntro": "Real request/response pairs captured by a deterministic stdio probe — not hand-written examples.",
