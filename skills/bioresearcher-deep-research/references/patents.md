@@ -29,7 +29,12 @@ the biomedical ones: search is bounded at 60 s, detail at 120 s.
 | seminal | boolean, optional, default true | Co-citation mining of top results to surface foundational prior art in `seminal_prior_art`; adds ~5-30 s - set `false` for the fastest bibliographic lookups |
 
 Default (no `source`) "auto" mode: queries worldwide + ppubs concurrently; if
-ppubs fails hard it falls back to uspto_odp once (tagged `_note`).
+ppubs fails hard it falls back to uspto_odp once (noted in `warnings`). The
+success payload is an envelope: `{patents, total_hits, total_hits_basis,
+seminal_prior_art, mined_count, errors?, warnings?}` - backend failures
+(e.g. a google_patents timeout) ride in `errors` as `{source, message}`
+entries, fallback/coverage notes in `warnings`; there are no in-band marker
+rows inside `patents`.
 
 ### patent_get
 
@@ -82,8 +87,9 @@ Pull claims and citations for a specific patent:
 
 ## Integration notes
 
-- Auto-mode `_note` fields flag backend fallbacks - mention data lineage in
-  the report when present.
+- Auto-mode envelope fields flag data lineage - `errors[]` entries
+  (source + message) record backend failures and `warnings[]` records
+  fallback/coverage notes; mention them in the report when present.
 - EPO OPS and USPTO are server-limited at ~1 s token buckets - no manual
   throttling; expect patent tools to be the slowest calls in an aspect.
 - Cite patents by publication number with a Google Patents or Espacenet URL

@@ -6,9 +6,10 @@ Literature search and retrieval via `article_search` / `article_get`
 ## Overview
 
 `article_search` runs federated search across up to five backends with
-deduplication; `article_get` retrieves one article by PMID/PMCID/DOI with
-optional open-access full text, annotations, and citation graphs. Both tools
-enforce a 30-second execution timeout.
+deduplication; `article_get` retrieves one article by PMID/PMCID/DOI (journal
+or preprint DOI) with optional annotations, citation graphs, and opt-in
+full text. `article_search` enforces a 30-second execution timeout,
+`article_get` 60 seconds.
 
 ## Tools
 
@@ -17,7 +18,7 @@ enforce a 30-second execution timeout.
 | Parameter | Type | Notes |
 |-----------|------|-------|
 | query | string (required) | Search query (title, abstract, or keyword) |
-| source | enum, optional | `pubmed`, `europepmc`, `semantic_scholar`, `pubtator`, `litsense`; omit for federated search over all |
+| source | enum, optional | `pubmed`, `europepmc`, `semantic_scholar`, `pubtator`, `litsense`, `preprint_only`, `arxiv`; omit for federated search (journal literature only - preprints are NOT included unless `preprint_only` is explicit) |
 | limit | int 1-50, default 10 | Applied to FINAL deduplicated results, not per-source |
 | offset | int >= 0, default 0 | Result offset |
 | dateRange | string, optional | `YYYY-MM-DD/YYYY-MM-DD`; open-ended `2020-01-01/` or `/2023-12-31`; at least one endpoint required. Only `pubmed`, `europepmc`, `semantic_scholar` support it - NOT `pubtator`/`litsense` |
@@ -31,20 +32,34 @@ Federated sources at a glance:
 | semantic_scholar | CS/ML-adjacent and citation graph (key optional) |
 | pubtator | Biomedical entity-tagged (gene/disease/drug/variant/chemical) |
 | litsense | Sentence-level semantic match to the query |
+| preprint_only | bioRxiv/medRxiv preprints only (rows carry `preprint_server`, `ppr_id`) |
+| arxiv | arXiv preprint server (rows carry `arxiv_id`) |
 
 ### article_get
 
 | Parameter | Type | Notes |
 |-----------|------|-------|
-| id | string (required) | PMID (numeric, e.g. "12345"), PMCID ("PMC1234567"), or DOI ("10.1038/s41586-021-03819-2") |
-| sections | enum array, optional | `core`, `oa`, `annotations`, `graph`, `citation`, `all`; omit for core metadata only |
+| id | string (required) | PMID (numeric, e.g. "12345"), PMCID ("PMC1234567"), journal DOI ("10.1038/s41586-021-03819-2"), or preprint DOI ("10.1101/YYYY.MM.NN.NNNNNN", new prefix "10.64898/...") |
+| sections | enum array, optional | `core`, `oa`, `fulltext`, `annotations`, `graph`, `citation`, `all`; omit for core metadata only. `["all"]` = oa+annotations+graph+citation WITHOUT fulltext - request `["fulltext"]` separately |
 | limit | int 1-100, default 20 | Max items per section (e.g. 20 citations) |
 | citation_mode | `fast` (default) / `full` | fast ~4 s, 4 providers with auto-fallback to PubMed; full ~15-30 s, all 5 providers incl. PubMed |
 | citation_direction | `forward` / `backward` / `both` (default) | forward = articles citing this one; backward = its references |
+| fulltext_output | `file` (default) / `inline` | `sections:["fulltext"]` output mode - see below |
+| fulltext_max_chars | int 1000-200000, default 40000 | Inline-mode only cap for `fulltext` text; ignored in file mode |
 
-Section contents: `core` = title/authors/journal/abstract; `oa` = open-access
-full text (PMC OA); `annotations` = PubTator entity annotations; `graph` =
-citation graph; `citation` = forward citations + backward references.
+Section contents: `core` = title/authors/journal/abstract; `oa` =
+license/access metadata and links ONLY - status vocabulary
+`open_access | free_to_read | paywalled | not_in_pmc | unknown` (a pdf_url
+does not by itself mean the text is fetchable); `fulltext` = the ACTUAL
+text when freely readable in PMC/Europe PMC (opt-in, never triggered by
+`"all"`); `annotations` = PubTator entity annotations; `graph` = citation
+graph; `citation` = forward citations + backward references.
+
+`fulltext` is file-first: by default the complete text is written to a
+server-side markdown file and the reply carries `file_path` plus an outline
+(Read/Grep the file selectively). Use `fulltext_output: "inline"` (capped by
+`fulltext_max_chars`) only when the harness cannot read server-side files.
+`oa`/`fulltext` do not apply to preprint DOIs.
 
 ## Worked examples
 
@@ -78,15 +93,16 @@ Full metadata plus citations for a known PMID:
 | Fewer results than limit on federated search | dedup-then-limit semantics | page with `offset`; duplicates across sources collapse into one entry |
 | citation section empty in fast mode | providers returned no items (fast auto-falls back to PubMed) | retry with `citation_mode: "full"` |
 
-## Field contract (biomcp >= 1.4.0)
+## Field contract (biomcp >= 1.6.0)
 
 Article records from every article tool path (`article_search`,
 `article_get`, `batch_get`, `discover`) carry: `pmid`, `pmcid`, `doi`,
 `title`, `authors` (full "LastName ForeName" strings - Vancouver initials are
-computed by the evidence-ledger `bib` command), `journal`, `publication_date`
-(raw string), `volume`, `issue`, `pages` (null when the upstream record has
-none, e.g. epub-ahead-of-print), plus `mesh_headings`/`publication_types`/
-`keywords`/`chemicals` on PubMed paths. HTML entities are decoded to UTF-8.
+computed by the evidence-ledger `bib` command), `journal`, `journal_issn`,
+`publication_date` (raw string), `volume`, `issue`, `pages` (null when the
+upstream record has none, e.g. epub-ahead-of-print), plus `mesh_headings`/
+`publication_types`/`keywords`/`chemicals` on PubMed paths. HTML entities are
+decoded to UTF-8.
 
 Backend coverage notes:
 

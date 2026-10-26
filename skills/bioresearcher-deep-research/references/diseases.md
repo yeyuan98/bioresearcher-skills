@@ -80,7 +80,7 @@ Trial landscape directly (name accepted):
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `_error: Disease ... not found` from disease_trials | invalid/unresolvable ID | call `disease_search` first and copy the exact ID; supported formats are MONDO/DOID/OMIM (message text) plus EFO/Orphanet/CUI accepted by the resolver |
+| `_error: Disease 'X' not found. Try disease_search...` from disease_trials | invalid/unresolvable ID | call `disease_search` first and copy the exact ID; supported formats are MONDO/DOID/OMIM/UMLS CUI (message text) plus EFO/Orphanet accepted by the resolver |
 | disease_get 0 hits for a raw name | the tool wants an ID, not a name | resolve via `disease_search`, or use `disease_trials`/`disease_drugs` which accept names |
 | Sections empty | over-narrow section set or sparse annotation for rare diseases | try `sections: ["all"]` and note data sparsity in the report |
 

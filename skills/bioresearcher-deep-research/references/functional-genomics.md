@@ -44,9 +44,13 @@ not index them; the error points at ENA (https://www.ebi.ac.uk/ena).
 `format` (`genbank` default / `fasta`), `seq_start`/`seq_stop` (1-based
 inclusive region), `strand` (1 plus; 2 minus, allows seq_start > seq_stop for
 reverse slices), `max_response_bytes` (default 30,000,000; oversized errors
-rather than truncates). Caps: whole-record fetches max 2,000,000 bp - larger
-records REQUIRE a seq_start/seq_stop region (up to 10 Mb span); output
-`sequence_text` is truncated to its first 200,000 characters when oversized.
+rather than truncates), `sequence_output` (`file` default / `inline`). Caps:
+whole-record fetches max 2,000,000 bp - larger records REQUIRE a
+seq_start/seq_stop region (up to 10 Mb span). Sequences over 1,000 characters
+default to FILE mode: the full text is written to a server-side cache file
+and the reply carries `file_path` + char counts (never truncated) - Read/Grep
+the file selectively. `sequence_output: "inline"` opts back into inline
+`sequence_text`, capped at its first 200,000 characters.
 
 `genbank_genes`: maps a nucleotide accession to NCBI Gene IDs (elink
 nuccore->gene) usable directly with gene_get/gene_search (entrezgene IDs) -
