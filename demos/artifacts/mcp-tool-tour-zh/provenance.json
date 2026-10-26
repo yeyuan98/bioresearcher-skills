@@ -1,26 +1,26 @@
 {
   "scenario": "mcp-tool-tour-zh",
   "kind": "mcp-probe",
-  "runDirName": "20260911-213057-r1",
-  "gitCommit": "d818c8571ae2874d9b76e7ce49fbc5e69016e573",
+  "runDirName": "20261027-003849-r1",
+  "gitCommit": "f51c8fabd9587e47bad6e30a8bb1e3be83e53b0e",
   "repoUrl": "https://github.com/yeyuan98/bioresearcher-skills",
   "opencodeVersion": null,
   "model": null,
-  "nodeVersion": "v22.23.1",
-  "biomcpPin": "1.4.0",
-  "skillsDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/skills",
+  "nodeVersion": "v24.14.1",
+  "biomcpPin": "1.6.0",
+  "skillsDir": "/home/y/git/bioresearcher-skills/skills",
   "skills": {
-    "bioresearcher-deep-research": "8996e44ea0104504ea23fd492cc4de3162c4212a7796755ba236a202fe07a56a",
-    "bioresearcher-onboard": "a60d6ccc853455f2e63cb6208707856302770fbf865a35543cdfa276ff40b093",
+    "bioresearcher-deep-research": "7234198636bf5231b9ee9e7996aec84003ac2539c506fcf6135cad7660d0f4a1",
+    "bioresearcher-onboard": "a45652c6986549254f44d74fb37364b6e3dce4b633ff129359f07ef935ee7121",
     "bioresearcher-plot-making": "4bce943e9500b2857837d8d63dc3e1f1b3fdb67d031506ee649ecda1991400eb",
     "bioresearcher-pubmed-weekly": "65058dff6ef441b34daff2570a70bdbe0b74e726539ba18cec96153c852d8532",
     "bioresearcher-python-setup-uv": "1b7fd43c22d33d0f1141dcbbe78416edd4ccdc36bf4fc56bf669a0771a296edd"
   },
-  "scenarioSha256": "25fe1da7f2705033ff6aef89d76cf5b1780cea458d1e2f985ad352b3e3b40392",
-  "startedAt": "2026-09-11T13:30:57.883Z",
-  "endedAt": "2026-09-11T13:31:08.700Z",
-  "durationSec": 11,
+  "scenarioSha256": "3d5ca5cccc1fd89db33adf70e66c5731e2c2fa6f7ca8d4e604599eb7a093e390",
+  "startedAt": "2026-10-26T16:38:49.499Z",
+  "endedAt": "2026-10-26T16:38:55.868Z",
+  "durationSec": 6,
   "modelCostUsd": null,
   "outcome": "PASS",
-  "publishedAt": "2026-09-11T13:31:08.703Z"
+  "publishedAt": "2026-10-26T16:38:55.874Z"
 }

@@ -11,7 +11,7 @@
         "en": "Structured variant query: gene + protein change (never compound free text like \"BRAF V600E\").",
         "zh": "结构化变异检索：gene + 蛋白变化（切勿使用 “BRAF V600E” 这类复合自由文本）。"
       },
-      "response": "[{\"id\":\"rs113488022\",\"gene\":\"BRAF\",\"hgvs_p\":\"V600E\",\"hgvs_c\":\"c.1799T>A\",\"significance\":\"Pathogenic\",\"gnomad_af\":0.00000397994}]"
+      "response": "[{\"id\":\"rs113488022\",\"gene\":\"BRAF\",\"hgvs_p\":\"V600E\",\"hgvs_c\":\"c.1799T>A\",\"significance\":\"Pathogenic\",\"gnomad_af\":0.00000397994,\"cadd_phred\":32}]"
     },
     {
       "tool": "article_search",
@@ -20,10 +20,10 @@
         "limit": 3
       },
       "note": {
-        "en": "Federated PubMed search (Europe PMC / Semantic Scholar / PubTator / LitSense); 1.4.0 responses carry full citation locators (volume/issue/pages).",
-        "zh": "PubMed 联邦检索（Europe PMC / Semantic Scholar / PubTator / LitSense）；1.4.0 响应自带完整引用定位字段（卷/期/页码）。"
+        "en": "Federated search across six backends (PubMed + Europe PMC / Semantic Scholar / arXiv / PubTator / LitSense); envelope {results, warnings?, errors?} — per-source failures ride out of band, journal rows carry full citation locators (volume/issue/pages).",
+        "zh": "六源联邦检索（PubMed + Europe PMC / Semantic Scholar / arXiv / PubTator / LitSense）；{results, warnings?, errors?} 信封——单源失败走带外字段，期刊来源行自带完整引用定位字段（卷/期/页码）。"
       },
-      "response": "[{\"pmid\": \"37272060\", \"doi\": \"10.1080/15476286.2023.2220210\", \"title\": \"Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.\", \"authors\": [\"Adamopoulos PG\", \"Athanasopoulou K\", \"…\"], \"journal\": \"RNA Biol\", \"volume\": \"20\", \"issue\": \"1\", \"pages\": \"281-295\", \"publication_date\": \"2023-01-01\", \"cited_by\": 4, \"source\": \"europepmc\"}]"
+      "response": "{\"results\": [{\"pmid\": \"37272060\", \"doi\": \"10.1080/15476286.2023.2220210\", \"title\": \"Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.\", \"authors\": [\"Adamopoulos PG\", \"Athanasopoulou K\", \"…\"], \"journal\": \"RNA Biol\", \"volume\": \"20\", \"issue\": \"1\", \"pages\": \"281-295\", \"publication_date\": \"2023-01-01\", \"cited_by\": 4, \"source\": \"europepmc\"}], \"warnings\": [\"arXiv, PubTator had matches but none made this page — …\"], \"errors\": [{\"source\": \"semantic_scholar\", \"message\": \"… HTTP 429 …\"}]}"
     },
     {
       "tool": "gene_get",

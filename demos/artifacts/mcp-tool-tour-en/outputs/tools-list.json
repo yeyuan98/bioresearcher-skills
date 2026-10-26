@@ -1,5 +1,5 @@
 {
-  "count": 41,
+  "count": 43,
   "names": [
     "article_get",
     "article_search",
@@ -31,9 +31,11 @@
     "geo_search",
     "gtex_eqtl",
     "gtex_expression",
+    "journal_metrics",
     "patent_get",
     "patent_search",
     "pdb",
+    "preprint_fulltext",
     "sra_get",
     "sra_search",
     "trial_get",

@@ -1,7 +1,7 @@
 {
   "test": "mcp-tool-tour-en",
   "rep": 1,
-  "runDir": "/home/administrator/git/bioresearcher-agent/bioresearcher-skills/demos/.runs/mcp-tool-tour-en/20260911-213014-r1",
+  "runDir": "/home/y/git/bioresearcher-skills/demos/.runs/mcp-tool-tour-en/20261027-003740-r1",
   "reused": false,
   "outcome": "PASS",
   "reason": null,
@@ -10,9 +10,9 @@
   "checks": [
     {
       "type": "core_registry",
-      "desc": "tools/list contains all 41 pinned core tools",
+      "desc": "tools/list contains all 43 pinned core tools",
       "status": "pass",
-      "detail": "server total 41"
+      "detail": "server total 43"
     },
     {
       "type": "probe_call",
@@ -63,5 +63,5 @@
       "detail": "ok (no isError, all expectations matched)"
     }
   ],
-  "gradedAt": "2026-09-11T13:30:53.877Z"
+  "gradedAt": "2026-10-26T16:38:46.683Z"
 }

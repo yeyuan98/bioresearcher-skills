@@ -215,7 +215,7 @@
   },
   "demos": {
     "title": "Demo cases",
-    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.30; refreshed 2026-09-11 against deep-research 1.7.0 + biomcp 1.4.0; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
+    "intro": "Seven true-run scenarios driven by demos/run-demo.mjs (agent cases ran on opencode v1.18.30, captured 2026-09-11 against deep-research 1.7.0 + biomcp 1.4.0; the two MCP probe cases were re-captured 2026-10-26 against biomcp 1.6.0; the skills tree under test is pinned per-case in provenance.json). Every case carries objective checks, curated transcripts and commit-pinned artifacts in the repository.",
     "htmlNote": "The embedded reports below are the byte-exact HTML artifacts committed to the repo — the site renders the original files, it does not re-render them.",
     "replayAll": "Replay guide and artifact index:",
     "pass": "PASS",

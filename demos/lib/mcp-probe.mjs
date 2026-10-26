@@ -5,7 +5,7 @@
  * capture TRUE request/response pairs for the partner MCP documentation.
  *
  * No LLM tokens, no opencode: it spawns the pinned server command
- * (default ["npx","-y","-p","biomcp@1.4.0","biomcp"]), performs the MCP
+ * (default ["npx","-y","-p","biomcp@1.6.0","biomcp"]), performs the MCP
  * initialize handshake, and issues scripted tools/call requests from a
  * scenario manifest. Results are written to --out-dir:
  *
@@ -39,7 +39,7 @@ import process from "node:process";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_COMMAND = ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"];
+const DEFAULT_COMMAND = ["npx", "-y", "-p", "biomcp@1.6.0", "biomcp"];
 const DEFAULT_INIT_TIMEOUT_MS = 180000;
 const DEFAULT_CALL_TIMEOUT_MS = 150000; // patent_get alone bakes in 120 s
 const PROTOCOL_VERSION = "2025-06-18";
@@ -49,7 +49,7 @@ const EXCERPT_LIMIT = 8000; // per-call text excerpt cap in capture.jsonl
 function usage() {
   return [
     "usage: node demos/lib/mcp-probe.mjs --manifest <scenario.json> --out-dir <DIR>",
-    "       node demos/lib/mcp-probe.mjs --check [--command 'npx,-y,-p,biomcp@1.4.0,biomcp']",
+    "       node demos/lib/mcp-probe.mjs --check [--command 'npx,-y,-p,biomcp@1.6.0,biomcp']",
     "  --manifest PATH   mcp-probe scenario manifest (server, probe[], asserts)",
     "  --out-dir DIR     where probe-result.json / capture.jsonl / tools-list.json go",
     "  --check           handshake + tools/list + core-registry assert only, exit code 0/1",

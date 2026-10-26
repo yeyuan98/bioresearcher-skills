@@ -215,7 +215,7 @@
   },
   "demos": {
     "title": "演示案例",
-    "intro": "由 demos/run-demo.mjs 驱动的七个真实运行场景（智能体案例经 opencode v1.18.30 运行；2026-09-11 刷新重跑，被测对象 deep-research 1.7.0 + biomcp 1.4.0；被测技能树按案例在 provenance.json 中钉扎）。每个案例都带客观校验、整理后的会话记录与仓库中提交号钉扎的产物。",
+    "intro": "由 demos/run-demo.mjs 驱动的七个真实运行场景（智能体案例经 opencode v1.18.30 运行，2026-09-11 采集，被测对象 deep-research 1.7.0 + biomcp 1.4.0；两个 MCP 探针案例于 2026-10-26 在 biomcp 1.6.0 下重新采集；被测技能树按案例在 provenance.json 中钉扎）。每个案例都带客观校验、整理后的会话记录与仓库中提交号钉扎的产物。",
     "htmlNote": "下方嵌入的报告是仓库中提交的原始 HTML 产物——本站渲染原文件，不做任何重新渲染。",
     "replayAll": "复现指南与产物索引：",
     "pass": "PASS",
