@@ -103,14 +103,14 @@ runtime (restart to apply):
 
 ## 4. API documentation
 
-### 4.1 Tool catalog (41 core + 15 optional)
+### 4.1 Tool catalog (43 core + 15 optional)
 
 Core tools by domain (argument contracts per the server's `tools/list` and
 the [biomcp-ts source](https://github.com/yeyuan98/biomcp-ts)):
 
 | Domain | Tools | Notes |
 |---|---|---|
-| Articles | `article_search`, `article_get` | federated PubMed (Europe PMC/Semantic Scholar/PubTator/LitSense); detail incl. citation networks |
+| Articles | `article_search`, `article_get`, `preprint_fulltext`, `journal_metrics` | federated PubMed (Europe PMC/Semantic Scholar/arXiv/PubTator/LitSense); detail incl. citation networks; preprint full text; OpenAlex journal quality metrics |
 | Genes | `gene_search`, `gene_get`, `gene_diseases`, `gene_drugs`, `gene_trials`, `gene_articles`, `gene_enrich` | MyGene/OpenTargets; `gene_get` takes 16 section values (incl. `all`) + `smart` alias resolution (HER2→ERBB2) |
 | Variants | `variant_search`, `variant_get`, `variant_oncokb`, `variant_trials` | MyVariant; **structured queries** (`gene`+`hgvsp`, never compound free text); OncoKB needs a token |
 | Drugs | `drug_search`, `drug_get`, `drug_trials` | drug–trial linkage |
@@ -212,7 +212,8 @@ Migrating from biomcp-python: the old package used `*-searcher`/`*-getter`
 suffixed names; this package uses short `domain_action` names (e.g.
 `article_search`, `gene_get`). The full per-tool mapping table lives in the
 repo's `docs/migration-from-plugin.md`. Capability deltas: the openFDA
-approval/label/adverse-event searches are not provided in 1.4.0 (adverse
+approval/label/adverse-event searches are not provided in biomcp-ts
+through 1.6.0 (adverse
 event capability is partly folded into the drug tools); the old `protocol`
 section is now covered by the `core` + `eligibility` sections.
 All other domains are a superset.
@@ -299,7 +300,8 @@ Two probe scenarios (token-free, pure direct network calls):
 | MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (40 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-en) |
 | MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (11 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-zh) |
 
-The EN tour verifies `tools/list` exposes all 41 pinned core tools; every
+The EN tour verifies `tools/list` exposes all 41 core tools of biomcp 1.4.0
+(captured before the 1.6.0 pin bump; the registry now pins 43); every
 call's full request/response (with assertions) is in `outputs/capture.jsonl`
 and `transcript.md`. The ZH tour is the WorkBuddy connector example
 “查找 BRAF V600E 变异的相关药物与临床试验” executed at the raw MCP layer.

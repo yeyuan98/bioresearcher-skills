@@ -95,14 +95,14 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 ## 4. API 文档
 
-### 4.1 工具总目录（41 核心 + 15 可选）
+### 4.1 工具总目录（43 核心 + 15 可选）
 
 核心工具按领域（参数契约以服务器 `tools/list` 与
 [biomcp-ts 源码](https://github.com/yeyuan98/biomcp-ts) 为准）：
 
 | 领域 | 工具 | 说明 |
 |---|---|---|
-| 文献 | `article_search`、`article_get` | PubMed 联邦检索（Europe PMC/Semantic Scholar/PubTator/LitSense）、文献详情（可含引文网络） |
+| 文献 | `article_search`、`article_get`、`preprint_fulltext`、`journal_metrics` | PubMed 联邦检索（Europe PMC/Semantic Scholar/arXiv/PubTator/LitSense）、文献详情（可含引文网络）、预印本全文、OpenAlex 期刊质量指标 |
 | 基因 | `gene_search`、`gene_get`、`gene_diseases`、`gene_drugs`、`gene_trials`、`gene_articles`、`gene_enrich` | MyGene/OpenTargets 等；`gene_get` 支持 16 个 section 可选值（含 `all`）与 `smart` 别名解析（HER2→ERBB2） |
 | 变异 | `variant_search`、`variant_get`、`variant_oncokb`、`variant_trials` | MyVariant；**结构化查询**（`gene`+`hgvsp`，勿用复合自由文本）；OncoKB 需凭证 |
 | 药物 | `drug_search`、`drug_get`、`drug_trials` | 药物与试验关联 |
@@ -202,7 +202,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 从 biomcp-python 迁移：旧包采用 `*-searcher`/`*-getter` 后缀命名，本包为
 `领域_动作` 短名（如 `article_search` / `gene_get`）；完整逐条映射表见仓库
 `docs/migration-from-plugin.md`。能力差异（降级）：openFDA 的批准/标签/
-不良事件三检索在 1.4.0 中未提供（不良事件能力部分并入药物工具链）；
+不良事件三检索在 biomcp-ts（截至 1.6.0）中未提供（不良事件能力部分并入药物工具链）；
 旧 `protocol` 分节由 `core`+`eligibility` 分节承担。其余领域
 （文献/基因/变异/药物/疾病/试验/专利/组学）为超集。
 
@@ -284,7 +284,7 @@ npx -y biomcp@1.6.0 doctor --client opencode   # 也支持 claude-code/codex/…
 | MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（40 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-en) |
 | MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（11 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-zh) |
 
-英文巡览验证 `tools/list` 暴露全部 41 个钉扎核心工具；每个调用的完整
+英文巡览验证 `tools/list` 暴露 biomcp 1.4.0 全部 41 个钉扎核心工具（采集早于 1.6.0 钉扎升级；注册表现钉扎 43 个）；每个调用的完整
 请求/响应（含断言）在 `outputs/capture.jsonl` 与 `transcript.md`。
 中文巡览即 WorkBuddy 连接器示例语料「查找 BRAF V600E 变异的相关药物与
 临床试验」的底层真实调用。

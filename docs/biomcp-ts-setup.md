@@ -126,8 +126,9 @@ can take minutes.
 | `CROSSREF_EMAIL` | Crossref polite pool (citations) |
 | `EPO_OPS_CONSUMER_KEY` / `EPO_OPS_CONSUMER_SECRET` | Enables EPO OPS patent backend (EP/WO claims) |
 | `USPTO_API_KEY` | USPTO ODP patent backend |
+| `OPENALEX_API_KEY` | OpenAlex (`journal_metrics`; private per-key budget instead of the shared keyless pool) |
 | `ONCOKB_TOKEN` (**required** for `variant_oncokb`) | OncoKB annotations |
-| `DISGENET_API_KEY` (**required** for DisGeNET data**) | `gene_diseases` falls back to OpenTargets without it |
+| `DISGENET_API_KEY` (**required** for DisGeNET data) | `gene_diseases` falls back to OpenTargets without it |
 
 Unset variables may also be provided via a project `.biomcp.json` (managed
 interactively by the `biomcp_configure` tool; requires a server restart to

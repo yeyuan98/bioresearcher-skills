@@ -5,7 +5,7 @@ Literature search and retrieval via `article_search` / `article_get`
 
 ## Overview
 
-`article_search` runs federated search across up to five backends with
+`article_search` runs federated search across up to six backends with
 deduplication; `article_get` retrieves one article by PMID/PMCID/DOI (journal
 or preprint DOI) with optional annotations, citation graphs, and opt-in
 full text. `article_search` enforces a 30-second execution timeout,
@@ -18,10 +18,10 @@ full text. `article_search` enforces a 30-second execution timeout,
 | Parameter | Type | Notes |
 |-----------|------|-------|
 | query | string (required) | Search query (title, abstract, or keyword) |
-| source | enum, optional | `pubmed`, `europepmc`, `semantic_scholar`, `pubtator`, `litsense`, `preprint_only`, `arxiv`; omit for federated search (journal literature only - preprints are NOT included unless `preprint_only` is explicit) |
+| source | enum, optional | `pubmed`, `europepmc`, `semantic_scholar`, `pubtator`, `litsense`, `preprint_only`, `arxiv`; omit for federated search (bioRxiv/medRxiv preprints are NOT included unless `preprint_only` is explicit; the default federation does include the `arxiv` leg) |
 | limit | int 1-50, default 10 | Applied to FINAL deduplicated results, not per-source |
 | offset | int >= 0, default 0 | Result offset |
-| dateRange | string, optional | `YYYY-MM-DD/YYYY-MM-DD`; open-ended `2020-01-01/` or `/2023-12-31`; at least one endpoint required. Only `pubmed`, `europepmc`, `semantic_scholar` support it - NOT `pubtator`/`litsense` |
+| dateRange | string, optional | `YYYY-MM-DD/YYYY-MM-DD`; open-ended `2020-01-01/` or `/2023-12-31`; at least one endpoint required. Supported by `pubmed`, `europepmc`, `semantic_scholar`, `preprint_only`, `arxiv` - NOT `pubtator`/`litsense` |
 
 Federated sources at a glance:
 
@@ -89,7 +89,7 @@ Full metadata plus citations for a known PMID:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Tool error "timed out after 30000ms" | federated fan-out exceeded 30 s | retry with a single `source`, narrower `dateRange`, or `limit` lowered |
-| dateRange silently ignored | `source` was pubtator or litsense | filter dates client-side, or switch source to pubmed/europepmc/semantic_scholar |
+| dateRange silently ignored | `source` was pubtator or litsense | filter dates client-side, or switch source to pubmed/europepmc/semantic_scholar/arxiv/preprint_only |
 | Fewer results than limit on federated search | dedup-then-limit semantics | page with `offset`; duplicates across sources collapse into one entry |
 | citation section empty in fast mode | providers returned no items (fast auto-falls back to PubMed) | retry with `citation_mode: "full"` |
 
@@ -109,6 +109,8 @@ Backend coverage notes:
 - Only `pubmed` and `europepmc` return locator fields (volume/issue/pages).
 - `semantic_scholar`, `pubtator`, and `litsense` records never carry
   locators.
+- `preprint_only` rows carry `preprint_server`/`ppr_id` and `arxiv` rows
+  carry `arxiv_id`; neither carries journal locator fields.
 - LitSense hits are HINT records: `{pmid, pmcid, score, source}` only - no
   title, no abstract. Before citing a LitSense-only PMID, enrich it with
   `article_get(pmid)` (one sequential call; standard retry ladder on

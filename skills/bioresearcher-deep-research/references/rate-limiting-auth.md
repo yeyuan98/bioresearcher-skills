@@ -89,7 +89,7 @@ Codex: `env`), then restart the client - config changes never apply live.
 - Patents: US search works keyless via USPTO Public Search (ppubs default US
   backend); Google Patents is a best-effort fallback.
 - Drug regulatory/FAERS data works keyless (lower limits).
-- Literature works keyless across all five federated sources.
+- Literature works keyless across all six federated sources.
 
 ## Integration notes
 
