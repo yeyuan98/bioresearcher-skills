@@ -36,6 +36,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.config/opencode"
           git init -q /tmp/opencode-sandbox
+          mkdir -p /tmp/opencode-sandbox/.opencode
           cp -r skills /tmp/opencode-sandbox/.opencode/skills
           cd /tmp/opencode-sandbox
 
@@ -53,7 +54,7 @@ jobs:
           # the expected skills appear (>=90s budget).
           deadline=$((SECONDS + 90))
           while [ $SECONDS -lt $deadline ]; do
-            opencode api --server "http://127.0.0.1:$PORT" GET /api/skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err
+            opencode api --server "http://127.0.0.1:$PORT" GET /api/skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err || true
             if grep -q bioresearcher-deep-research /tmp/opencode-skills.json 2>/dev/null; then
               break
             fi

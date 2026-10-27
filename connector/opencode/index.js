@@ -137,7 +137,7 @@ export default Plugin.define({
   async setup(ctx) {
     // 1. Register bundled skills (idempotent; content is required by v2).
     const records = loadSkillRecords();
-    ctx.skill.transform((ed) => {
+    await ctx.skill.transform((ed) => {
       for (const s of records) {
         try {
           ed.add({ id: s.id, name: s.name, description: s.description, path: s.path, content: s.content });

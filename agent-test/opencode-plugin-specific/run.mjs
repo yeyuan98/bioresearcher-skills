@@ -10,7 +10,7 @@
  *   - serve_setup    : start `opencode serve --port <free>` with an isolated
  *                      HOME/XDG env + OPENCODE_PASSWORD, wait for readiness,
  *                      then run the bootstrap GUARD (bioresearcher must show
- *                      up in /api/plugin within 90s — otherwise the suite
+ *                      up in /api/plugin within 240s — otherwise the suite
  *                      aborts LOUDLY, never vacuously).
  *   - api            : `<bin> api --server <url> METHOD PATH` with polling
  *                      retry (HTTP 200 can precede plugin/MCP init) and

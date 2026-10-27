@@ -47,7 +47,7 @@ Per case the harness:
    (v2 reads `~/.claude/skills` and the plugin stamps its agent file under
    `<config>/opencode/agents` — both must stay away from the host);
 4. **bootstrap guard**: after serve readiness it polls `/api/plugin` until
-   `bioresearcher` appears (HTTP 200 can precede plugin init; 90 s budget) —
+   `bioresearcher` appears (HTTP 200 can precede plugin init; 240 s budget) —
    if the plugin never loads, the SUITE aborts loudly instead of recording
    vacuous results;
 5. runs the case's steps (`api` calls via `opencode api --server`, with

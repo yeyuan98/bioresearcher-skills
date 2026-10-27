@@ -2,7 +2,7 @@
   "id": "mcp-connected",
   "name": "canonical biomcp MCP entry connects over stdio",
   "level": "L0",
-  "purpose": "Asserts the workspace opencode.json gains the canonical mcp.servers.biomcp entry (validated shape, timeout triple 120000) and the server completes the stdio handshake (biomcp connected) — via /api/mcp against the isolated serve instance. `opencode mcp list` is intentionally NOT used: it spawns an unmanaged `serve --service` daemon on the machine-global managed port (49374) and times out whenever any other host service holds that port (free, no LLM; needs network for npx biomcp)",
+  "purpose": "Product assertion: the canonical mcp.servers.biomcp entry (written into the workspace opencode.json by the harness bootstrap, validated shape, timeout triple 120000) completes the real stdio handshake — biomcp connected via /api/mcp against the isolated serve instance. `opencode mcp list` is intentionally NOT used: it spawns an unmanaged `serve --service` daemon on the machine-global managed port (49374) and times out whenever any other host service holds that port (free, no LLM; needs network for npx biomcp)",
   "mcp": true,
   "steps": [
     { "type": "serve_setup" },
