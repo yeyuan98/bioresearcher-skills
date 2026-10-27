@@ -72,9 +72,10 @@ Releases from v1.3.0 on carry a `bioresearcher-connector_workbuddy-v*.tar.gz`
 bundle for market submission.
 
 **OpenCode (plugin / connector):** the same server + skills + subagent ship as an
-OpenCode plugin — see [docs/connector-opencode.md](./docs/connector-opencode.md).
-Published to npm as `opencode-bioresearcher` (`"plugin": ["opencode-bioresearcher"]`
-in `opencode.json` or `opencode plugin opencode-bioresearcher`). Releases also carry
+OpenCode plugin (opencode v2 only, >= 2.0.29) — see
+[docs/connector-opencode.md](./docs/connector-opencode.md).
+Published to npm as `opencode-bioresearcher` (`"plugins": ["opencode-bioresearcher"]`
+in `opencode.json`; the biomcp MCP server is config-driven). Releases also carry
 a `bioresearcher-connector_opencode-v*.tar.gz` bundle for local or offline installation.
 
 **DeepSeek Harness (plugin / connector):** the same server + skills + subagent ship as a

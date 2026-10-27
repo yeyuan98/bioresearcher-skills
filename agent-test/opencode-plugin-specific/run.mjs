@@ -161,19 +161,31 @@ async function main() {
     process.exit(2);
   }
 
-  // Setup isolated test workspace
+  // Setup isolated test workspace (opencode v2: plugins are loaded via the
+  // config "plugins" entry pointing at a directory WITH node_modules).
   const workspaceDir = path.join(RUNS_DIR, "workspace");
   fs.rmSync(workspaceDir, { recursive: true, force: true });
-  fs.mkdirSync(path.join(workspaceDir, ".opencode", "plugins"), { recursive: true });
+  fs.mkdirSync(workspaceDir, { recursive: true });
   spawnSync("git", ["init"], { cwd: workspaceDir });
 
-  // Copy built bioresearcher plugin package into workspace
-  fs.cpSync(path.join(testStage, "bioresearcher"), path.join(workspaceDir, ".opencode", "plugins", "bioresearcher"), { recursive: true });
-  fs.cpSync(path.join(testStage, "bioresearcher", "loader.js"), path.join(workspaceDir, ".opencode", "plugins", "bioresearcher.js"));
+  // Copy built bioresearcher plugin package into the workspace and install
+  // its dependencies — a plugin dir without node_modules fails SILENTLY.
+  const pluginDir = path.join(workspaceDir, "bioresearcher");
+  fs.cpSync(path.join(testStage, "bioresearcher"), pluginDir, { recursive: true });
+  const npmInstall = spawnSync("npm", ["install", "--no-audit", "--no-fund"], { cwd: pluginDir, encoding: "utf8" });
+  if (npmInstall.status !== 0) {
+    console.error(`ERROR installing plugin dependencies in ${pluginDir}:\n${npmInstall.stdout || npmInstall.stderr}`);
+    process.exit(2);
+  }
+  fs.writeFileSync(path.join(workspaceDir, "opencode.json"), `${JSON.stringify({ plugins: [pluginDir] }, null, 2)}\n`);
 
   let failed = 0;
   const outLogDir = path.join(RUNS_DIR, "logs");
   fs.mkdirSync(outLogDir, { recursive: true });
+  // Isolate the config dir so the plugin's setup() (global agent file under
+  // <config>/opencode/agents) never touches the host's real config.
+  const isolatedConfig = path.join(RUNS_DIR, "config");
+  fs.mkdirSync(path.join(isolatedConfig, "opencode"), { recursive: true });
 
   for (const c of selected) {
     process.stdout.write(`  ${c.id.padEnd(28)} ... `);
@@ -186,7 +198,7 @@ async function main() {
     spawnSync("sh", ["-c", cmd], {
       cwd: workspaceDir,
       timeout: c.timeoutMs || 30000,
-      env: { ...process.env, OPENCODE_DISABLE_PROJECT_CONFIG: "0" },
+      env: { ...process.env, OPENCODE_DISABLE_PROJECT_CONFIG: "0", XDG_CONFIG_HOME: isolatedConfig },
     });
 
     const combinedOutput = fs.existsSync(tmpOut) ? fs.readFileSync(tmpOut, "utf8") : "";

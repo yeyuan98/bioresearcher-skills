@@ -23,9 +23,21 @@ when that release PR is cut (the release workflow extracts only the
 - Fulltext/preprint support: `article_get` `sections:["fulltext"]` documented (opt-in, never triggered by `"all"`; file-first — reply carries `file_path` + outline — with `fulltext_output:"inline"` + `fulltext_max_chars` 1000-200000, default 40000); `oa` corrected to license/access metadata only (statuses `open_access | free_to_read | paywalled | not_in_pmc | unknown`); `article_search` sources `preprint_only` (rows carry `preprint_server`, `ppr_id`) and `arxiv` (`arxiv_id`); `article_get` accepts preprint DOIs (`10.1101/YYYY.MM.NN.NNNNNN` and new `10.64898/*`).
 - Other 1.6.0 truth updates: field contract heading raised to biomcp >= 1.6.0 and gains `journal_issn`; `gene_enrich` success shape `{pathways, total_reported, truncated}` + new `limit` param (1-100, default 30) + runtime guidance (15-45 s typical, ~105 s worst; client timeouts >= 120 s); `genbank_get` sequences over 1,000 chars default to a server-side file handle (`sequence_output:"inline"` opt-out); timeout table gains the 1.6.0 per-tool server deadlines; `OPENALEX_API_KEY` optional-auth row (`journal_metrics`).
 
-### bioresearcher-onboard 1.1.2
+### bioresearcher-onboard 1.2.0
 
 - Pin sweep: vendored biomcp install pin bumped from 1.4.0 to 1.6.0 (`scripts/onboard.mjs` packagesToInstall and SKILL.md install description).
+- OpenCode writer upgraded to the canonical opencode v2 shape: writes `mcp.servers.biomcp` (`type: "local"`, command `npx -y -p biomcp@1.6.0 biomcp`, `timeout` triple `{startup: 120000, catalog: 120000, execution: 120000}`); migrates a legacy flat `mcp.biomcp` entry (environment preserved, flat timeout N mapped to triple N, flat key removed) and leaves an existing canonical entry untouched.
+- Re-bundled into the OpenCode connector as the MCP bootstrap: the v2 plugin no longer auto-registers biomcp programmatically (upstream `mcp.transform` is broken), so onboard now delivers that step.
+
+### OpenCode connector (opencode v2-only rewrite)
+
+- **BREAKING**: the connector now targets opencode v2 ONLY — requires opencode >= 2.0.29 (tested through 2.1.4). Users on opencode v1 must stay on `opencode-bioresearcher@1.11.1`.
+- Rewritten onto the official framework package: `@opencode/plugin` `Plugin.define({id, setup})` is now an npm dependency; the v1 config-hook factory and the `loader.js` shallow-discovery shim are removed.
+- Skills are delivered via the v2 `ctx.skill.transform` API (idempotent `ed.add` carrying full SKILL.md content — v2 requires `content`); `bioresearcher-onboard` joins the 5-skill bundle as the MCP bootstrap.
+- The `bioresearcher-dr-worker` subagent installs as a global agent file `<config>/opencode/agents/bioresearcher-dr-worker.md` (v2-native frontmatter with permission triples; v1 shorthand silently drops the file) guarded by a `<!-- bioresearcher-stamp vX.Y.Z -->` marker: same stamp → skipped, different stamp → upgraded, no stamp (user-owned) → never touched. The build injects the repo VERSION into the staged copy.
+- MCP registration is no longer programmatic: opencode v2's `mcp.transform` hook is broken upstream, so biomcp is registered via canonical `mcp.servers.biomcp` config (flat legacy shape still accepted); the bundled onboard skill writes/migrates it.
+- Install docs rewritten for v2: npm config install via `"plugins": ["opencode-bioresearcher"]`; local/offline installs load the extracted dir via `"plugins": ["/abs/path"]` plus `npm install --omit=dev` (without deps the plugin fails silently) — `opencode plugin add` rejects local paths.
+- `connector/opencode/connector-meta.json` `minOpencodeVersion` raised to 2.0.29 with `maxTestedOpencodeVersion` 2.1.4.
 
 ### Pin sweep (biomcp 1.6.0)
 

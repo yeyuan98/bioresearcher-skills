@@ -7,6 +7,9 @@
   "exports": {
     ".": "./index.js"
   },
+  "dependencies": {
+    "@opencode/plugin": "^2.1.4"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yeyuan98/bioresearcher-skills.git",
@@ -21,7 +24,6 @@
   },
   "files": [
     "index.js",
-    "loader.js",
     "package.json",
     "connector-meta.json",
     "skill-bundle.json",

@@ -72,9 +72,19 @@ for (const name of skillsDir.filter((n) => !bundle.includes(n))) {
 ok(`bundle manifest: ${bundle.length} skill(s): ${bundle.join(", ")}`);
 
 // --- agent check -----------------------------------------------------------
-const agentSrc = join(ROOT, ".claude-plugin", "agents", "bioresearcher-dr-worker.md");
-if (!existsSync(agentSrc)) fail(`expected agent prompt file missing at ${agentSrc}`);
-else ok("dr-worker subagent source present");
+// Agent prompts are v2-native sources in connector/opencode/agents/*.md and
+// carry a `<!-- bioresearcher-stamp vDEV -->` marker that staging rewrites to
+// the repo VERSION (upgrade/idempotence protocol; see connector/opencode/index.js).
+const agentsSrcDir = join(FLAVOR, "agents");
+const agentFiles = existsSync(agentsSrcDir)
+  ? readdirSync(agentsSrcDir).filter((f) => f.endsWith(".md"))
+  : [];
+if (agentFiles.length === 0) fail(`no agent prompt files found in ${agentsSrcDir}`);
+for (const f of agentFiles) {
+  const text = readFileSync(join(agentsSrcDir, f), "utf8");
+  if (!text.includes("bioresearcher-stamp vDEV")) fail(`${f}: missing "bioresearcher-stamp vDEV" marker`);
+}
+if (agentFiles.length) ok(`agent prompt sources present (${agentFiles.join(", ")})`);
 
 if (failures) { console.error("validation failed before staging"); process.exit(1); }
 
@@ -84,7 +94,7 @@ const stage = join(stageRoot, "bioresearcher");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 
-for (const f of ["package.json", "connector-meta.json", "index.js", "loader.js", "skill-bundle.json"]) {
+for (const f of ["package.json", "connector-meta.json", "index.js", "skill-bundle.json"]) {
   cpSync(join(FLAVOR, f), join(stage, f));
 }
 
@@ -97,8 +107,13 @@ if (existsSync(join(FLAVOR, "README.md"))) {
   cpSync(join(ROOT, "docs", "connector-opencode.md"), join(stage, "README.md"));
 }
 
+// Stage agent prompts with the vDEV stamp rewritten to the repo VERSION.
 mkdirSync(join(stage, "agents"), { recursive: true });
-cpSync(agentSrc, join(stage, "agents", "bioresearcher-dr-worker.md"));
+for (const f of agentFiles) {
+  const staged = readFileSync(join(agentsSrcDir, f), "utf8")
+    .replace("bioresearcher-stamp vDEV", `bioresearcher-stamp v${version}`);
+  writeFileSync(join(stage, "agents", f), staged);
+}
 
 // Local-build hygiene: never package editor/interpreter droppings
 const JUNK = /(^|\/)(__pycache__|\.DS_Store|\.ipynb_checkpoints|Thumbs\.db)(\/|$)|\.pyc$/;
@@ -113,11 +128,16 @@ for (const name of bundle) {
 JSON.parse(readFileSync(join(stage, "connector-meta.json"), "utf8"));
 JSON.parse(readFileSync(join(stage, "package.json"), "utf8"));
 if (!existsSync(join(stage, "index.js"))) fail("staged bundle missing index.js");
-if (!existsSync(join(stage, "loader.js"))) fail("staged bundle missing loader.js");
+if (existsSync(join(stage, "loader.js"))) fail("staged bundle must not contain loader.js (removed with the v1 plugin mechanism)");
 if (!existsSync(join(stage, "skill-bundle.json"))) fail("staged bundle missing skill-bundle.json");
 if (!existsSync(join(stage, "README.md"))) fail("staged bundle missing README.md");
 if (!existsSync(join(stage, "LICENSE"))) fail("staged bundle missing LICENSE");
-if (!existsSync(join(stage, "agents", "bioresearcher-dr-worker.md"))) fail("staged bundle missing dr-worker agent");
+for (const f of agentFiles) {
+  if (!existsSync(join(stage, "agents", f))) fail(`staged bundle missing agents/${f}`);
+  if (!readFileSync(join(stage, "agents", f), "utf8").includes(`bioresearcher-stamp v${version}`)) {
+    fail(`staged agents/${f} missing stamped version marker v${version}`);
+  }
+}
 
 for (const name of bundle) {
   if (!existsSync(join(stage, "skills", name, "SKILL.md"))) fail(`staged bundle missing skills/${name}/SKILL.md`);

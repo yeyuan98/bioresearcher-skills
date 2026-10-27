@@ -63,7 +63,7 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
   `plugins/bioresearcher/` subtree — legal per the marketplace docs and keeps
   `skills/` at the root for skills-CLI/hub discovery. Install copies the whole
   repo into the plugin cache; keep the repo lean.
-- Inline version pins (`skills@…` and `opencode-ai@…` in workflows, the
+- Inline version pins (`skills@…` and `@opencode/cli@…` in workflows, the
   `uvx` commit pin, `scripts/ci/biomcp-tools.json`, the
   `connector/workbuddy/mcp.json` pins — `biomcp@x.y.z` + npm registry URL —
   and `.claude-plugin/mcp.json` — `biomcp@x.y.z`) are pin management, NOT
@@ -107,13 +107,26 @@ independent semver. Series 1 is governed by an opt-in slot registry; Series
 ## OpenCode connector / plugin
 
 - Sources live in `connector/opencode/` only. Never commit build output (`dist/`).
+- Targets opencode v2 ONLY (>= 2.0.29, tested through 2.1.4): the plugin is a
+  framework plugin (`Plugin.define` from the `@opencode/plugin` npm
+  dependency); the v1 config-hook factory and `loader.js` are gone. The
+  `@opencode/plugin` dependency range is pin management (same class as
+  `biomcp@x.y.z`), NOT VERSION coupling — bump it manually when warranted.
 - `connector/opencode/connector-meta.json` and `package.json` `version` must
   equal repo `VERSION` (check-drift gate); release workflow attaches
   `bioresearcher-connector_opencode-v<VERSION>.tar.gz` to GitHub releases and
   publishes `opencode-bioresearcher` to npm via `scripts/ci/publish-npm.mjs`.
-- The bundled-skill list is defined in `connector/opencode/skill-bundle.json`.
-  `bioresearcher-onboard` is intentionally excluded (the plugin's config hook
-  automatically registers `biomcp` into OpenCode's runtime).
+- The bundled-skill list is defined in `connector/opencode/skill-bundle.json`
+  (5 skills, INCLUDING `bioresearcher-onboard`: MCP registration is
+  config-driven on v2 — the plugin never registers servers programmatically
+  because upstream `mcp.transform` is broken; onboard writes/migrates the
+  canonical `mcp.servers.biomcp` entry in opencode.json).
+- Skills are delivered via `ctx.skill.transform`; the `bioresearcher-dr-worker`
+  agent prompt is a v2-native source in `connector/opencode/agents/` staged
+  into the bundle with build-time stamp injection (`bioresearcher-stamp vDEV`
+  -> `v<VERSION>`); setup() installs it as a global agent file under
+  `<config>/opencode/agents/` guarded by that stamp (no stamp = user-owned,
+  never touched).
 - Built by `scripts/ci/build-connector-opencode.mjs`. No credentials, tokens, or
   real API keys in any connector file.
 
