@@ -49,7 +49,11 @@ Everything else: call sequentially, no timers.
 
 | Tool | Budget |
 |------|--------|
-| article_search / article_get | 30 s |
+| article_search / journal_metrics | 30 s |
+| article_get | 60 s |
+| gene_get / disease_get / drug_get / variant_get / pdb | 40 s |
+| trial_get / variant_trials | 45 s |
+| gene_enrich | up to ~105 s (keep client tool timeouts >= 120 s) |
 | patent_search | 60 s |
 | patent_get | 120 s |
 | Per-source HTTP timeout (most sources) | 15 s |
@@ -75,6 +79,7 @@ Everything else: call sequentially, no timers.
 | `CROSSREF_EMAIL` | Crossref polite pool - faster citation metadata |
 | `EPO_OPS_CONSUMER_KEY` + `EPO_OPS_CONSUMER_SECRET` | EPO OPS patent backend: worldwide search + EP/WO claims (BOTH must be set together) |
 | `USPTO_API_KEY` | USPTO Open Data Portal application search backend |
+| `OPENALEX_API_KEY` | `journal_metrics`: private per-key daily budget instead of the shared keyless OpenAlex pool (free key at openalex.org) |
 
 Set keys in the MCP client's env block (opencode: `environment`; Claude/
 Codex: `env`), then restart the client - config changes never apply live.
@@ -84,7 +89,7 @@ Codex: `env`), then restart the client - config changes never apply live.
 - Patents: US search works keyless via USPTO Public Search (ppubs default US
   backend); Google Patents is a best-effort fallback.
 - Drug regulatory/FAERS data works keyless (lower limits).
-- Literature works keyless across all five federated sources.
+- Literature works keyless across all six federated sources.
 
 ## Integration notes
 

@@ -40,11 +40,11 @@ Protein Atlas - see pacing note below), `druggability` (DGIdb),
 
 | Tool | Parameters | Notes |
 |------|-----------|-------|
-| gene_diseases | symbol, limit (1-50, default 10) | DisGeNET associations NEED `DISGENET_API_KEY`; without it the tool falls back to OpenTargets gene-disease associations |
+| gene_diseases | symbol, limit (1-50, default 10) | DisGeNET associations NEED `DISGENET_API_KEY`; without it the tool silently returns OpenTargets gene-disease rows (source: "opentargets") |
 | gene_drugs | symbol | Drugs targeting the gene |
 | gene_trials | symbol | Clinical trials referencing the gene |
 | gene_articles | symbol | Articles about the gene (relevance search, no recency sort) |
-| gene_enrich | genes (list of HGNC symbols) | Reactome pathway enrichment; returns `_error` row on failure |
+| gene_enrich | genes (min 3 HGNC symbols), limit (1-100, default 30) | Reactome pathway enrichment; success returns `{pathways, total_reported, truncated}`; a single `_error` row on failure |
 
 ## Worked examples
 
@@ -77,7 +77,7 @@ Enrichment on a hit list:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | gene_get error: not a valid HGNC symbol | alias or outdated name used | pass the official symbol, or set `smart: true` |
-| gene_diseases returns `_error` re DisGeNET | `DISGENET_API_KEY` missing | the tool already fell back to OpenTargets data; add the key for DisGeNET-grade associations |
+| gene_diseases returns an `_error` row | BOTH DisGeNET and OpenTargets failed - not merely a missing key | without `DISGENET_API_KEY` the tool silently returns OpenTargets rows (source: "opentargets"); add the key for DisGeNET-grade associations and retry transient backend failures |
 | HPA sections slow/erroring when iterating many genes | `protein_atlas`/`expression` use an unthrottled raw fetch | pace these calls manually; other sections are server-limited |
 | gene_enrich single `_error` row | Reactome AnalysisService rejected the input | check symbols are valid HGNC; retry with a smaller list |
 
@@ -90,4 +90,6 @@ Enrichment on a hit list:
   gene expression questions with tissue profiles.
 - `ensembl_lookup` (references/ensembl-pdb.md) is the identifier/structure
   authority (stable IDs, coordinates, transcripts) for ANY Ensembl species.
+- `gene_enrich` runs 15-45 s typically (~105 s worst case, its server-side
+  budget) - keep client tool timeouts generous (>= 120 s) for it.
 - MyGene is server-limited at 100 ms - no manual throttling.

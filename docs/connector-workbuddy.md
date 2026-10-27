@@ -7,7 +7,7 @@ other marketplaces.
 
 ## Bundle contents
 
-A single `biomcp` stdio MCP server (core-only variant, pinned `biomcp@1.4.0`,
+A single `biomcp` stdio MCP server (core-only variant, pinned `biomcp@1.6.0`,
 Node 22 runtime managed by WorkBuddy, npmmirror registry, 120 s connection
 timeout) plus four of the five skills:
 

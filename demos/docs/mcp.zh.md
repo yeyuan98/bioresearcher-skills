@@ -8,8 +8,8 @@
 
 ## 1. 功能总览
 
-biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.4.0**）是一个生物医学数据
-**MCP 服务器**：通过 stdio JSON-RPC 向智能体宿主暴露 41 个核心工具 +
+biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.6.0**）是一个生物医学数据
+**MCP 服务器**：通过 stdio JSON-RPC 向智能体宿主暴露 43 个核心工具 +
 15 个可选工具，覆盖文献、临床试验、基因、变异、药物、疾病、专利、
 组学数据库、GTEx、Ensembl/PDB 等公开数据源。默认**免密钥**即可使用。
 
@@ -17,21 +17,23 @@ biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.4.0**）是一个生物医学
 - 上游：NCBI E-utilities（PubMed/GEO/SRA/GenBank）、ClinicalTrials.gov、
   MyGene/MyVariant、OpenTargets、GTEx、Ensembl、PDB/RCSB、Google Patents
   （及凭证可选启用的 EPO OPS / USPTO）、Semantic Scholar 等
-- 实证：本页 Demo 的 `tools/list` 探针确认服务器暴露 **41 个核心工具**
-  （与钉扎注册表 `scripts/ci/biomcp-tools.json` 一致）
+- 实证：本页 Demo 的 `tools/list` 探针确认钉扎核心工具集（与
+  `scripts/ci/biomcp-tools.json` 一致；已提交捕获仍为 biomcp 1.4.0 的
+  41 个工具，待真跑刷新至 1.6.0 的 43 个）
 
 ## 2. 核心特性
 
-- **免密钥默认可用**：41 个核心工具零配置零凭证（个别增强除外，见 5.3）
+- **免密钥默认可用**：43 个核心工具零配置零凭证（个别增强除外，见 5.3）
 - **服务内建按源限流**：无需（也不应）在客户端 sleep/节流（数值见 3.3）
-- **确定性版本钉扎**：`npx -p biomcp@1.4.0` 精确版本，避免 npx 缓存
+- **确定性版本钉扎**：`npx -p biomcp@1.6.0` 精确版本，避免 npx 缓存
   语义漂移与 peer 依赖问题（禁止裸 `npx biomcp`，见 Q&A Q1）
 - **诊断工具**：`biomcp doctor` 环境体检（不启动服务器）；
   `biomcp_configure` 交互式管理可选凭证（写入项目 `.biomcp.json`）
 - **可选工具组按环境变量注册**：R 分析（webR）/ SAM 工具链（Biowasm）/
   SQL 数据库（mysql2）三组，设 `BIOMCP_*` 变量后随服务器启动注册
 - **中国大陆可用**：支持 npmmirror 镜像安装；HTTP(S)_PROXY 代理透传
-- **超时内建**：每工具预算（文献 30 s、专利检索 60 s、专利详情 120 s），
+- **超时内建**：每工具预算（文献检索 30 s、文献详情 60 s、专利检索
+  60 s、专利详情 120 s，实体/试验类工具另有 40-45 s 预算），
   防止单一慢源拖垮会话
 
 ## 3. 技术架构
@@ -60,9 +62,9 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 | 变体 | 命令数组 |
 |---|---|
-| 全功能（db + R 分析） | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
-| 核心 + R 分析（无 db） | `["npx","-y","-p","biomcp@1.4.0","-p","webr@0.6","biomcp"]` |
-| 仅核心 | `["npx","-y","-p","biomcp@1.4.0","biomcp"]` |
+| 全功能（db + R 分析） | `["npx","-y","-p","biomcp@1.6.0","-p","webr@0.6","-p","mysql2@3","biomcp"]` |
+| 核心 + R 分析（无 db） | `["npx","-y","-p","biomcp@1.6.0","-p","webr@0.6","biomcp"]` |
+| 仅核心 | `["npx","-y","-p","biomcp@1.6.0","biomcp"]` |
 
 要求 Node.js ≥ 22.13。`-p` 精确钉扎使 peer 依赖随包解析（裸
 `npx biomcp` 会因缓存无法解析 peer 依赖而失败）。
@@ -93,14 +95,14 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 
 ## 4. API 文档
 
-### 4.1 工具总目录（41 核心 + 15 可选）
+### 4.1 工具总目录（43 核心 + 15 可选）
 
 核心工具按领域（参数契约以服务器 `tools/list` 与
 [biomcp-ts 源码](https://github.com/yeyuan98/biomcp-ts) 为准）：
 
 | 领域 | 工具 | 说明 |
 |---|---|---|
-| 文献 | `article_search`、`article_get` | PubMed 联邦检索（Europe PMC/Semantic Scholar/PubTator/LitSense）、文献详情（可含引文网络） |
+| 文献 | `article_search`、`article_get`、`preprint_fulltext`、`journal_metrics` | PubMed 联邦检索（Europe PMC/Semantic Scholar/arXiv/PubTator/LitSense）、文献详情（可含引文网络）、预印本全文、OpenAlex 期刊质量指标 |
 | 基因 | `gene_search`、`gene_get`、`gene_diseases`、`gene_drugs`、`gene_trials`、`gene_articles`、`gene_enrich` | MyGene/OpenTargets 等；`gene_get` 支持 16 个 section 可选值（含 `all`）与 `smart` 别名解析（HER2→ERBB2） |
 | 变异 | `variant_search`、`variant_get`、`variant_oncokb`、`variant_trials` | MyVariant；**结构化查询**（`gene`+`hgvsp`，勿用复合自由文本）；OncoKB 需凭证 |
 | 药物 | `drug_search`、`drug_get`、`drug_trials` | 药物与试验关联 |
@@ -200,7 +202,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 从 biomcp-python 迁移：旧包采用 `*-searcher`/`*-getter` 后缀命名，本包为
 `领域_动作` 短名（如 `article_search` / `gene_get`）；完整逐条映射表见仓库
 `docs/migration-from-plugin.md`。能力差异（降级）：openFDA 的批准/标签/
-不良事件三检索在 1.4.0 中未提供（不良事件能力部分并入药物工具链）；
+不良事件三检索在 biomcp-ts（截至 1.6.0）中未提供（不良事件能力部分并入药物工具链）；
 旧 `protocol` 分节由 `core`+`eligibility` 分节承担。其余领域
 （文献/基因/变异/药物/疾病/试验/专利/组学）为超集。
 
@@ -219,7 +221,7 @@ BioResearcher 运行时」（`bioresearcher-onboard` 技能自动落地
 ```json
 {"$schema": "https://opencode.ai/config.json",
  "mcp": {"biomcp": {"type": "local",
-   "command": ["npx", "-y", "-p", "biomcp@1.4.0", "biomcp"]}}}
+   "command": ["npx", "-y", "-p", "biomcp@1.6.0", "biomcp"]}}}
 ```
 
 服务器命名 `biomcp` 时工具显示为 `biomcp_article_search`、`biomcp_gene_get`
@@ -231,7 +233,7 @@ BioResearcher 运行时」（`bioresearcher-onboard` 技能自动落地
 
 ```json
 {"mcpServers": {"biomcp": {"type": "stdio", "command": "npx",
-  "args": ["-y", "-p", "biomcp@1.4.0", "biomcp"], "timeout": 120000}}}
+  "args": ["-y", "-p", "biomcp@1.6.0", "biomcp"], "timeout": 120000}}}
 ```
 
 手动注册与插件捆绑**不会按命令去重**，二选一并停用另一个（`/mcp`）。
@@ -261,7 +263,7 @@ WorkBuddy 用户直接装连接器（市场托管，npmmirror + Node 22）。
 ### 5.4 健康检查（doctor）
 
 ```bash
-npx -y biomcp@1.4.0 doctor --client opencode   # 也支持 claude-code/codex/…
+npx -y biomcp@1.6.0 doctor --client opencode   # 也支持 claude-code/codex/…
 ```
 
 仅诊断（Node 版本、npx、网络），不启动服务器；退出码 0 = 健康。
@@ -282,7 +284,7 @@ npx -y biomcp@1.4.0 doctor --client opencode   # 也支持 claude-code/codex/…
 | MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（40 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-en) |
 | MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（11 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-zh) |
 
-英文巡览验证 `tools/list` 暴露全部 41 个钉扎核心工具；每个调用的完整
+英文巡览验证 `tools/list` 暴露 biomcp 1.4.0 全部 41 个钉扎核心工具（采集早于 1.6.0 钉扎升级；注册表现钉扎 43 个）；每个调用的完整
 请求/响应（含断言）在 `outputs/capture.jsonl` 与 `transcript.md`。
 中文巡览即 WorkBuddy 连接器示例语料「查找 BRAF V600E 变异的相关药物与
 临床试验」的底层真实调用。
@@ -296,7 +298,7 @@ npx -y biomcp@1.4.0 doctor --client opencode   # 也支持 claude-code/codex/…
 ## 7. 常见 Q&A
 
 **Q1：为什么不能用裸 `npx biomcp`？**
-npx 缓存无法解析 peer 依赖（webr/mysql2 等），必须 `-p biomcp@1.4.0 -p
+npx 缓存无法解析 peer 依赖（webr/mysql2 等），必须 `-p biomcp@1.6.0 -p
 webr@0.6 …` 形式钉扎（见 3.2）。
 
 **Q2：需要密钥吗？**
@@ -328,9 +330,10 @@ npx 冷启动要下载包（约 10–60 s，之后有缓存）；连接超时建
 ≥ 22.13（含 npx）。
 
 **Q10：版本如何钉扎/升级？**
-所有接线示例精确钉 `biomcp@1.4.0`；升级由本仓库发版同步（钉扎注册表
+所有接线现已精确钉 `biomcp@1.6.0`（钉扎注册表
 `scripts/ci/biomcp-tools.json` 随 pin 更新，Demo 内置副本逐字节一致并受
-CI 校验）。
+CI 校验）；下方捕获场景仍运行于 1.4.0，待真跑刷新后同步。升级由本仓库
+发版同步。
 
 **Q11：中国大陆网络环境？**
 见 5.5：npmmirror 安装 + 代理访问上游 API。
@@ -344,7 +347,7 @@ Apache-2.0。
 - 上游源码与完整工具契约：<https://github.com/yeyuan98/biomcp-ts>
 - 接线/认证/限流原文：仓库 `docs/biomcp-ts-setup.md`
 - 钉扎注册表：`scripts/ci/biomcp-tools.json`（Demo 副本
-  `demos/lib/biomcp-tools@1.4.0.json`，CI 保证一致）
+  `demos/lib/biomcp-tools@1.6.0.json`，CI 保证一致）
 - 迁移映射：仓库 `docs/migration-from-plugin.md`
 - 智能体（技能层）文档：[agent.zh.md](./agent.zh.md)；术语表：
   [glossary.md](./glossary.md)

@@ -5,10 +5,11 @@ Route a research question to the correct biomcp tool, then shape the call with
 
 ## Overview
 
-biomcp (npm `biomcp`, pinned `biomcp@1.4`) exposes 56 tools: 41 core plus 15
-environment-gated optional tools (3 database, 4 R analysis, 8 biowasm). This
-file routes question types to tools; per-domain parameter detail lives in the
-domain reference files.
+biomcp (npm `biomcp`, pinned `biomcp@1.6`) exposes 58 tools: 43 core plus 15
+environment-gated optional tools (3 database, 4 R analysis, 8 biowasm). The
+1.6 core set adds `journal_metrics` and `preprint_fulltext` to the article
+family. This file routes question types to tools; per-domain parameter
+detail lives in the domain reference files.
 
 > In MCP clients that prefix server tools (e.g. opencode with server name
 > 'biomcp'), tools appear as biomcp_article_search etc.
@@ -20,6 +21,8 @@ QUESTION TYPE
 ├─ Literature / papers / PubMed
 │   → article_search (query, source?, dateRange?, limit, offset)
 │   → article_get (id: PMID/PMCID/DOI, sections?, citation_mode?)
+│   → preprint_fulltext (bioRxiv/medRxiv preprint DOI, version?)   # on-demand full text; license disclosed
+│   → journal_metrics (journal name / NLM abbreviation / ISSN, limit <= 25)   # OpenAlex venue quality (2-yr citedness, h-index, i10, OA) before citing
 │   → details: references/article-literature.md
 │
 ├─ Clinical trials / NCT IDs
@@ -131,7 +134,7 @@ Question: "What evidence links BRAF V600E to melanoma drug resistance?"
 |---------|-------|-----|
 | `no_such_tool` for a db/analysis tool | feature not enabled, or enabled after server start (tools register at startup only) | set `DB_TYPE`/`ANALYSIS_R`/`ANALYSIS_BIOWASM` in the client env block, restart the client |
 | Tool error mentioning OncoKB token | `variant_oncokb` without `ONCOKB_TOKEN` | get a token (oncokb.org registration) and set it, or skip OncoKB |
-| gene_diseases returns an `_error` about DisGeNET | no `DISGENET_API_KEY` | the tool falls back to OpenTargets associations; add the key for DisGeNET data |
+| gene_diseases returns an `_error` row | BOTH DisGeNET and OpenTargets failed - not merely a missing key | without `DISGENET_API_KEY` the tool silently returns OpenTargets rows (source: "opentargets"); add the key for DisGeNET-grade associations |
 | variant_search returns nothing for "BRAF V600E" as `query` | compound free text is not a variant ID | use `gene="BRAF"`, `hgvsp="V600E"` as separate params (the tool also auto-splits a bare "GENE V600E" query, but explicit params are reliable) |
 | Trial pages repeat or skip | offset paging used on trial_search | use `page_token` cursor paging |
 

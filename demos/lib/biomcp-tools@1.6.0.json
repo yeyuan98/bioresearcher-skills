@@ -1,13 +1,13 @@
 {
-  "biomcp_ts_version": "1.4.0",
-  "pinned_at": "2026-09-10",
+  "biomcp_ts_version": "1.6.0",
+  "pinned_at": "2026-10-26",
   "source": "https://github.com/yeyuan98/biomcp-ts src/server/tools (local verification)",
   "core": [
     "gene_search", "gene_get", "gene_diseases", "gene_drugs", "gene_trials", "gene_articles", "gene_enrich",
     "variant_search", "variant_get", "variant_oncokb", "variant_trials",
     "drug_search", "drug_get", "drug_trials",
     "disease_search", "disease_get", "disease_drugs", "disease_trials",
-    "article_search", "article_get",
+    "article_search", "article_get", "preprint_fulltext", "journal_metrics",
     "trial_search", "trial_get",
     "discover", "batch_get",
     "pdb",

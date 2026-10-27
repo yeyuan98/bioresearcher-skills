@@ -113,7 +113,7 @@ demos/
 │                    #   scope-aware checks; vendored port of agent-test/run.mjs)
 ├── check-demos.mjs  # CI-safe gate for this pack
 ├── lib/             # mcp-probe.mjs (stdio JSON-RPC client), publish.mjs (curator),
-│                    # biomcp-tools@1.4.0.json (vendored registry, CI-diffed), screenshot.sh
+│                    # biomcp-tools@1.6.0.json (vendored registry, CI-diffed), screenshot.sh
 ├── scenarios/       # 7 scenario manifests (+ fixtures; kind: agent | mcp-probe)
 ├── artifacts/       # committed true-run outputs (curated; log.jsonl never committed)
 ├── docs/            # the four partner documents + glossary

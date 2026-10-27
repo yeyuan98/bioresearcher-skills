@@ -6,7 +6,7 @@ Drug identity, regulatory status, labels, adverse events, and targets via
 ## Overview
 
 `drug_search` finds drugs by name/mechanism/keyword (MyChem-backed);
-`drug_get` returns per-drug detail with sections spanning US/EU/WHO
+`drug_get` returns per-drug detail with sections spanning US/WHO
 regulatory data, FDA labels (safety), FAERS adverse events, targets, and
 indications; `drug_trials` cross-links to clinical trials.
 
@@ -25,7 +25,7 @@ indications; `drug_trials` cross-links to clinical trials.
 | Parameter | Type | Notes |
 |-----------|------|-------|
 | name | string (required) | Drug name, e.g. "imatinib", "aspirin" |
-| sections | enum array, optional | `core`, `us_regulatory`, `eu_regulatory`, `who_regulatory`, `safety`, `targets`, `indications`, `adverse_events`, `all` |
+| sections | enum array, optional | `core`, `us_regulatory`, `who_regulatory`, `safety`, `targets`, `indications`, `adverse_events`, `all` |
 | limit | int 1-100, default 20 | For `adverse_events`, caps the number of ranked reaction rows |
 
 Section semantics (important - commonly confused):
@@ -34,7 +34,7 @@ Section semantics (important - commonly confused):
 |---------|----------|
 | core | identity, identifiers, description |
 | us_regulatory | US brand name + `fda_status` (e.g. approved) - NOT full labels, NOT approval history |
-| eu_regulatory / who_regulatory | EMA / WHO regulatory summaries |
+| who_regulatory | WHO Prequalification products: `{prequalified, products, note}` - prequalification listing, not regulatory summaries |
 | safety | FDA LABEL TEXT: box_warning, warnings, adverse_reactions - this is where label prose lives |
 | adverse_events | FDA FAERS adverse reactions RANKED by report count - no filters (no patient age/sex/date/reaction filtering) |
 | targets | drug targets |
@@ -65,7 +65,7 @@ Regulatory snapshot + targets + indications in one call:
 
 ```json
 {"name": "trastuzumab",
- "sections": ["us_regulatory", "eu_regulatory", "targets", "indications"]}
+ "sections": ["us_regulatory", "who_regulatory", "targets", "indications"]}
 ```
 
 ## Failure modes
@@ -75,6 +75,7 @@ Regulatory snapshot + targets + indications in one call:
 | us_regulatory is surprisingly thin | it only carries brand name + fda_status | label text (warnings, box warning, adverse reactions) is in `safety` |
 | Wanting FAERS filtered by age/sex/date | `adverse_events` exposes ranked counts only - no filters | take the ranked list and note the limitation in the report; do not claim subgroup-level FAERS results |
 | 0 hits for a trade name | search index prefers generic/mechanism terms | `drug_search` by generic name or mechanism, then `drug_get` by the matched name |
+| `sections: ["eu_regulatory"]` rejected (MCP -32602) | `eu_regulatory` was removed in biomcp 1.6.0 | drop it; US status is `us_regulatory`, WHO prequalification is `who_regulatory` |
 | Payload too large | `sections: ["all"]` on a heavily annotated drug | request only the needed sections; lower `limit` for reaction rows |
 
 ## Integration notes

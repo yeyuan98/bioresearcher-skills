@@ -15,6 +15,22 @@ when that release PR is cut (the release workflow extracts only the
 
 ## [Unreleased]
 
+### bioresearcher-deep-research 1.8.0
+
+- Pin sweep: prerequisites, recommended client command, and doctor check bumped to `biomcp@1.6.0` (43 core tools — `journal_metrics` and `preprint_fulltext` new; optional set and env gating unchanged).
+- Response-envelope guidance updated for 1.6.0: `gene_diseases` without `DISGENET_API_KEY` silently returns OpenTargets rows (`source: "opentargets"`) — an `_error` row appears only when BOTH DisGeNET and OpenTargets fail; `batch_get` per-item failures are rows with `success: false` + `error` (batch continues); `patent_search` success is an envelope `{patents, total_hits, total_hits_basis, seminal_prior_art, mined_count, errors?, warnings?}` with backend failures riding in `errors` (no in-band marker rows, fallback notes in `warnings`).
+- `drug_get`: `eu_regulatory` removed from the sections enum (requesting it fails with MCP -32602; documented as a troubleshooting row); `who_regulatory` reworded as WHO Prequalification products `{prequalified, products, note}`.
+- Fulltext/preprint support: `article_get` `sections:["fulltext"]` documented (opt-in, never triggered by `"all"`; file-first — reply carries `file_path` + outline — with `fulltext_output:"inline"` + `fulltext_max_chars` 1000-200000, default 40000); `oa` corrected to license/access metadata only (statuses `open_access | free_to_read | paywalled | not_in_pmc | unknown`); `article_search` sources `preprint_only` (rows carry `preprint_server`, `ppr_id`) and `arxiv` (`arxiv_id`); `article_get` accepts preprint DOIs (`10.1101/YYYY.MM.NN.NNNNNN` and new `10.64898/*`).
+- Other 1.6.0 truth updates: field contract heading raised to biomcp >= 1.6.0 and gains `journal_issn`; `gene_enrich` success shape `{pathways, total_reported, truncated}` + new `limit` param (1-100, default 30) + runtime guidance (15-45 s typical, ~105 s worst; client timeouts >= 120 s); `genbank_get` sequences over 1,000 chars default to a server-side file handle (`sequence_output:"inline"` opt-out); timeout table gains the 1.6.0 per-tool server deadlines; `OPENALEX_API_KEY` optional-auth row (`journal_metrics`).
+
+### bioresearcher-onboard 1.1.2
+
+- Pin sweep: vendored biomcp install pin bumped from 1.4.0 to 1.6.0 (`scripts/onboard.mjs` packagesToInstall and SKILL.md install description).
+
+### Pin sweep (biomcp 1.6.0)
+
+- Repo-wide wiring bump to `biomcp@1.6.0`: `.claude-plugin/mcp.json`, WorkBuddy / OpenCode / dsh connector server configs, `docs/` setup + connector pages, and `agent-test/` MCP case configs. `scripts/ci/biomcp-tools.json` re-vendored at 1.6.0 (43 core + 15 optional) with the demos copy renamed `demos/lib/biomcp-tools@1.6.0.json`; captured scenarios/artifacts intentionally still ran at 1.4.0 pending the true-run refresh pack above.
+
 ### Demos (partner pack refresh)
 
 Refresh the true-run demo pack to the current skill generation (deep-research

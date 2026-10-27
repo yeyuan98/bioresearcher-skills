@@ -252,7 +252,7 @@ function assertCall(entry, call) {
 async function loadRegistry() {
   // Vendored copy of scripts/ci/biomcp-tools.json at the pinned version; CI
   // (demos/check-demos.mjs) diffs the two so drift is impossible.
-  const regPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "biomcp-tools@1.4.0.json");
+  const regPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "biomcp-tools@1.6.0.json");
   return JSON.parse(fs.readFileSync(regPath, "utf8"));
 }
 
@@ -351,7 +351,7 @@ async function runManifestMode(args) {
     serverCommand: command,
     serverInfo: client.serverInfo,
     protocolVersion: PROTOCOL_VERSION,
-    registry: { file: "demos/lib/biomcp-tools@1.4.0.json", biomcp_ts_version: registry.biomcp_ts_version, core: registry.core.length, optional: registry.optional.length },
+    registry: { file: "demos/lib/biomcp-tools@1.6.0.json", biomcp_ts_version: registry.biomcp_ts_version, core: registry.core.length, optional: registry.optional.length },
     nodeVersion: process.version,
     startedAt: new Date(startedAt).toISOString(),
     durationMs: Date.now() - startedAt,

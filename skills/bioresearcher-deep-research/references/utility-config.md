@@ -104,13 +104,13 @@ Check a feature's parameters in detail:
 | `no_such_tool` after enabling a feature | tools register at server start only | restart the client/session, then verify with `biomcp_configure` `{}` (`running_now`) |
 | set refused: "sensitive" | sensitive key class requires confirmation | re-send identical call with `confirm_sensitive: true` |
 | `cwd_refused` | server cwd is / or $HOME | use the client env block (error carries the translation) |
-| batch_get item row contains `_error` | that single ID failed (typo, unknown ID) | fix the ID and re-request just that item; other items succeeded |
+| batch_get item row contains `success: false` + `error` | that single ID failed (typo, unknown ID) | fix the ID and re-request just that item; the batch continues and other items succeeded |
 
 ## Integration notes
 
 - Smoke-test sequence for a fresh setup: `biomcp_configure` with `{}` ->
   confirm expected features `running_now` -> one cheap domain call.
-- `doctor` CLI complements this: `npx -y biomcp@1.4 doctor` (exit 0 = clear);
+- `doctor` CLI complements this: `npx -y biomcp@1.6 doctor` (exit 0 = clear);
   `--client opencode` emits a paste-ready client entry.
 - Multi-entity literature pulls (e.g. 10 PMIDs from article_search) belong in
   ONE `batch_get` call, not 10 article_get calls.
