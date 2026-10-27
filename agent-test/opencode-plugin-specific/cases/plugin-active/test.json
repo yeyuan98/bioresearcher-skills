@@ -1,0 +1,19 @@
+{
+  "id": "plugin-active",
+  "name": "opencode v2 server loads the bioresearcher plugin as active",
+  "level": "L0",
+  "purpose": "Asserts /api/plugin data[] contains the bioresearcher plugin from the workspace plugins entry with state active (free, no LLM)",
+  "steps": [
+    { "type": "serve_setup" },
+    {
+      "type": "api",
+      "method": "GET",
+      "path": "/api/plugin",
+      "poll": { "untilContains": "\"id\":\"bioresearcher\"", "budgetMs": 240000, "intervalMs": 5000 },
+      "checks": [
+        { "type": "array_item", "path": "data", "match": { "key": "id", "equals": "bioresearcher" }, "assert": { "key": "state.status", "equals": "active" }, "desc": "bioresearcher plugin listed with state active" }
+      ]
+    },
+    { "type": "serve_teardown" }
+  ]
+}

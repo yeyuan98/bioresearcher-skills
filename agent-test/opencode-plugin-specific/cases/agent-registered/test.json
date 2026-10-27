@@ -1,0 +1,19 @@
+{
+  "id": "agent-registered",
+  "name": "opencode v2 loads the stamped bioresearcher-dr-worker subagent",
+  "level": "L0",
+  "purpose": "Asserts /api/agent data[] lists bioresearcher-dr-worker with mode subagent (the plugin's global agent file under the isolated config dir; free, no LLM)",
+  "steps": [
+    { "type": "serve_setup" },
+    {
+      "type": "api",
+      "method": "GET",
+      "path": "/api/agent",
+      "poll": { "untilContains": "bioresearcher-dr-worker", "budgetMs": 240000, "intervalMs": 5000 },
+      "checks": [
+        { "type": "array_item", "path": "data", "match": { "key": "name", "equals": "bioresearcher-dr-worker" }, "assert": { "key": "mode", "equals": "subagent" }, "desc": "bioresearcher-dr-worker agent listed with mode subagent" }
+      ]
+    },
+    { "type": "serve_teardown" }
+  ]
+}

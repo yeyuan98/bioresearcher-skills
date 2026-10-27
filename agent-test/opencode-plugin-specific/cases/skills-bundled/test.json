@@ -1,0 +1,21 @@
+{
+  "id": "skills-bundled",
+  "name": "opencode v2 skill transforms deliver the bundled skills including onboard",
+  "level": "L0",
+  "purpose": "Asserts /api/skill lists the bundled bioresearcher skills, including bioresearcher-deep-research AND the deliberately bundled bioresearcher-onboard (free, no LLM)",
+  "steps": [
+    { "type": "serve_setup" },
+    {
+      "type": "api",
+      "method": "GET",
+      "path": "/api/skill",
+      "poll": { "untilContains": "bioresearcher-deep-research", "budgetMs": 240000, "intervalMs": 5000 },
+      "checks": [
+        { "type": "contains", "expect": "bioresearcher-deep-research", "desc": "bioresearcher-deep-research delivered" },
+        { "type": "contains", "expect": "bioresearcher-onboard", "desc": "bioresearcher-onboard delivered (bundled on purpose: it writes the config-driven biomcp MCP entry)" },
+        { "type": "contains", "expect": "bioresearcher-pubmed-weekly", "desc": "bioresearcher-pubmed-weekly delivered" }
+      ]
+    },
+    { "type": "serve_teardown" }
+  ]
+}

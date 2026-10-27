@@ -25,10 +25,12 @@ node agent-test/run.mjs --dry-run  # discovery + schema validation + provisionin
 
 ## Requirements
 
-- `opencode` >= 1.18 installed and authenticated (the `{env:VAR}` config
-  substitution used in `opencode.json` is verified on >= 1.18; evaluated on
-  1.18.x). The runner spawns `opencode run --dir <run-dir> --auto <prompt>
-  --format json` per rep.
+- `opencode` v2 (>= 2.0.29) installed and authenticated. The runner spawns
+  `opencode run --standalone --auto [--model <id>] --format json <prompt>`
+  per rep, with the run dir as cwd (`--standalone` = private server that
+  exits with the CLI; a non-standalone run would leave persistent
+  `serve --service` daemons). Passing an explicit `--model` is recommended —
+  v2 otherwise defaults to its free-tier model.
 - node >= 22 (plain ESM, `node:` stdlib only, zero npm deps).
 - Network for MCP cases (`deep-research-q01-light` runs `npx -y -p biomcp@1.6.0
   biomcp`, keyless — no credentials anywhere; exact pin avoids npm range
@@ -83,7 +85,7 @@ re-capture for a finished run dir, then exit), `--data-root <DIR>` (default
 
 | Outcome | Meaning |
 |---------|---------|
-| `ERROR` | Harness/session problem: unparseable log, no terminal `step_finish(stop)`, check spec errors, timeout, spawn failure |
+| `ERROR` | Harness/session problem: unparseable log, no terminal completion (clean exit + trailing text after the last tool_use; a v1-era trailing `step_finish(stop)` is also accepted), check spec errors, timeout, spawn failure |
 | `FAIL` | Session completed but >= 1 objective check failed |
 | `PASS` | Session completed, all machine checks hold |
 | `PASS*` | All machine checks hold AND unadjudicated `rubric` flags remain (human verdict pending) |
@@ -91,18 +93,23 @@ re-capture for a finished run dir, then exit), `--data-root <DIR>` (default
 - Exit codes: `0` all selected tests PASS / PASS* / SKIP-only; `1` any FAIL;
   `2` harness ERROR / INTERRUPTED (takes precedence over `1`).
 - Results live in `agent-test/.runs/<TEST>/<YYYYMMDD-HHMMSS>-r<rep>/` with
-  `prompt.txt`, `opencode.json`, `log.jsonl`, `result.json`, the subagent
+  `prompt.txt`, `opencode.json`, `log.jsonl`, `exitCode.json` (the CLI exit
+  status, input to the terminal rule), `result.json`, the subagent
   capture (`subagents/`, `timeline.jsonl`, `subagents.json`, live
   `progress.jsonl`; see *Subagent observability*), plus the injected
   `.opencode/skills/` and seeded `data/`; `.runs/summary.json` and one
   `.runs/provenance.json` per invocation (git HEAD if available, opencode
   version, global-config hash, host-tool probe, per-skill `SKILL.md` sha256).
-- Resume: a rep whose prior dir has a log ending in a terminal
-  `step_finish(reason="stop")` and a `result.json` is reused (no respawn)
-  unless `--force`; incomplete rep dirs are cleaned up before each run.
-- An `APIError` event in a session that never reached a terminal stop triggers
-  a global stop-loss: remaining tests are marked INTERRUPTED and the run
-  exits 2.
+- Resume: a rep whose prior dir has a log ending in a terminal completion
+  (clean exit recorded in `exitCode.json` plus trailing text after the last
+  tool_use, or a v1-era trailing `step_finish(reason="stop")`) and a
+  `result.json` is reused (no respawn) unless `--force`; incomplete rep dirs
+  are cleaned up before each run.
+- A stream `error` event (v2 provider.internal/provider.quota envelopes or
+  any >=400 status) in a session that never completed triggers a global
+  stop-loss: remaining tests are marked INTERRUPTED and the run exits 2.
+  Tool-level errors are SOFT — the run continues and the call is graded with
+  status `error`.
 - Rubric adjudication: `rubric` checks leave a rep at `PASS*` with
   `rubricFlags` in `result.json`; record the human verdict in that file's
   `adjudications` array (`{flag, verdict, note, by, at}`, verdicts such as
@@ -192,7 +199,10 @@ Dispatched worker subagents are invisible in `log.jsonl` (long delegations
 are minutes of log silence, and none of their tool calls reach the grader).
 opencode persists every session — parent-linked, with full parts — in its
 host SQLite DB (`$XDG_DATA_HOME/opencode/opencode.db`, default
-`~/.local/share/opencode/opencode.db`), so the runner reads that DB
+`~/.local/share/opencode/opencode.db`; v2 schema: `session_v2` rows with
+`parent_id`/`directory`, `session_message` rows whose assistant `content`
+arrays carry the parts, tool items keyed `.name` with output at
+`.state.content`), so the runner reads that DB
 **read-only** (node:sqlite, WAL-safe next to live opencode processes) and
 produces, per rep dir:
 
@@ -252,6 +262,11 @@ server:
 ```json
 {"$schema":"https://opencode.ai/config.json","mcp":{"biomcp":{"type":"local","command":["npx","-y","-p","biomcp@1.6.0","biomcp"]}}}
 ```
+
+opencode v2 still accepts this legacy flat shape; new configs should prefer
+the canonical v2 nesting (`mcp.servers.biomcp` with the
+`timeout.startup/catalog/execution` triple — see
+`docs/connector-opencode.md`).
 
 - Never rename it to `opencode.jsonc` — root `.gitignore` patterns commonly
   ignore that filename everywhere, so the file would silently never be
@@ -323,6 +338,20 @@ in `fixtures/` + archived in `resources.tar.bz2`, `—` = none.
    checks gained `scope: parent|subagents|all` and a `subagent_count` type;
    `--extract-subagents <DIR>` re-captures a finished run dir. See
    *Subagent observability*.
+7. **opencode v2 adapter**: the runner spawns
+   `opencode run --standalone --auto --format json` (cwd = run dir) and
+   persists the CLI exit status to `exitCode.json`. Parsing adapts v2 logs
+   to the v1-era vocabulary the checks use: built-in tool renames are
+   aliased back (`shell`→`bash`, `subagent`→`task`), MCP calls funneled
+   through the v2 `execute` tool are recovered as synthetic `biomcp_<method>`
+   calls (from `state.metadata.metadata.toolCalls`, falling back to the
+   `tools.biomcp.<method>` call syntax in `state.input.code`, gated on
+   `scripts/ci/biomcp-tools.json`), the terminal rule became clean exit +
+   trailing text after the last tool_use (a v1 trailing `step_finish(stop)`
+   is still accepted), stream-error envelopes
+   (`provider.internal`/`provider.quota`, >=400) drive the stop-loss while
+   tool-level errors stay soft, and subagent capture reads the v2 DB schema
+   (`session_v2` + `session_message`).
 
 The grader core (the 12 ported check types), NDJSON parsing, stop-loss,
 resume, artifacts, and exit-code semantics are ported unchanged; the 13th

@@ -405,6 +405,52 @@ export async function publishScenario({ scenario, runDir, args, provenance, skil
   console.log(`published demos/artifacts/${scenario.id}/ (${outputs.length} output file(s)${skipped.length ? `, ${skipped.length} skipped` : ""})`);
 }
 
+/* Mirrors the runner's opencode v2 log adapter (demos/run-demo.mjs): built-in
+ * renames aliased back to the v1-era names, and MCP calls funneled through
+ * the v2 `execute` tool recovered as synthetic biomcp_* calls so published
+ * transcripts keep the canonical tool names. */
+const TOOL_NAME_ALIASES = { shell: "bash", subagent: "task" };
+const TOOLS_BIOMCP_RE = /tools\.biomcp\.([a-z_]+)/g;
+let biomcpMethodsCache = null;
+function biomcpMethodSet() {
+  if (biomcpMethodsCache) return biomcpMethodsCache;
+  const set = new Set();
+  try {
+    const reg = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "scripts", "ci", "biomcp-tools.json"), "utf8"));
+    for (const key of ["core", "optional"]) for (const m of reg[key] ?? []) set.add(m);
+  } catch {}
+  biomcpMethodsCache = set;
+  return set;
+}
+
+function extractExecuteMcpCalls(state) {
+  const out = [];
+  const meta = state?.metadata;
+  const nested = meta?.metadata;
+  const records = Array.isArray(nested?.toolCalls) ? nested.toolCalls : Array.isArray(meta?.toolCalls) ? meta.toolCalls : null;
+  if (records) {
+    const executeErrored = nested?.error === true || meta?.error === true;
+    const registry = biomcpMethodSet();
+    for (const rec of records) {
+      if (!rec || typeof rec.tool !== "string") continue;
+      const method = rec.tool.startsWith("biomcp.") ? rec.tool.slice("biomcp.".length) : rec.tool;
+      if (!registry.has(method)) continue;
+      const failed = executeErrored || rec.error != null;
+      out.push({ tool: `biomcp_${method}`, input: rec.input ?? null, status: failed ? "error" : rec.status ?? "completed" });
+    }
+    return out;
+  }
+  const code = state?.input?.code;
+  if (typeof code === "string") {
+    const registry = biomcpMethodSet();
+    for (const m of code.matchAll(TOOLS_BIOMCP_RE)) {
+      if (!registry.has(m[1])) continue;
+      out.push({ tool: `biomcp_${m[1]}`, input: null, status: "completed" });
+    }
+  }
+  return out;
+}
+
 function readParsedLog(runDir) {
   const logPath = path.join(runDir, "log.jsonl");
   let text = "";
@@ -427,12 +473,19 @@ function readParsedLog(runDir) {
       const part = ev.part ?? {};
       const state = part.state ?? {};
       if (state.status === "pending") continue;
-      toolCalls.push({ tool: part.tool, status: state.status ?? null, input: state.input ?? null, output: state.output ?? null, error: state.error ?? null });
+      const tool = TOOL_NAME_ALIASES[part.tool] ?? part.tool;
+      toolCalls.push({ tool, status: state.status ?? null, input: state.input ?? null, output: state.output ?? null, error: state.error ?? null });
+      if (tool === "execute") {
+        for (const rec of extractExecuteMcpCalls(state)) {
+          toolCalls.push({ tool: rec.tool, status: rec.status, input: rec.input, output: null, error: null, synthetic: "execute" });
+        }
+      }
     } else if ((ev.type === "text" || ev.type === "message") && typeof ev.part?.text === "string") {
       if (ev.part.text) texts.push(ev.part.text);
     } else if (ev.type === "step_finish") {
-      const c = ev.part?.cost?.total;
-      if (typeof c === "number" && Number.isFinite(c)) costTotal = (costTotal ?? 0) + c;
+      /* v1 carried cost as {total}; v2 carries a bare numeric cost. */
+      const c = typeof ev.part?.cost?.total === "number" ? ev.part.cost.total : typeof ev.part?.cost === "number" ? ev.part.cost : null;
+      if (c !== null && Number.isFinite(c)) costTotal = (costTotal ?? 0) + c;
     }
   }
   return { toolCalls, texts, costTotal };
