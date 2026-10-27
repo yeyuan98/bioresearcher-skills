@@ -1,12 +1,10 @@
 {
-  "description": "Skills bundled into the OpenCode plugin archive. bioresearcher-onboard is excluded because the plugin itself automatically configures biomcp into OpenCode's runtime.",
+  "description": "Skills bundled into the OpenCode plugin archive (opencode v2 only). The plugin delivers skills and the dr-worker subagent via the v2 plugin API (Plugin.define skill transforms + global agent file); the biomcp MCP server is config-driven (mcp.servers.biomcp in opencode.json, written by the bundled bioresearcher-onboard skill).",
   "skills": [
     "bioresearcher-deep-research",
+    "bioresearcher-onboard",
     "bioresearcher-plot-making",
     "bioresearcher-pubmed-weekly",
     "bioresearcher-python-setup-uv"
-  ],
-  "excluded": {
-    "bioresearcher-onboard": "Installing and registering biomcp in harness configs is already performed automatically by the OpenCode plugin's config hook."
-  }
+  ]
 }

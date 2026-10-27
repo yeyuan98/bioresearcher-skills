@@ -343,18 +343,35 @@ if (!resolvedClient && !anyDetected) {
   targetOpencode = true;
 }
 
-// OpenCode: opencode.json
+// OpenCode: opencode.json (canonical v2 shape mcp.servers.<name>)
 if (targetOpencode) {
+  const npxCmd = IS_WIN ? "npx.cmd" : "npx";
   safeMergeJson(opencodePath, (data) => {
     data.$schema = data.$schema || "https://opencode.ai/config.json";
     data.mcp = data.mcp || {};
-    data.mcp.biomcp = {
-      type: "local",
-      command: [normalizedNodePath, normalizedBundlePath],
-      environment: data.mcp.biomcp?.environment || {},
-      enabled: true,
-      timeout: options.withR ? 120000 : 30000,
-    };
+    data.mcp.servers = data.mcp.servers || {};
+    // Migrate legacy flat entry (pre-v2 onboard / old plugin config hook):
+    // preserve environment, convert flat timeout N to the triple form.
+    const legacy = data.mcp.biomcp;
+    if (data.mcp.servers.biomcp === undefined && legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+      const flatTimeout = typeof legacy.timeout === "number" ? legacy.timeout : 120000;
+      data.mcp.servers.biomcp = {
+        type: "local",
+        command: [npxCmd, "-y", "-p", "biomcp@1.6.0", "biomcp"],
+        environment: legacy.environment || {},
+        timeout: { startup: flatTimeout, catalog: flatTimeout, execution: flatTimeout },
+      };
+    } else if (data.mcp.servers.biomcp === undefined) {
+      data.mcp.servers.biomcp = {
+        type: "local",
+        command: [npxCmd, "-y", "-p", "biomcp@1.6.0", "biomcp"],
+        environment: {},
+        timeout: { startup: 120000, catalog: 120000, execution: 120000 },
+      };
+    }
+    // An existing canonical entry is left untouched; drop the migrated flat key.
+    if (legacy !== undefined) delete data.mcp.biomcp;
+    if (Object.keys(data.mcp).length === 0) delete data.mcp;
     return data;
   });
 }

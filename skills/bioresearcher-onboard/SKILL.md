@@ -4,7 +4,7 @@ description: "Bootstraps a project-local biomcp MCP server runtime in .bioresear
 license: Apache-2.0
 compatibility: "Unix-like shells (Linux, macOS) and Windows (PowerShell, cmd.exe); OpenCode, Claude Code, Cursor, ZCode, Pi Coding Agent, CodeBuddy, WorkBuddy"
 metadata:
-  version: "1.1.2"
+  version: "1.2.0"
   source: "bioresearcher-skills"
 allowed-tools: Bash Read Write Edit
 ---
@@ -25,8 +25,9 @@ working directory under `.bioresearcher-runtime/`.
 - Installs `biomcp` locally into `.bioresearcher-runtime/node_modules/` with
   sub-100ms startup latency and offline resilience.
 - Configures optional features (R analysis, Biowasm genomics, SQLite database)
-  and registers the server in your harness configuration (`opencode.json`,
-  `.mcp.json`, etc.) without overwriting existing settings.
+  and registers the server in your harness configuration (`opencode.json`
+  under the canonical `mcp.servers.biomcp` key, `.mcp.json`, etc.) without
+  overwriting existing settings.
 - Verifies the configuration using the built-in diagnostic doctor.
 
 ## Steps

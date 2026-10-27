@@ -87,11 +87,13 @@ jobs:
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/connector-meta.json'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/package.json'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/index.js'
-          tar -tzf "$TARBALL" | grep -qx 'bioresearcher/loader.js'
+          ! tar -tzf "$TARBALL" | grep -q 'bioresearcher/loader.js'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/skill-bundle.json'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/README.md'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/LICENSE'
           tar -tzf "$TARBALL" | grep -qx 'bioresearcher/agents/bioresearcher-dr-worker.md'
+          tar -xzOf "$TARBALL" bioresearcher/agents/bioresearcher-dr-worker.md | grep -q "bioresearcher-stamp v$(tr -d '[:space:]' < VERSION)"
+          tar -xzOf "$TARBALL" bioresearcher/package.json | grep -q '@opencode/plugin'
           N="$(node -p 'require("./connector/opencode/skill-bundle.json").skills.length')"
           M="$(tar -tzf "$TARBALL" | grep -c '^bioresearcher/skills/[^/]*/SKILL.md$')"
           test "$N" -eq "$M"
