@@ -30,8 +30,9 @@
  *      demos/artifacts/<id>/ via demos/lib/publish.mjs (transcript.md,
  *      outputs/, result.json, provenance.json, bilingual README.md).
  *   5. COST PROBE (additive): step_finish events carrying opencode cost data
- *      are summed into parsed.costTotal for the artifact provenance; absent
- *      cost fields leave it null (never an error).
+ *      are summed into parsed.costTotal for the artifact provenance (v1
+ *      cost.total objects and v2 numeric cost both accepted); absent cost
+ *      fields leave it null (never an error).
  *   6. Timeout ladder, hermetic env sanitization, {env:VAR} substitution,
  *      skill injection with per-SKILL.md sha256 provenance: ported unchanged.
  *   7. SUBAGENT CAPTURE (ported from agent-test/run.mjs DELTA 8): `opencode
@@ -49,7 +50,9 @@
  *      keeps node:sqlite — and its ExperimentalWarning — out of hermetic
  *      CI). --extract-subagents <DIR> re-captures any finished run dir
  *      postmortem. The privacy guard only ever reads the host DB for per-rep
- *      dirs this runner created under demos/.runs.
+ *      dirs this runner created under demos/.runs. The opencode v2 DB
+ *      schema is used (session_v2 + session_message; tool items keyed
+ *      `.name`, output at `.state.content`).
  *
  * CI-safe modes: --list and --dry-run never spawn opencode, never touch the
  * network, and do not require opencode installed. Real runs are MANUAL-ONLY
@@ -137,7 +140,7 @@ function usage() {
     "  --force             re-run even if a complete prior rep exists",
     "  --data-root <DIR>   fixture data root (default demos/data)",
     "  --skills-dir <DIR>  skills injected into each run dir (default ../skills)",
-    "  --model <ID>        passed to `opencode run --model` (optional; agent kind)",
+    "  --model <ID>        passed to `opencode run --model` (recommended — v2 defaults to the free-tier model; agent kind)",
     "  --timeout <ms>      per-rep timeout override (default: scenario timeoutMs else 300000)",
     "  --publish           curate each graded rep into demos/artifacts/<id>/",
     "  --dry-run           discovery + schema validation + provisioning simulation, never spawn",
@@ -337,13 +340,16 @@ function sanitizeChildEnv() {
  * their tool calls never reach log.jsonl and long delegations are minutes of
  * log silence (deep-research 1.7.0 makes parallel dispatch mandatory whenever
  * a subagent tool exists, so every flagship demo run now dispatches workers).
- * opencode itself persists EVERY session in its host SQLite DB
- * (session.parent_id links workers to the parent; part rows carry full tool
- * inputs/outputs, text, reasoning and per-step tokens; session.directory holds
- * the run dir), so the runner recovers subagent behavior from there — strictly
- * read-only (WAL-safe next to live opencode processes), best-effort (failures
- * become notes, never run-outcome changes), and never on --list/--dry-run
- * (node:sqlite is lazily imported so hermetic CI never loads it).
+ * opencode itself persists EVERY session in its host SQLite DB (opencode v2
+ * schema: `session_v2` rows link workers to the parent via parent_id and
+ * hold directory/title/agent; `session_message` rows hold one JSON `data`
+ * blob per message whose assistant `content` array carries full tool
+ * inputs/outputs, text, reasoning and per-step tokens — tool items are keyed
+ * `.name`, output lives at `.state.content`), so the runner recovers subagent
+ * behavior from there — strictly read-only (WAL-safe next to live opencode
+ * processes), best-effort (failures become notes, never run-outcome changes),
+ * and never on --list/--dry-run (node:sqlite is lazily imported so hermetic
+ * CI never loads it).
  */
 
 const SESSION_COLS = "id, parent_id, directory, title, agent, time_created, time_updated";
@@ -382,28 +388,65 @@ function shortSessionLabel(title, agent) {
   return `${agent ?? "?"}/${base.length > 28 ? base.slice(0, 27) + "…" : base}`;
 }
 
-/* DB part row -> normalized event mirroring the `opencode run --format json`
+/* DB part item -> normalized event mirroring the `opencode run --format json`
  * envelope ({type, timestamp, sessionID, part}) so downstream consumers can
- * treat parent and subagent streams identically. */
+ * treat parent and subagent streams identically. Accepts BOTH field layouts:
+ * v1 DB part rows (tool name at `.tool`, output at `state.output`) and v2
+ * session_message content items (name at `.name`, output at `state.content`);
+ * the emitted part always carries BOTH names and a normalized string
+ * `state.output` so v1-era readers keep working. */
+function toolOutputOf(state) {
+  if (typeof state?.output === "string") return state.output;
+  const c = state?.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) {
+    const txt = c
+      .filter((x) => x && typeof x === "object" && x.type === "text" && typeof x.text === "string")
+      .map((x) => x.text)
+      .join("\n");
+    if (txt) return txt;
+  }
+  return state?.output ?? null;
+}
+
 function subagentPartToEvent(sid, timeCreated, p) {
   const t = p?.type;
   const type = t === "tool" ? "tool_use" : t === "step-start" ? "step_start" : t === "step-finish" ? "step_finish" : t;
   let part = p;
-  if (t === "tool") part = { tool: p.tool, state: p.state ?? {} };
-  else if (t === "step-finish") part = { reason: p.reason, tokens: p.tokens ?? null };
+  if (t === "tool") {
+    const name = p.tool ?? p.name ?? null;
+    const state = p.state ?? {};
+    part = { tool: name, name, state: { ...state, output: toolOutputOf(state) } };
+  } else if (t === "step-finish") part = { reason: p.reason, tokens: p.tokens ?? null };
   else if (t === "text" || t === "reasoning") part = { text: p.text ?? "" };
   return { type, timestamp: timeCreated, sessionID: sid, origin: "subagent", part };
 }
 
-/* All sessions belonging to a run: roots have directory == runDir; the worker
- * closure follows parent_id (nested subagents included, any cwd). */
-function collectRunSessions(db, runDir) {
+/* Child session IDs dispatched by the parent run, recovered from the parent
+ * log's execute output envelopes (`<subagent sessionID="..." state="...">`).
+ * Preferred discovery channel; session_v2.parent_id linkage is the fallback. */
+function childSessionIdsFromLog(logText) {
+  const ids = new Set();
+  for (const m of String(logText ?? "").matchAll(/<subagent\s+sessionID="([^"]+)"/g)) ids.add(m[1]);
+  return [...ids];
+}
+
+/* All sessions belonging to a run: roots have directory == runDir (plus any
+ * child IDs the parent log names explicitly); the worker closure follows
+ * parent_id (nested subagents included, any cwd). */
+function collectRunSessions(db, runDir, logChildIds = []) {
   const byId = new Map();
-  for (const s of db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE directory = ?`).all(runDir)) byId.set(s.id, s);
+  for (const s of db.prepare(`SELECT ${SESSION_COLS} FROM session_v2 WHERE directory = ?`).all(runDir)) byId.set(s.id, s);
+  if (logChildIds.length) {
+    const ph = logChildIds.map(() => "?").join(",");
+    for (const s of db.prepare(`SELECT ${SESSION_COLS} FROM session_v2 WHERE id IN (${ph})`).all(...logChildIds)) {
+      if (!byId.has(s.id)) byId.set(s.id, s);
+    }
+  }
   let frontier = [...byId.keys()];
   for (let depth = 0; depth < 16 && frontier.length; depth++) {
     const ph = frontier.map(() => "?").join(",");
-    const children = db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE parent_id IN (${ph})`).all(...frontier);
+    const children = db.prepare(`SELECT ${SESSION_COLS} FROM session_v2 WHERE parent_id IN (${ph})`).all(...frontier);
     frontier = [];
     for (const c of children) {
       if (byId.has(c.id)) continue;
@@ -415,7 +458,14 @@ function collectRunSessions(db, runDir) {
 }
 
 function scanLedgerBanners(p, into) {
-  const blobs = [typeof p?.text === "string" ? p.text : null, typeof p?.state?.output === "string" ? p.state.output : null, typeof p?.state?.input === "string" ? p.state.input : null];
+  /* v1 blobs: part.text / state.output / state.input (string). v2 content
+   * arrays (state.content[].text) are covered via toolOutputOf. */
+  const state = p?.state;
+  const blobs = [
+    typeof p?.text === "string" ? p.text : null,
+    typeof state === "object" && state !== null ? toolOutputOf(state) : null,
+    typeof state?.input === "string" ? state.input : null,
+  ];
   for (const blob of blobs) {
     if (!blob) continue;
     for (const m of blob.matchAll(/^\[evidence-ledger\][^\n]*/gm)) into.add(m[0].slice(0, 120));
@@ -452,13 +502,6 @@ async function extractSubagents(runDir) {
   const { db, dbPath } = open;
   summary.dbPath = dbPath;
   try {
-    const sessions = collectRunSessions(db, path.resolve(runDir));
-    summary.parentSessions = sessions.filter((s) => !s.parent_id).map((s) => s.id);
-    const subs = sessions.filter((s) => s.parent_id);
-    const outDir = path.join(runDir, "subagents");
-    fs.mkdirSync(outDir, { recursive: true });
-
-    const timeline = [];
     const logText = (() => {
       try {
         return fs.readFileSync(path.join(runDir, "log.jsonl"), "utf8");
@@ -466,6 +509,13 @@ async function extractSubagents(runDir) {
         return "";
       }
     })();
+    const sessions = collectRunSessions(db, path.resolve(runDir), childSessionIdsFromLog(logText));
+    summary.parentSessions = sessions.filter((s) => !s.parent_id).map((s) => s.id);
+    const subs = sessions.filter((s) => s.parent_id);
+    const outDir = path.join(runDir, "subagents");
+    fs.mkdirSync(outDir, { recursive: true });
+
+    const timeline = [];
     for (const line of logText.split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
@@ -479,8 +529,28 @@ async function extractSubagents(runDir) {
     }
 
     for (const s of subs) {
-      const parts = db.prepare("SELECT time_created, data FROM part WHERE session_id = ? ORDER BY time_created").all(s.id);
-      const messages = db.prepare("SELECT COUNT(*) AS n FROM message WHERE session_id = ?").get(s.id).n;
+      /* v2 schema: one session_message row per message; assistant rows carry
+       * the parts array in data.content (ordered). message count = rows. */
+      const msgRows = db.prepare("SELECT seq, type, time_created, data FROM session_message WHERE session_id = ? ORDER BY seq").all(s.id);
+      const messages = msgRows.length;
+      const parts = []; // {timeCreated, item} flattened from assistant content arrays
+      for (const row of msgRows) {
+        let d;
+        try {
+          d = JSON.parse(row.data);
+        } catch {
+          continue;
+        }
+        if (row.type !== "assistant" || !Array.isArray(d.content)) continue;
+        const tc = Number.isFinite(Number(d.time?.completed)) ? d.time.completed : row.time_created;
+        for (const item of d.content) parts.push({ timeCreated: tc, item });
+        /* v2 keeps per-message tokens on the assistant row (there is no
+         * step-finish part like v1's): synthesize one so token accounting
+         * survives the port. */
+        if (d.tokens && typeof d.tokens === "object") {
+          parts.push({ timeCreated: tc, item: { type: "step-finish", reason: d.finish ?? null, tokens: d.tokens } });
+        }
+      }
       const toolHistogram = {};
       const banners = new Set();
       let tokensTotal = 0;
@@ -497,14 +567,8 @@ async function extractSubagents(runDir) {
           timeCreated: s.time_created ?? null,
           timeUpdated: s.time_updated ?? null,
         }) + "\n");
-        for (const row of parts) {
-          let p;
-          try {
-            p = JSON.parse(row.data);
-          } catch {
-            continue;
-          }
-          const ev = subagentPartToEvent(s.id, row.time_created, p);
+        for (const { timeCreated, item } of parts) {
+          const ev = subagentPartToEvent(s.id, timeCreated, item);
           timeline.push(ev);
           if (ev.type === "tool_use") {
             const key = `${ev.part.tool}:${ev.part.state?.status ?? "?"}`;
@@ -514,7 +578,7 @@ async function extractSubagents(runDir) {
           } else if ((ev.type === "text" || ev.type === "reasoning") && typeof ev.part?.text === "string") {
             textChars += ev.part.text.length;
           }
-          scanLedgerBanners(p, banners);
+          scanLedgerBanners(item, banners);
           fs.writeSync(fd, JSON.stringify(ev) + "\n");
         }
       } finally {
@@ -540,11 +604,16 @@ async function extractSubagents(runDir) {
     timeline.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
     const tlFd = fs.openSync(path.join(runDir, "timeline.jsonl"), "w");
     try {
-      for (const ev of timeline) {
-        const out = ev.type === "tool_use" && typeof ev.part?.state?.output === "string" && ev.part.state.output.length > 240
-          ? { ...ev, part: { ...ev.part, state: { ...ev.part.state, output: ev.part.state.output.slice(0, 240) + `… (+${ev.part.state.output.length - 240} chars)` } } }
-          : ev;
-        fs.writeSync(tlFd, JSON.stringify(out) + "\n");
+      for (let ev of timeline) {
+        /* Truncate oversized tool outputs (v1 state.output and the v2
+         * state.content layout via toolOutputOf) to keep the file readable. */
+        if (ev.type === "tool_use") {
+          const outStr = toolOutputOf(ev.part?.state);
+          if (typeof outStr === "string" && outStr.length > 240) {
+            ev = { ...ev, part: { ...ev.part, state: { ...ev.part.state, output: outStr.slice(0, 240) + `… (+${outStr.length - 240} chars)` } } };
+          }
+        }
+        fs.writeSync(tlFd, JSON.stringify(ev) + "\n");
       }
     } finally {
       fs.closeSync(tlFd);
@@ -614,10 +683,10 @@ function loadSubagentEvents(runDir) {
         const state = part.state ?? {};
         if (state.status === "pending") continue;
         out.toolCalls.push({
-          tool: part.tool,
+          tool: part.tool ?? part.name ?? null, // v1 .tool / v2 .name (capture writes both)
           status: state.status ?? null,
           input: state.input ?? null,
-          output: state.output ?? null,
+          output: toolOutputOf(state),
           error: state.error ?? null,
           ts: ev.timestamp ?? null,
           sessionID: ev.sessionID ?? null,
@@ -697,7 +766,7 @@ function startSubagentProgressPoller(label, runDir) {
         record(`poller started (db: ${open.dbPath})`);
       }
       const db = state.db;
-      const sessions = db.prepare(`SELECT ${SESSION_COLS} FROM session WHERE directory = ?`).all(path.resolve(runDir));
+      const sessions = db.prepare(`SELECT ${SESSION_COLS} FROM session_v2 WHERE directory = ?`).all(path.resolve(runDir));
       const ids = [];
       for (const s of sessions) {
         ids.push(s.id);
@@ -715,31 +784,36 @@ function startSubagentProgressPoller(label, runDir) {
       /* Activity = new parts OR updated parts (a long-running tool call
        * transitions pending -> running -> completed via row updates that
        * never bump time_created). Reporting still keys on time_created so a
-       * part is printed once. */
+       * part is printed once. v2: parts live in session_message rows; each
+       * assistant row's data.content array holds the individual part items
+       * (tool names at `.name`). */
       const createdBefore = state.watermark;
-      const rows = db.prepare(`SELECT session_id, time_created, time_updated, data FROM part WHERE session_id IN (${ph}) AND (time_created > ? OR time_updated > ?) ORDER BY time_created`).all(...ids, state.watermark, state.updatedWatermark);
+      const rows = db.prepare(`SELECT session_id, time_created, time_updated, data FROM session_message WHERE session_id IN (${ph}) AND (time_created > ? OR time_updated > ?) ORDER BY time_created, seq`).all(...ids, state.watermark, state.updatedWatermark);
       const grouped = new Map();
       for (const r of rows) {
         if (r.time_created > state.watermark) state.watermark = r.time_created;
         if ((r.time_updated ?? 0) > state.updatedWatermark) state.updatedWatermark = r.time_updated;
         state.lastActivityAt = Date.now();
-        let p;
+        let d;
         try {
-          p = JSON.parse(r.data);
+          d = JSON.parse(r.data);
         } catch {
           continue;
         }
         const meta = state.known.get(r.session_id);
-        const kind = p.type === "tool" ? `tool ${p.tool} ${p.state?.status ?? ""}`.trim() : String(p.type ?? "?");
-        const sessLabel = meta ? shortSessionLabel(meta.title, meta.agent) : r.session_id.slice(-6);
-        /* lastDesc covers parent AND subagent activity so the stall banner
-         * names the true last event, not just the last subagent one. */
-        state.lastDesc = `${meta?.parent_id ? `sub[${sessLabel}]` : "parent"} ${kind} @${clock()}`;
-        if (!meta?.parent_id) continue; // parent stream already lands in log.jsonl
-        if (r.time_created <= createdBefore) continue; // update-only re-report guard
-        const g = grouped.get(r.session_id) ?? { label: sessLabel, items: [] };
-        g.items.push({ ts: r.time_created, kind });
-        grouped.set(r.session_id, g);
+        const items = r.type === "assistant" && Array.isArray(d.content) ? d.content : [];
+        for (const p of items) {
+          const kind = p?.type === "tool" ? `tool ${p.name ?? p.tool} ${p.state?.status ?? ""}`.trim() : String(p?.type ?? "?");
+          const sessLabel = meta ? shortSessionLabel(meta.title, meta.agent) : r.session_id.slice(-6);
+          /* lastDesc covers parent AND subagent activity so the stall banner
+           * names the true last event, not just the last subagent one. */
+          state.lastDesc = `${meta?.parent_id ? `sub[${sessLabel}]` : "parent"} ${kind} @${clock()}`;
+          if (!meta?.parent_id) continue; // parent stream already lands in log.jsonl
+          if (r.time_created <= createdBefore) continue; // update-only re-report guard
+          const g = grouped.get(r.session_id) ?? { label: sessLabel, items: [] };
+          g.items.push({ ts: r.time_created, kind });
+          grouped.set(r.session_id, g);
+        }
       }
       for (const [, g] of grouped) {
         record(`subagent activity`, { label: g.label, events: g.items });
@@ -809,7 +883,7 @@ function readLogFile(file) {
   } catch {
     return null;
   }
-  return parseLog(text);
+  return parseLog(text, readExitCodeInfo(path.dirname(file)));
 }
 
 function findResumeDir(scenario, rep) {
@@ -924,9 +998,14 @@ function runSession(scenario, rep, args, prepared) {
     const timeoutMs = args.timeout ?? scenario.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const startedAt = new Date().toISOString();
 
-    const argv = ["run", "--dir", runDir, "--auto", prompt, "--format", "json"];
+    /* opencode v2 spawn: no --dir flag (cwd + $PWD govern the project dir);
+     * --standalone runs a private server that exits cleanly with the CLI (a
+     * non-standalone run spawns persistent `serve --service` daemons that
+     * collide on the managed port). Prompt is the trailing positional. */
+    const argv = ["run", "--standalone", "--auto"];
     if (args.model) argv.push("--model", args.model);
-    const child = spawn("opencode", argv, { cwd: runDir, env: sessionEnv, stdio: ["ignore", "pipe", "pipe"] });
+    argv.push("--format", "json", prompt);
+    const child = spawn("opencode", argv, { cwd: runDir, env: { ...sessionEnv, PWD: runDir }, stdio: ["ignore", "pipe", "pipe"] });
 
     // DELTA 7: live subagent-progress poller (sidecar progress.jsonl + console
     // lines + stall warnings). Best-effort; never touches log.jsonl.
@@ -941,19 +1020,32 @@ function runSession(scenario, rep, args, prepared) {
       killTimer = setTimeout(() => child.kill("SIGKILL"), TERM_GRACE_MS);
     }, timeoutMs);
 
-    const finish = (spawnError) => {
+    const finish = (spawnError, exitCode = null, exitSignal = null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       if (killTimer) clearTimeout(killTimer);
       poller.stop(spawnError ? `spawn failed: ${spawnError?.message ?? "?"}` : timedOut ? "run timed out" : "run finished");
       fs.closeSync(fd);
-      resolve({ runDir, logPath, timedOut, spawnError: spawnError ?? null, startedAt, endedAt: new Date().toISOString(), prompt });
+      resolve({ runDir, logPath, timedOut, spawnError: spawnError ?? null, exitCode, exitSignal, startedAt, endedAt: new Date().toISOString(), prompt });
     };
     child.stdout.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} poller.noteActivity(); });
     child.stderr.on("data", (c) => { try { fs.writeSync(fd, c); } catch {} poller.noteActivity(); });
     child.on("error", (e) => finish(e));
-    child.on("close", () => finish(null));
+    child.on("close", (code, signal) => {
+      /* v2: persist the CLI exit status next to the log so re-parses (resume,
+       * incomplete-dir dropping, postmortem grading, --publish) can apply the
+       * clean-exit terminal rule without re-spawning. */
+      try {
+        fs.writeFileSync(path.join(runDir, "exitCode.json"), JSON.stringify({
+          code: code ?? null,
+          signal: signal ?? null,
+          timedOut,
+          finishedAt: new Date().toISOString(),
+        }, null, 2) + "\n");
+      } catch {}
+      finish(null, code ?? null, signal ?? null);
+    });
   });
 }
 
@@ -1038,11 +1130,83 @@ function isApiErrorEvent(ev) {
   const err = ev.error ?? ev.part?.error ?? ev.data ?? null;
   if (!err || typeof err !== "object") return false;
   if (err.name === "APIError") return true;
-  const sc = err.data?.statusCode ?? err.statusCode ?? null;
+  /* opencode v2 stream-error envelopes: {type:"error", error:{type:
+   * "provider.internal"|"provider.quota"|..., message, status}} — a typed
+   * error or any >=400 status marks the event (tool-level errors are SOFT
+   * and never reach this path: they arrive as tool_use parts, not error
+   * events, and the run continues with exit 0). */
+  if (typeof err.type === "string" && err.type) return true;
+  const sc = err.data?.statusCode ?? err.statusCode ?? err.status ?? null;
   return Number.isFinite(Number(sc)) && Number(sc) >= 400;
 }
 
-function parseLog(text) {
+/* opencode v2 renamed built-in tools; alias them back so every scenario
+ * manifest and check keeps its v1-era byte-identical tool name. */
+const TOOL_NAME_ALIASES = { shell: "bash", subagent: "task" };
+
+/* Pinned biomcp method registry (scripts/ci/biomcp-tools.json, core+optional):
+ * the only names the execute-adapter will materialize as biomcp_* calls.
+ * Hallucinated or non-biomcp names are skipped silently. */
+let biomcpMethodsCache = null;
+function biomcpMethodSet() {
+  if (biomcpMethodsCache) return biomcpMethodsCache;
+  const set = new Set();
+  try {
+    const reg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "scripts", "ci", "biomcp-tools.json"), "utf8"));
+    for (const key of ["core", "optional"]) for (const m of reg[key] ?? []) set.add(m);
+  } catch {
+    /* registry unavailable -> extraction disabled (no synthetic calls) */
+  }
+  biomcpMethodsCache = set;
+  return set;
+}
+
+const TOOLS_BIOMCP_RE = /tools\.biomcp\.([a-z_]+)/g;
+
+/* opencode v2 funnels every MCP call through the built-in `execute` tool, so
+ * the v1-style per-tool events are gone. Recover them: PRIMARY the structured
+ * record at state.metadata.metadata.toolCalls (JSONL nesting; the v2 DB keeps
+ * the same record one level up at state.metadata.toolCalls — read both),
+ * FALLBACK the executed source (state.input.code) via the stable
+ * tools.biomcp.<method> call syntax. Each registry-verified record becomes a
+ * synthetic biomcp_<method> toolCall emitted right after the execute call. */
+function extractExecuteMcpCalls(state) {
+  const out = [];
+  const meta = state?.metadata;
+  const nested = meta?.metadata;
+  const records = Array.isArray(nested?.toolCalls) ? nested.toolCalls : Array.isArray(meta?.toolCalls) ? meta.toolCalls : null;
+  if (records) {
+    const executeErrored = nested?.error === true || meta?.error === true;
+    const registry = biomcpMethodSet();
+    for (const rec of records) {
+      if (!rec || typeof rec.tool !== "string") continue;
+      const method = rec.tool.startsWith("biomcp.") ? rec.tool.slice("biomcp.".length) : rec.tool;
+      if (!registry.has(method)) continue;
+      const failed = executeErrored || rec.error != null;
+      out.push({ tool: `biomcp_${method}`, input: rec.input ?? null, status: failed ? "error" : rec.status ?? "completed" });
+    }
+    return out;
+  }
+  const code = state?.input?.code;
+  if (typeof code === "string") {
+    const registry = biomcpMethodSet();
+    for (const m of code.matchAll(TOOLS_BIOMCP_RE)) {
+      if (!registry.has(m[1])) continue;
+      out.push({ tool: `biomcp_${m[1]}`, input: null, status: "completed" });
+    }
+  }
+  return out;
+}
+
+function readExitCodeInfo(dir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, "exitCode.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function parseLog(text, exitInfo = null) {
   const events = [];
   let parsedCount = 0;
   for (const line of String(text).split(/\r?\n/)) {
@@ -1062,38 +1226,58 @@ function parseLog(text) {
   let endsWithStop = false;
   let lastApiError = null;
   let lastWasTerminalStop = false;
-  let costTotal = null; // DELTA 5: sum of step_finish cost.total, when present
-  for (const ev of events) {
-    lastWasTerminalStop = false;
+  let lastToolUseIdx = -1;
+  let lastTextIdx = -1;
+  let costTotal = null; // DELTA 5: sum of step_finish cost, when present
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    lastWasTerminalStop = false; // v1 rule: only a TRAILING step_finish(stop) counts
     if (ev.type === "tool_use") {
       const part = ev.part ?? {};
       const state = part.state ?? {};
       const status = state.status;
       if (status === "pending") continue;
+      const tool = TOOL_NAME_ALIASES[part.tool] ?? part.tool;
       toolCalls.push({
-        tool: part.tool,
+        tool,
         status: status ?? null,
         input: state.input ?? null,
         output: state.output ?? null,
-        error: state.error ?? null,
+        error: state.error ?? null, /* tool errors are SOFT: recorded per call, never fatal */
         /* DELTA 7: event timestamp (ms epoch) — lets scope:"all" interleave
          * parent and captured subagent tool calls in true execution order. */
         ts: ev.timestamp ?? null,
       });
+      if (tool === "execute") {
+        for (const rec of extractExecuteMcpCalls(state)) {
+          toolCalls.push({ tool: rec.tool, status: rec.status, input: rec.input, output: null, error: null, ts: ev.timestamp ?? null, synthetic: "execute" });
+        }
+      }
+      lastToolUseIdx = i;
     } else if (ev.type === "text" && typeof ev.part?.text === "string") {
-      if (ev.part.text) texts.push(ev.part.text);
+      if (ev.part.text) { texts.push(ev.part.text); lastTextIdx = i; }
     } else if (ev.type === "message" && typeof ev.part?.text === "string") {
-      if (ev.part.text) texts.push(ev.part.text);
+      if (ev.part.text) { texts.push(ev.part.text); lastTextIdx = i; }
     } else if (ev.type === "step_finish") {
       if (ev.part?.reason === "stop") lastWasTerminalStop = true;
-      const c = ev.part?.cost?.total;
-      if (typeof c === "number" && Number.isFinite(c)) costTotal = (costTotal ?? 0) + c;
+      /* v1 carried cost as {total}; v2 carries a bare numeric cost. */
+      const c = typeof ev.part?.cost?.total === "number" ? ev.part.cost.total : typeof ev.part?.cost === "number" ? ev.part.cost : null;
+      if (c !== null && Number.isFinite(c)) costTotal = (costTotal ?? 0) + c;
     } else if (isApiErrorEvent(ev)) {
       lastApiError = ev.error ?? ev.part?.error ?? ev.data ?? null;
     }
   }
-  endsWithStop = lastWasTerminalStop && events.length > 0;
-  return { events, parsedCount, toolCalls, texts, endsWithStop, apiError: lastApiError, costTotal };
+  /* Terminal rule (opencode v2): a run is COMPLETE iff the CLI exited cleanly
+   * (exitCode.json code === 0) AND assistant text follows the last tool_use —
+   * v2 runs never end with step_finish reason "stop" (steps close with
+   * "tool-calls"), so that must never be required. A v1-era terminal stop is
+   * still accepted when present, and a MISSING exitCode.json (pre-v2 run
+   * dirs, or the file could not be written) falls back to the v1 stop rule
+   * alone so old dirs keep their recorded semantics. */
+  const exitOk = exitInfo ? exitInfo.code === 0 : null;
+  const textAfterLastTool = lastTextIdx > lastToolUseIdx;
+  endsWithStop = events.length > 0 && (lastWasTerminalStop || (exitOk === true && textAfterLastTool));
+  return { events, parsedCount, toolCalls, texts, endsWithStop, apiError: lastApiError, costTotal, exit: exitInfo ?? null };
 }
 
 /* ================================================================= SECTION: grader */
@@ -1610,7 +1794,7 @@ function gradeRep(parsed, scenario, subParsed) {
     reason = "log has no parseable NDJSON events";
   } else if (!parsed.endsWithStop) {
     outcome = "ERROR";
-    reason = "no terminal step_finish(reason=stop) at end of log";
+    reason = "no terminal completion: clean exit (exitCode.json code 0) with trailing text after the last tool_use required (a v1-era trailing step_finish(stop) is also accepted)";
   } else if (results.some((r) => r.status === "error")) {
     outcome = "ERROR";
     reason = `${results.filter((r) => r.status === "error").length} check(s) ERROR`;
@@ -1692,8 +1876,13 @@ function captureProvenance(args, dataRoot, skillsDir) {
     if (g.status === 0) prov.gitCommit = g.stdout.trim();
   } catch {}
   try {
+    /* Accepts both v1 ("1.18.35") and v2 ("opencode v2.0.29") outputs; the
+     * RAW first line is stored so provenance records exactly what ran. */
     const v = spawnSync("opencode", ["--version"], { encoding: "utf8", timeout: 30000 });
-    if (v.status === 0) prov.opencodeVersion = (v.stdout ?? "").trim().split(/\r?\n/)[0];
+    if (v.status === 0) {
+      const raw = (v.stdout ?? "").trim().split(/\r?\n/)[0];
+      if (raw) prov.opencodeVersion = raw;
+    }
   } catch {}
   const homeDir = process.env.HOME || process.env.USERPROFILE || "";
   if (homeDir) {
@@ -1910,7 +2099,7 @@ async function main() {
         }
         continue;
       }
-      const parsed = readLogFile(logPath) ?? { events: [], parsedCount: 0, toolCalls: [], texts: [], endsWithStop: false, apiError: null, costTotal: null };
+      const parsed = readLogFile(logPath) ?? { events: [], parsedCount: 0, toolCalls: [], texts: [], endsWithStop: false, apiError: null, costTotal: null, exit: null };
       // Stop-loss only when the session never reached a terminal stop: a
       // transient APIError that opencode retried (session completed) grades
       // normally instead of halting the whole run.

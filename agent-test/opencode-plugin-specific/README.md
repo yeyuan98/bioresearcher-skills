@@ -1,57 +1,86 @@
-# OpenCode Plugin Tests (Empirical & Manual-Run)
+# OpenCode Plugin Tests (Empirical & Manual-Run, opencode v2)
 
 Empirical test suite for the **OpenCode bioresearcher connector/plugin**
-(opencode v2 only, >= 2.0.29): verifies plugin loading via the config
-`plugins` entry, bundled-skill delivery through the v2 skill transforms, and
-the stamped `bioresearcher-dr-worker` global agent file.
+(opencode v2 only, **>= 2.0.29**): verifies plugin loading via the config
+`plugins` entry (`/api/plugin`), bundled-skill delivery through the v2 skill
+transforms (`/api/skill`), the stamped `bioresearcher-dr-worker` global agent
+file (`/api/agent`), and the config-driven canonical `mcp.servers.biomcp`
+entry connecting over stdio (`/api/mcp`).
 
-Sibling of `agent-test/claude-plugin-specific/run.mjs` and `agent-test/run.mjs`.
+Sibling of `agent-test/claude-plugin-specific/run.mjs` and
+`agent-test/run.mjs`.
 
-## Fast Hermetic Checks (CI-Safe)
+## Fast Hermetic Checks (CI-Safe, Binary-Free)
 
-CI validates the suite hermetically (zero external binary dependencies, no tokens spent):
+CI validates the suite hermetically (zero external binary dependencies, no
+tokens, no network):
 
 ```bash
 node agent-test/opencode-plugin-specific/run.mjs --list
 node agent-test/opencode-plugin-specific/run.mjs --dry-run
 ```
 
+`--dry-run` validates every case spec: step types (`serve_setup` / `api` /
+`cli` / `config_file` / `serve_teardown`), required fields, and check
+types/ops. Unknown step or check shapes are ERRORS — a malformed case can
+never degrade into a vacuous pass.
+
 ## Live Empirical Execution (Local Host)
 
-Requires `opencode` CLI >= 2.0.29 on host (and network for the staged
-`npm install` of the plugin's `@opencode/plugin` dependency — a plugin dir
-without `node_modules` fails silently):
+Requires `opencode` CLI >= 2.0.29 on PATH, network (the staged `npm install`
+of the plugin's `@opencode/plugin` dependency — a plugin dir without
+`node_modules` fails silently — plus `npx -y -p biomcp@1.6.0 biomcp` for the
+mcp-connected case), and **no LLM tokens**:
 
 ```bash
 node agent-test/opencode-plugin-specific/run.mjs
-node agent-test/opencode-plugin-specific/run.mjs --only plugin-startup
+node agent-test/opencode-plugin-specific/run.mjs --only plugin-active
 ```
 
-The harness stages the built connector into the workspace, installs its
-dependencies, wires it through `opencode.json` (`plugins: [<dir>]`), and
-isolates `XDG_CONFIG_HOME` so the plugin's global agent-file install never
-touches the host's real config.
+Per case the harness:
 
-## Case set status (v2 refresh pending)
+1. builds the connector into `.runs/.stage/` and stages it into an isolated
+   git-init workspace (`.runs/workspace/`) with `npm install`;
+2. wires it through the workspace `opencode.json` (`plugins: [<dir>]`);
+3. starts an isolated `opencode serve --port <free>` with a fresh
+   `OPENCODE_PASSWORD` and an isolated `HOME` + `XDG_{CONFIG,DATA,STATE,CACHE}_HOME`
+   (v2 reads `~/.claude/skills` and the plugin stamps its agent file under
+   `<config>/opencode/agents` — both must stay away from the host);
+4. **bootstrap guard**: after serve readiness it polls `/api/plugin` until
+   `bioresearcher` appears (HTTP 200 can precede plugin init; 90 s budget) —
+   if the plugin never loads, the SUITE aborts loudly instead of recording
+   vacuous results;
+5. runs the case's steps (`api` calls via `opencode api --server`, with
+   polling retry for plugin/MCP init races) and evaluates the per-step
+   checks;
+6. tears the serve instance down **by PID** (SIGTERM -> 3 s -> SIGKILL).
 
-The `cases/` expectations are still v1-era and DO NOT pass on opencode v2:
-v2 dropped the `debug skill`/`debug agent` subcommands, the resolved config
-no longer carries `mcp.biomcp`/`agent.*` injected by the plugin (MCP is
-config-driven; the agent is a markdown file), and in-process CLI commands
-now spawn a managed background service on a fixed port that conflicts with
-any running `serve --service` daemon. The verified v2 surface for the
-refresh is `opencode serve --port N` + `opencode api --server ... GET
-/api/plugin | /api/skill` plus filesystem asserts on the stamped agent file
-under `<XDG_CONFIG_HOME>/opencode/agents/` — the load test used for the v2
-connector rewrite is the reference procedure. Case JSONs are kept for that
-refresh and are NOT expected to pass as-is.
+### Daemon hygiene
+
+- Every `opencode serve --port N` the harness starts is killed by PID before
+  the case ends (also on failure paths). After a run, verify with
+  `pgrep -af "opencode serve"`.
+- **`opencode mcp list` is intentionally not used as case evidence**: v2 CLI
+  commands resolve a *background service* and spawn unmanaged
+  `opencode serve --service` daemons on the machine-global managed port
+  (49374). Whenever any other opencode service already holds that port (very
+  common on a dev machine), the command times out with
+  `Timed out waiting for the background service to start` and leaks two
+  daemons. The `cli` step type supports it (with a retry-once hook for the
+  `No MCP servers configured` first-call race) for manual debugging on clean
+  hosts, but case evidence goes through `opencode api --server` against the
+  harness-owned serve instance (`GET /api/mcp` reports
+  `{"name":"biomcp","status":{"status":"connected"}}` after the real stdio
+  handshake).
 
 ## Case Index
 
-| ID | Level | Purpose (v1-era, see status above) |
+| ID | Level | Purpose |
 |----|-------|---------|
-| `plugin-debug-config` | L0 | Asserts resolved config contains biomcp local MCP server (timeout 120000), skills.paths, and dr-worker subagent |
-| `plugin-mcp-list` | L0 | Asserts `opencode mcp list` connects to biomcp over stdio |
-| `plugin-debug-skill` | L0 | Asserts `opencode debug skill` discovers bundled skills |
-| `plugin-debug-agent` | L0 | Asserts `opencode debug agent bioresearcher-dr-worker` resolves subagent mode and tool permissions |
-| `plugin-startup` | L0 | Asserts clean boot with zero plugin initialization errors |
+| `plugin-active` | L0 | `/api/plugin` lists `bioresearcher` from the workspace plugins entry with `state: active` |
+| `skills-bundled` | L0 | `/api/skill` delivers the bundled skills, including `bioresearcher-deep-research` AND `bioresearcher-onboard` |
+| `agent-registered` | L0 | `/api/agent` lists `bioresearcher-dr-worker` with `mode: subagent` (the stamped global agent file) |
+| `mcp-connected` | L0 | Workspace `opencode.json` gains the canonical `mcp.servers.biomcp` entry (validated shape, timeout triple 120000) and `/api/mcp` reports `biomcp connected` over stdio |
+
+Artifacts land in `.runs/logs/` (`serve-<case>-<port>.log`,
+`<case>.artifact.json`). `.runs/` is gitignored.

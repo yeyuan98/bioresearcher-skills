@@ -1,0 +1,31 @@
+{
+  "id": "mcp-connected",
+  "name": "canonical biomcp MCP entry connects over stdio",
+  "level": "L0",
+  "purpose": "Asserts the workspace opencode.json gains the canonical mcp.servers.biomcp entry (validated shape, timeout triple 120000) and the server completes the stdio handshake (biomcp connected) — via /api/mcp against the isolated serve instance. `opencode mcp list` is intentionally NOT used: it spawns an unmanaged `serve --service` daemon on the machine-global managed port (49374) and times out whenever any other host service holds that port (free, no LLM; needs network for npx biomcp)",
+  "mcp": true,
+  "steps": [
+    { "type": "serve_setup" },
+    {
+      "type": "config_file",
+      "file": "opencode.json",
+      "checks": [
+        { "type": "json_path", "path": "mcp.servers.biomcp.type", "op": "equals", "expect": "local", "desc": "canonical mcp.servers.biomcp type is local" },
+        { "type": "json_path", "path": "mcp.servers.biomcp.command.0", "op": "equals", "expect": "npx", "desc": "command launches npx" },
+        { "type": "json_path", "path": "mcp.servers.biomcp.timeout.startup", "op": "equals", "expect": 120000, "desc": "timeout.startup is 120000" },
+        { "type": "json_path", "path": "mcp.servers.biomcp.timeout.catalog", "op": "equals", "expect": 120000, "desc": "timeout.catalog is 120000" },
+        { "type": "json_path", "path": "mcp.servers.biomcp.timeout.execution", "op": "equals", "expect": 120000, "desc": "timeout.execution is 120000" }
+      ]
+    },
+    {
+      "type": "api",
+      "method": "GET",
+      "path": "/api/mcp",
+      "poll": { "untilContains": "connected", "budgetMs": 120000, "intervalMs": 5000 },
+      "checks": [
+        { "type": "array_item", "path": "data", "match": { "key": "name", "equals": "biomcp" }, "assert": { "key": "status.status", "equals": "connected" }, "desc": "biomcp is reported as connected" }
+      ]
+    },
+    { "type": "serve_teardown" }
+  ]
+}

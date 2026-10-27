@@ -1,7 +1,8 @@
 name: smoke
 
-# Manual opencode discovery smoke. Requires the opencode CLI; listing skills
-# does not need model auth. Enable the weekly cron once verified green once.
+# Manual opencode discovery smoke (opencode v2 only, >= 2.0.29). Requires the
+# opencode CLI; listing skills needs no model auth (only the v2 server boot).
+# Enable the weekly cron once verified green once.
 on:
   workflow_dispatch:
 
@@ -19,21 +20,51 @@ jobs:
           node-version: 22
 
       - name: Install opencode
-        run: npm install -g opencode-ai@1.18.27
+        run: npm install -g @opencode/cli@2.1.4
 
-      - name: Discover skills
+      - name: Discover skills (filesystem + v2 serve /api/skill)
         env:
-          # Isolate from any global config: a fresh HOME + XDG config dir means
-          # only project-level .opencode/skills are discovered.
+          # Isolate from any global config: a fresh HOME + XDG dirs means
+          # only project-level .opencode/skills are discovered (v2 also
+          # reads ~/.claude/skills, so HOME must be isolated too).
           HOME: /tmp/opencode-home
           XDG_CONFIG_HOME: /tmp/opencode-home/.config
-          OPENCODE_CONFIG_DIR: /tmp/opencode-home/.config/opencode
+          XDG_DATA_HOME: /tmp/opencode-home/.local/share
+          XDG_STATE_HOME: /tmp/opencode-home/.local/state
+          XDG_CACHE_HOME: /tmp/opencode-home/.cache
+          OPENCODE_PASSWORD: smoke-pw
         run: |
           mkdir -p "$HOME/.config/opencode"
-          mkdir -p .opencode
-          cp -r skills .opencode/skills
-          opencode debug skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err || { cat /tmp/opencode-skills.err >&2; exit 1; }
+          git init -q /tmp/opencode-sandbox
+          cp -r skills /tmp/opencode-sandbox/.opencode/skills
+          cd /tmp/opencode-sandbox
+
+          # v2: project config must exist for the project to resolve.
+          echo '{}' > opencode.json
+
+          # Start an isolated serve instance on a free port; the CLI client
+          # (opencode api) authenticates via OPENCODE_PASSWORD.
+          PORT=24731
+          opencode serve --port "$PORT" > /tmp/opencode-serve.log 2>&1 &
+          SERVE_PID=$!
+          trap 'kill "$SERVE_PID" 2>/dev/null || true' EXIT
+
+          # HTTP 200 can precede plugin/skill init — poll /api/skill until
+          # the expected skills appear (>=90s budget).
+          deadline=$((SECONDS + 90))
+          while [ $SECONDS -lt $deadline ]; do
+            opencode api --server "http://127.0.0.1:$PORT" GET /api/skill > /tmp/opencode-skills.json 2>/tmp/opencode-skills.err
+            if grep -q bioresearcher-deep-research /tmp/opencode-skills.json 2>/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+          kill "$SERVE_PID" 2>/dev/null || true
+          trap - EXIT
+          wait "$SERVE_PID" 2>/dev/null || true
+
           cat /tmp/opencode-skills.json
+          cat /tmp/opencode-skills.err >&2
           for s in bioresearcher-deep-research bioresearcher-python-setup-uv bioresearcher-pubmed-weekly; do
             grep -q "\"$s\"" /tmp/opencode-skills.json || { echo "skill not discovered: $s" >&2; exit 1; }
           done

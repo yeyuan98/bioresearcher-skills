@@ -108,8 +108,8 @@ changes (notes extracted from `CHANGELOG.md`).
 ### Empirical agent tests
 
 `agent-test/` holds a unified, **manually-run** test suite that drives the
-real opencode CLI against these skills and a live keyless biomcp-ts MCP
-server (costs LLM tokens; never run in CI):
+real opencode v2 CLI (>= 2.0.29) against these skills and a live keyless
+biomcp-ts MCP server (costs LLM tokens; never run in CI):
 
 ```bash
 node agent-test/run.mjs --list
