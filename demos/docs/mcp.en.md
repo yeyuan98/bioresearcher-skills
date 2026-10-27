@@ -5,7 +5,7 @@
 > Covering: functionality, technical architecture/API, core features,
 > onboarding, application cases, demo links, and FAQ. Every request/response
 > sample below is a **true probe capture** (`demos/lib/mcp-probe.mjs` against
-> `biomcp@1.4.0`, zero LLM, zero keys) — not a hand-written example.
+> `biomcp@1.6.0`, zero LLM, zero keys) — not a hand-written example.
 
 ## 1. What it does
 
@@ -20,8 +20,8 @@ all public sources, **keyless by default**.
   MyGene/MyVariant, OpenTargets, GTEx, Ensembl, RCSB PDB, Google Patents
   (plus optional EPO OPS / USPTO with credentials), Semantic Scholar, …
 - Evidence: this page's `tools/list` probe confirms the pinned core tool set
-  (matches `scripts/ci/biomcp-tools.json`; the committed captures still show
-  the 41 tools of biomcp 1.4.0, pending the true-run refresh to 1.6.0's 43)
+  (matches `scripts/ci/biomcp-tools.json`; the committed captures show all
+  43 core tools of biomcp 1.6.0)
 
 ## 2. Core features
 
@@ -118,7 +118,7 @@ the [biomcp-ts source](https://github.com/yeyuan98/biomcp-ts)):
 | Clinical trials | `trial_search`, `trial_get` | ClinicalTrials.gov; sectional `trial_get` |
 | Patents | `patent_search`, `patent_get` | Google Patents keyless; EPO OPS/USPTO with credentials |
 | Omics databases | `geo_search`, `geo_get`, `sra_search`, `sra_get`, `genbank_search`, `genbank_get`, `genbank_genes` | GEO/SRA/GenBank search and records (GenBank region slicing) |
-| GTEx | `gtex_expression`, `gtex_eqtl` | tissue expression (v10, TPM) and eQTL |
+| GTEx | `gtex_expression`, `gtex_eqtl` | tissue expression (TPM; server resolves the latest `gtex_vN` release — observed `gtex_v11`) and eQTL |
 | Ensembl/PDB | `ensembl_lookup`, `ensembl_homology`, `ensembl_consequence`, `ensembl_region`, `pdb` | ID mapping/homology/consequence/region variants; PDB search + metadata |
 | Utility | `discover`, `batch_get`, `biomcp_configure` | tool discovery, batch fetch, credential config |
 
@@ -133,17 +133,23 @@ readability; each sample notes its tour; full byte-exact pairs in each
 **Articles** `article_search` `{query:"BRCA1 DNA repair", limit:3}` →
 
 ```json
-[{"pmid": "37272060", "pmcid": "PMC10243389",
+{"results": [{"pmid": "37272060", "pmcid": "PMC10243389",
   "doi": "10.1080/15476286.2023.2220210",
   "title": "Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.",
   "authors": ["Adamopoulos PG", "Athanasopoulou K", "…"],
   "journal": "RNA Biol", "volume": "20", "issue": "1", "pages": "281-295",
   "publication_date": "2023-01-01", "cited_by": 4, "is_open_access": true,
-  "source": "europepmc"}, …]
+  "source": "europepmc"}, …],
+ "warnings": ["arXiv, PubTator had matches but none made this page — …"],
+ "errors": [{"source": "semantic_scholar", "message": "… HTTP 429 …"}]}
 ```
 
-(1.4.0 responses carry full citation locators — volume / issue / pages — which
-the deep-research evidence ledger renders into Vancouver references.)
+(The response is an envelope `{results, warnings?, errors?}`: per-source
+failures and degradation notes ride out of band, so every element of
+`results` is a real article. Journal-sourced rows carry full citation
+locators — volume / issue / pages — which the deep-research evidence ledger
+renders into Vancouver references; preprint/arXiv rows carry
+`preprint_server`/`ppr_id`/`arxiv_id` instead and never journal locators.)
 
 **Gene detail** `gene_get` `{symbol:"BRCA1", sections:["core"]}` →
 
@@ -163,32 +169,35 @@ the deep-research evidence ledger renders into Vancouver references.)
 **Trials** `trial_search` `{query:"BRAF melanoma", limit:3}` (zh tour) →
 
 ```json
-{"studies": [{"nct_id": "NCT03415126",
-  "title": "A Study of ASN007 in Patients With Advanced Solid Tumors",
-  "status": "COMPLETED", "interventions": ["DRUG: ASN007: ascending doses", …]}, …]}
+{"studies": [{"nct_id": "NCT01876212",
+  "title": "Dendritic Cell Vaccines + Dasatinib for Metastatic Melanoma",
+  "status": "COMPLETED", "interventions": ["BIOLOGICAL: DC vaccine", "DRUG: Dasatinib"], …},
+  …], "nextPageToken": …}
 ```
 
 **Diseases** `disease_search` `{query:"melanoma", limit:3}` →
 
 ```json
-[{"name": "esophageal melanoma", "disease_id": "MONDO:0001192", "doid": "DOID:1108"}, …]
+{"results": [{"name": "esophageal melanoma", "disease_id": "MONDO:0001192", "doid": "DOID:1108"}, …]}
 ```
 
 **Patents** `patent_search` `{query:"\"mRNA display\"", limit:3}` →
 
 ```json
-{"patents": [{"publication_number": "US20140179551A1",
-  "title": "METHODS FOR THE SELECTION OF BINDING PROTEINS",
-  "publication_date": "2014-06-26",
-  "assignee": ["BRISTOL-MYERS SQUIBB COMPANY"], …}], …}
+{"patents": [{"publication_number": "US20230125614A1",
+  "title": "IN VIVO mRNA DISPLAY: LARGE-SCALE PROTEOMICS BY NEXT GENERATION SEQUENCING",
+  "publication_date": "2023-04-27",
+  "assignee": ["The Trustees of Columbia University in the City of New York"], …}],
+ "total_hits": {"ppubs": 1847}, "mined_count": 10, "seminal_prior_art": […],
+ "errors": []}
 ```
 
 **GTEx** `gtex_expression` `{gene:"TP53", limit:5}` →
 
 ```json
-{"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.18",
- "dataset": "gtex_v10", "unit": "TPM",
- "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4845, …}, …]}
+{"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.19",
+ "dataset": "gtex_v11", "unit": "TPM",
+ "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 54.4686, …}, …]}
 ```
 
 **PDB** `pdb` `{query:"KRAS", sections:["experiment"]}` →
@@ -202,9 +211,14 @@ the deep-research evidence ledger renders into Vancouver references.)
 **Gene→drugs** `gene_drugs` `{symbol:"BRAF"}` →
 
 ```json
-[{"drug_name": "BELVARAFENIB", "source": "opentargets", "action_type": "Small molecule"},
- {"drug_name": "PLIXORAFENIB", "source": "opentargets", …}, …]
+{"results": [{"drug_name": "SORAFENIB TOSYLATE", "source": "opentargets",
+  "action_type": "Small molecule", "phase": "APPROVAL", "report_count": 76},
+ {"drug_name": "BELVARAFENIB", "source": "opentargets", …}, …]}
 ```
+
+(An envelope `{results, warnings?, errors?}`: OpenTargets failures and
+unresolved genes ride in `errors[]` instead of inline items; rows are ranked
+by max clinical phase, then trial-report count, with salt forms collapsed.)
 
 ### 4.3 Tool map and capability downgrades (vs biomcp-python)
 
@@ -297,11 +311,11 @@ Two probe scenarios (token-free, pure direct network calls):
 
 | Scenario | Calls | Outcome | Demo link (GitHub permalink) |
 |---|---|---|---|
-| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (40 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-en) |
-| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (11 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-zh) |
+| MCP tool tour (EN; 8 core tools + tools/list registry assert) | article_search, gene_get, variant_search, trial_search, disease_search, patent_search, gtex_expression, pdb | PASS (66 s) | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2080ea5b7a953c34f465d8e497f161e620db4caf/demos/artifacts/mcp-tool-tour-en) |
+| MCP tool tour (zh notes; BRAF V600E variant→gene→drugs→trials chain) | variant_search, gene_get, gene_drugs, trial_search | PASS (6 s) | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2080ea5b7a953c34f465d8e497f161e620db4caf/demos/artifacts/mcp-tool-tour-zh) |
 
-The EN tour verifies `tools/list` exposes all 41 core tools of biomcp 1.4.0
-(captured before the 1.6.0 pin bump; the registry now pins 43); every
+The EN tour verifies `tools/list` exposes all 43 pinned core tools of
+biomcp 1.6.0 (probe captures re-run 2026-10-26 on the 1.6.0 pin); every
 call's full request/response (with assertions) is in `outputs/capture.jsonl`
 and `transcript.md`. The ZH tour is the WorkBuddy connector example
 “查找 BRAF V600E 变异的相关药物与临床试验” executed at the raw MCP layer.
@@ -353,8 +367,9 @@ your local environment or `.biomcp.json`.
 **Q10: How is the version pinned/upgraded?**
 All wiring now pins `biomcp@1.6.0` (the pinned registry
 `scripts/ci/biomcp-tools.json` updates with the pin, and the demos' vendored
-copy is CI-checked byte-identical); the captured scenarios below still ran
-at 1.4.0 pending the true-run refresh. Upgrades ride this repo's releases.
+copy is CI-checked byte-identical); the captured probe scenarios below ran at
+1.6.0 (re-captured 2026-10-26; the agent scenarios of 2026-09-11 predate the
+bump and await their manual refresh). Upgrades ride this repo's releases.
 
 **Q11: Mainland-China network?**
 See §5.5 — npmmirror for install, proxy for upstream APIs.

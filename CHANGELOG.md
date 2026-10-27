@@ -31,6 +31,28 @@ when that release PR is cut (the release workflow extracts only the
 
 - Repo-wide wiring bump to `biomcp@1.6.0`: `.claude-plugin/mcp.json`, WorkBuddy / OpenCode / dsh connector server configs, `docs/` setup + connector pages, and `agent-test/` MCP case configs. `scripts/ci/biomcp-tools.json` re-vendored at 1.6.0 (43 core + 15 optional) with the demos copy renamed `demos/lib/biomcp-tools@1.6.0.json`; captured scenarios/artifacts intentionally still ran at 1.4.0 pending the true-run refresh pack above.
 
+### Demos (mcp-tool-tour refresh to biomcp 1.6.0)
+
+Re-capture the two MCP tool-tour scenarios against `biomcp@1.6.0`
+(2026-10-26, run-time HEAD `f51c8fa`); nothing under `skills/` changes.
+
+- `demos/lib/mcp-probe.mjs` DEFAULT_COMMAND + `demos/lib/publish.mjs`
+  fallback strings bumped to `biomcp@1.6.0` (closes the interim window
+  where manual `--check` runs saw 41 tools vs the pinned 43).
+- `mcp-tool-tour-en/zh` manifests: server pin 1.6.0, 43-tool assert,
+  six-backend federation + envelope notes; artifacts re-published via
+  `run-demo.mjs --publish` (provenance `biomcpPin: 1.6.0`, both PASS —
+  EN 9/9 checks, ZH 5/5).
+- Docs/website re-quoted from the new captures: §4.2 samples with the
+  1.6.0 envelopes (`{results,...}`, `{patents,...}`), `gene_drugs` phase
+  ranking, GTEx `gtex_v11` (the server resolves the latest gtex_vN),
+  `cadd_phred` echo, and refreshed per-call durations (EN patent mining
+  40.4 s).
+- `agent-deep-research-en/zh` remain captured at biomcp 1.4.0
+  (2026-09-11) pending the manual opencode v1.18.30 environment
+  (opencode v2 drops the harness `--dir` flag; pandoc also required);
+  stated explicitly in the website cases intro.
+
 ### Demos (partner pack refresh)
 
 Refresh the true-run demo pack to the current skill generation (deep-research

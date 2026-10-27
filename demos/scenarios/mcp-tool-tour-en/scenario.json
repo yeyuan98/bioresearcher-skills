@@ -4,8 +4,8 @@
   "name": "MCP tool tour: 8 keyless core tools, true request/response pairs",
   "title_en": "MCP tool tour — true request/response pairs from 8 core tools",
   "title_zh": "MCP 工具巡览——8 个核心工具的真实请求/响应样本",
-  "summary_en": "Deterministic stdio JSON-RPC probe against the keyless biomcp@1.4.0 server: initialize handshake, paginated tools/list (all 41 pinned core tools present), then 8 scripted tools/call requests whose real responses back the MCP documentation's API tables.",
-  "summary_zh": "对免密钥 biomcp@1.4.0 服务的确定性 stdio JSON-RPC 探针：initialize 握手、分页 tools/list（41 个受-pin 核心工具全部在列），随后 8 次脚本化 tools/call，其真实响应即 MCP 文档 API 表格的数据来源。",
+  "summary_en": "Deterministic stdio JSON-RPC probe against the keyless biomcp@1.6.0 server: initialize handshake, paginated tools/list (all 43 pinned core tools present), then 8 scripted tools/call requests whose real responses back the MCP documentation's API tables.",
+  "summary_zh": "对免密钥 biomcp@1.6.0 服务的确定性 stdio JSON-RPC 探针：initialize 握手、分页 tools/list（43 个受-pin 核心工具全部在列），随后 8 次脚本化 tools/call，其真实响应即 MCP 文档 API 表格的数据来源。",
   "level": "L1",
   "lang": "en",
   "purpose": "Token-free TRUE API examples for the partner MCP doc; no LLM involved.",
@@ -14,7 +14,7 @@
       "npx",
       "-y",
       "-p",
-      "biomcp@1.4.0",
+      "biomcp@1.6.0",
       "biomcp"
     ],
     "initTimeoutMs": 180000,
@@ -29,8 +29,8 @@
         "limit": 3
       },
       "expect_regex": "PMID|pmid",
-      "note_en": "PubMed (federated with Europe PMC / Semantic Scholar / PubTator / LitSense) article search; returns PMIDs + titles.",
-      "note_zh": "PubMed 文献检索（联合 Europe PMC / Semantic Scholar / PubTator / LitSense），返回 PMID 与标题。"
+      "note_en": "Federated article search (PubMed + Europe PMC / Semantic Scholar / arXiv / PubTator / LitSense; response is an envelope {results, warnings?, errors?}); returns PMIDs + titles.",
+      "note_zh": "联邦文献检索（PubMed + Europe PMC / Semantic Scholar / arXiv / PubTator / LitSense，响应为 {results, warnings?, errors?} 信封），返回 PMID 与标题。"
     },
     {
       "tool": "gene_get",
@@ -83,8 +83,8 @@
         "limit": 3
       },
       "expect_regex": "[A-Z]{2}\\d",
-      "note_en": "Patent search (Google Patents backend keyless; EPO OPS / USPTO backends activate with credentials), publication numbers like US11027025B2.",
-      "note_zh": "专利检索（免密钥走 Google Patents 后端；配置凭证后启用 EPO OPS / USPTO 后端），返回如 US11027025B2 的公开号。"
+      "note_en": "Patent search (keyless: USPTO Public Search full-text 'ppubs' default US backend + Google Patents worldwide best-effort; EPO OPS / USPTO ODP backends activate with credentials; response is an envelope {patents, warnings?, errors?}), publication numbers like US11027025B2.",
+      "note_zh": "专利检索（免密钥：默认走 USPTO Public Search 全文 'ppubs' 美国后端 + Google Patents 全球尽力而为；配置凭证后启用 EPO OPS / USPTO ODP 后端；响应为 {patents, warnings?, errors?} 信封），返回如 US11027025B2 的公开号。"
     },
     {
       "tool": "gtex_expression",

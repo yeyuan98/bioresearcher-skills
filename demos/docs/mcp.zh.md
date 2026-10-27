@@ -4,7 +4,7 @@
 >
 > 覆盖：功能、技术架构/API 文档、核心特性、开通流程、应用案例、Demo 链接与
 > 常见 Q&A。所有请求/响应样本均为**探针真实捕获**（`demos/lib/mcp-probe.mjs`
-> 直连 `biomcp@1.4.0`，零 LLM、零密钥），非手写示例。
+> 直连 `biomcp@1.6.0`，零 LLM、零密钥），非手写示例。
 
 ## 1. 功能总览
 
@@ -18,8 +18,8 @@ biomcp-ts（npm 包 `biomcp`，本仓库钉扎 **1.6.0**）是一个生物医学
   MyGene/MyVariant、OpenTargets、GTEx、Ensembl、PDB/RCSB、Google Patents
   （及凭证可选启用的 EPO OPS / USPTO）、Semantic Scholar 等
 - 实证：本页 Demo 的 `tools/list` 探针确认钉扎核心工具集（与
-  `scripts/ci/biomcp-tools.json` 一致；已提交捕获仍为 biomcp 1.4.0 的
-  41 个工具，待真跑刷新至 1.6.0 的 43 个）
+  `scripts/ci/biomcp-tools.json` 一致；已提交捕获为 biomcp 1.6.0 的
+  43 个工具）
 
 ## 2. 核心特性
 
@@ -110,7 +110,7 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 | 临床试验 | `trial_search`、`trial_get` | ClinicalTrials.gov；`trial_get` 支持分节 |
 | 专利 | `patent_search`、`patent_get` | 免密钥走 Google Patents；EPO OPS/USPTO 需凭证 |
 | 组学数据库 | `geo_search`、`geo_get`、`sra_search`、`sra_get`、`genbank_search`、`genbank_get`、`genbank_genes` | GEO/SRA/GenBank 检索与记录获取（GenBank 支持区域切片） |
-| GTEx | `gtex_expression`、`gtex_eqtl` | 组织表达（v10, TPM）与 eQTL |
+| GTEx | `gtex_expression`、`gtex_eqtl` | 组织表达（TPM；服务端自动解析最新 `gtex_vN` 版本——实测 `gtex_v11`）与 eQTL |
 | Ensembl/PDB | `ensembl_lookup`、`ensembl_homology`、`ensembl_consequence`、`ensembl_region`、`pdb` | ID 映射/同源/后果预测/区域变异；PDB 检索与元数据 |
 | 实用 | `discover`、`batch_get`、`biomcp_configure` | 工具发现、批量获取、凭证配置 |
 
@@ -124,17 +124,22 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 **文献检索** `article_search` `{query:"BRCA1 DNA repair", limit:3}` →
 
 ```json
-[{"pmid": "37272060", "pmcid": "PMC10243389",
+{"results": [{"pmid": "37272060", "pmcid": "PMC10243389",
   "doi": "10.1080/15476286.2023.2220210",
   "title": "Hybrid-seq deciphers the complex transcriptional profile of the human BRCA1 DNA repair associated gene.",
   "authors": ["Adamopoulos PG", "Athanasopoulou K", "…"],
   "journal": "RNA Biol", "volume": "20", "issue": "1", "pages": "281-295",
   "publication_date": "2023-01-01", "cited_by": 4, "is_open_access": true,
-  "source": "europepmc"}, …]
+  "source": "europepmc"}, …],
+ "warnings": ["arXiv, PubTator had matches but none made this page — …"],
+ "errors": [{"source": "semantic_scholar", "message": "… HTTP 429 …"}]}
 ```
 
-（1.4.0 响应自带完整引用定位字段——卷 / 期 / 页码——深度研究的证据账本
-正是用它们渲染 Vancouver 参考文献。）
+（响应为 `{results, warnings?, errors?}` 信封：单源失败与降级说明走带外
+字段，`results` 中每条都是真实文献。期刊来源行自带完整引用定位字段——
+卷 / 期 / 页码——深度研究的证据账本正是用它们渲染 Vancouver 参考文献；
+预印本 / arXiv 行则携带 `preprint_server`/`ppr_id`/`arxiv_id`，不含期刊
+定位字段。）
 
 **基因详情** `gene_get` `{symbol:"BRCA1", sections:["core"]}` →
 
@@ -154,32 +159,35 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 **临床试验** `trial_search` `{query:"BRAF melanoma", limit:3}`（取自中文巡览）→
 
 ```json
-{"studies": [{"nct_id": "NCT03415126",
-  "title": "A Study of ASN007 in Patients With Advanced Solid Tumors",
-  "status": "COMPLETED", "interventions": ["DRUG: ASN007: ascending doses", …]}, …]}
+{"studies": [{"nct_id": "NCT01876212",
+  "title": "Dendritic Cell Vaccines + Dasatinib for Metastatic Melanoma",
+  "status": "COMPLETED", "interventions": ["BIOLOGICAL: DC vaccine", "DRUG: Dasatinib"], …},
+  …], "nextPageToken": …}
 ```
 
 **疾病本体** `disease_search` `{query:"melanoma", limit:3}` →
 
 ```json
-[{"name": "esophageal melanoma", "disease_id": "MONDO:0001192", "doid": "DOID:1108"}, …]
+{"results": [{"name": "esophageal melanoma", "disease_id": "MONDO:0001192", "doid": "DOID:1108"}, …]}
 ```
 
 **专利检索** `patent_search` `{query:"\"mRNA display\"", limit:3}` →
 
 ```json
-{"patents": [{"publication_number": "US20140179551A1",
-  "title": "METHODS FOR THE SELECTION OF BINDING PROTEINS",
-  "publication_date": "2014-06-26",
-  "assignee": ["BRISTOL-MYERS SQUIBB COMPANY"], …}], …}
+{"patents": [{"publication_number": "US20230125614A1",
+  "title": "IN VIVO mRNA DISPLAY: LARGE-SCALE PROTEOMICS BY NEXT GENERATION SEQUENCING",
+  "publication_date": "2023-04-27",
+  "assignee": ["The Trustees of Columbia University in the City of New York"], …}],
+ "total_hits": {"ppubs": 1847}, "mined_count": 10, "seminal_prior_art": […],
+ "errors": []}
 ```
 
 **GTEx 表达** `gtex_expression` `{gene:"TP53", limit:5}` →
 
 ```json
-{"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.18",
- "dataset": "gtex_v10", "unit": "TPM",
- "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 77.4845, …}, …]}
+{"gene_symbol": "TP53", "gencode_id": "ENSG00000141510.19",
+ "dataset": "gtex_v11", "unit": "TPM",
+ "tissues": [{"tissue": "Cells_EBV-transformed_lymphocytes", "median_tpm": 54.4686, …}, …]}
 ```
 
 **PDB 结构** `pdb` `{query:"KRAS", sections:["experiment"]}` →
@@ -193,9 +201,14 @@ MCP stdio 传输：宿主以子进程拉起服务器，双方按**换行分隔�
 **基因→药物** `gene_drugs` `{symbol:"BRAF"}` →
 
 ```json
-[{"drug_name": "BELVARAFENIB", "source": "opentargets", "action_type": "Small molecule"},
- {"drug_name": "PLIXORAFENIB", "source": "opentargets", …}, …]
+{"results": [{"drug_name": "SORAFENIB TOSYLATE", "source": "opentargets",
+  "action_type": "Small molecule", "phase": "APPROVAL", "report_count": 76},
+ {"drug_name": "BELVARAFENIB", "source": "opentargets", …}, …]}
 ```
+
+（`{results, warnings?, errors?}` 信封：OpenTargets 失败与无法解析的基因
+走 `errors[]` 带外字段，不混入条目；结果按最高临床阶段、其次试验报告数
+排序，盐型已合并。）
 
 ### 4.3 工具映射与能力降级（相对 biomcp-python）
 
@@ -281,10 +294,10 @@ npx -y biomcp@1.6.0 doctor --client opencode   # 也支持 claude-code/codex/…
 
 | 场景 | 调用 | 结果 | Demo 链接（GitHub 固定链接） |
 |---|---|---|---|
-| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（40 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-en) |
-| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（11 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/79271f069e34510f988eaddd90c55da42a178053/demos/artifacts/mcp-tool-tour-zh) |
+| MCP 工具巡览（英文，8 个核心工具 + tools/list 注册表校验） | article_search、gene_get、variant_search、trial_search、disease_search、patent_search、gtex_expression、pdb | PASS（66 s） | [demos/artifacts/mcp-tool-tour-en](https://github.com/yeyuan98/bioresearcher-skills/tree/2080ea5b7a953c34f465d8e497f161e620db4caf/demos/artifacts/mcp-tool-tour-en) |
+| MCP 工具巡览（中文注释，BRAF V600E 变异→基因→药物→试验调用链） | variant_search、gene_get、gene_drugs、trial_search | PASS（6 s） | [demos/artifacts/mcp-tool-tour-zh](https://github.com/yeyuan98/bioresearcher-skills/tree/2080ea5b7a953c34f465d8e497f161e620db4caf/demos/artifacts/mcp-tool-tour-zh) |
 
-英文巡览验证 `tools/list` 暴露 biomcp 1.4.0 全部 41 个钉扎核心工具（采集早于 1.6.0 钉扎升级；注册表现钉扎 43 个）；每个调用的完整
+英文巡览验证 `tools/list` 暴露 biomcp 1.6.0 全部 43 个钉扎核心工具（探针捕获已于 2026-10-26 在 1.6.0 钉扎下重跑）；每个调用的完整
 请求/响应（含断言）在 `outputs/capture.jsonl` 与 `transcript.md`。
 中文巡览即 WorkBuddy 连接器示例语料「查找 BRAF V600E 变异的相关药物与
 临床试验」的底层真实调用。
@@ -332,7 +345,8 @@ npx 冷启动要下载包（约 10–60 s，之后有缓存）；连接超时建
 **Q10：版本如何钉扎/升级？**
 所有接线现已精确钉 `biomcp@1.6.0`（钉扎注册表
 `scripts/ci/biomcp-tools.json` 随 pin 更新，Demo 内置副本逐字节一致并受
-CI 校验）；下方捕获场景仍运行于 1.4.0，待真跑刷新后同步。升级由本仓库
+CI 校验）；下方探针捕获场景已运行于 1.6.0（2026-10-26 重跑；2026-09-11
+的智能体场景早于本次升级，待手动环境刷新）。升级由本仓库
 发版同步。
 
 **Q11：中国大陆网络环境？**

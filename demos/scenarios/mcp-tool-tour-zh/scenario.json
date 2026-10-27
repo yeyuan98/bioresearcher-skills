@@ -14,7 +14,7 @@
       "npx",
       "-y",
       "-p",
-      "biomcp@1.4.0",
+      "biomcp@1.6.0",
       "biomcp"
     ],
     "initTimeoutMs": 180000,
@@ -50,9 +50,9 @@
       "args": {
         "symbol": "BRAF"
       },
-      "expect_regex": ".",
-      "note_en": "Step 3 — drugs targeting BRAF.",
-      "note_zh": "第 3 步——作用于 BRAF 靶点的药物。"
+      "expect_regex": "results",
+      "note_en": "Step 3 — drugs targeting BRAF (OpenTargets; response is an envelope {results, warnings?, errors?}).",
+      "note_zh": "第 3 步——作用于 BRAF 靶点的药物（OpenTargets；响应为 {results, warnings?, errors?} 信封）。"
     },
     {
       "tool": "trial_search",

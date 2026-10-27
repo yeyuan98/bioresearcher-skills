@@ -21,7 +21,7 @@ Bilingual partner-publication pack for the BioResearcher skills package:
 | Document | 中文 | English |
 |---|---|---|
 | Agent (skills, plugin, connector) | [agent.zh.md](./docs/agent.zh.md) | [agent.en.md](./docs/agent.en.md) |
-| MCP (biomcp-ts server, pinned 1.4.0) | [mcp.zh.md](./docs/mcp.zh.md) | [mcp.en.md](./docs/mcp.en.md) |
+| MCP (biomcp-ts server, pinned 1.6.0) | [mcp.zh.md](./docs/mcp.zh.md) | [mcp.en.md](./docs/mcp.en.md) |
 | Glossary / 术语表 | [glossary.md](./docs/glossary.md) | — |
 
 ### Partner-requirements matrix / 合作方需求覆盖矩阵
@@ -44,25 +44,27 @@ All artifacts are **true runs** with commit + sha256 provenance per directory
 运行**结果，每个目录带提交号与 sha256 溯源、双语 README、会话记录、客观
 校验与产出文件。
 
-> **Provenance note / 溯源说明** — the pack has two capture dates. The
+> **Provenance note / 溯源说明** — the pack has three capture dates. The
 > 2026-09-11 refresh re-ran the two deep-research cases, the interview case,
 > and both MCP probes against deep-research **1.7.0** + biomcp **1.4.0**
-> (repo HEAD at run time: `d818c85`; the refreshed artifacts are permalinked
-> at the refresh pack commit). `agent-pubmed-weekly-en` retains its original
-> 2026-09-06 run (`3380cc6`) — its skill is unchanged and its provenance
-> stays self-describing; `agent-plot-making-en` was re-published from its
-> original completed session after a publish-glob fix (prompt/checks
-> unchanged). Every `provenance.json` records the exact `gitCommit`, per
-> skill sha256, and `scenarioSha256`; `check-demos.mjs` fails if an
-> artifact's manifest sha no longer matches its capture.
-> / 本目录有两次采集时点。2026-09-11 刷新重跑了两个深度研究案例、访谈案例
+> (repo HEAD at run time: `d818c85`). The 2026-10-26 refresh re-ran the two
+> MCP probes against biomcp **1.6.0** (repo HEAD at run time: `f51c8fa`;
+> their artifacts carry the new `scenarioSha256` + `biomcpPin`). The
+> deep-research/interview/pubmed-weekly/plot-making artifacts keep their
+> 2026-09-06/09-11 runs — the deep-research pair still exercises biomcp
+> 1.4.0 and awaits its manual opencode-environment refresh; every
+> `provenance.json` records the exact `gitCommit`, per-skill sha256, and
+> `scenarioSha256`; `check-demos.mjs` fails if an artifact's manifest sha
+> no longer matches its capture.
+> / 本目录有三次采集时点。2026-09-11 刷新重跑了两个深度研究案例、访谈案例
 > 与两个 MCP 探针（被测对象 deep-research **1.7.0** + biomcp **1.4.0**，
-> 运行时仓库 HEAD `d818c85`；刷新产物的固定链接指向刷新打包提交）。
-> `agent-pubmed-weekly-en` 保留 2026-09-06 原始运行（`3380cc6`，技能未变、
-> 溯源自洽）；`agent-plot-making-en` 在发布 glob 修正后从原始完整会话
-> 重新发布（提示词与校验未变）。各 `provenance.json` 记录确切的
-> `gitCommit`、逐技能 sha256 与 `scenarioSha256`；清单 sha 与采集不一致时
-> `check-demos.mjs` 会直接判失败。
+> 运行时仓库 HEAD `d818c85`）。2026-10-26 刷新在 biomcp **1.6.0** 下重跑
+> 两个 MCP 探针（运行时仓库 HEAD `f51c8fa`；其产物携带新的
+> `scenarioSha256` 与 `biomcpPin`）。深度研究 / 访谈 / 周报 / 绘图产物
+> 保留 2026-09-06/09-11 的运行——深度研究两例仍运行 biomcp 1.4.0，待手动
+> opencode 环境刷新；各 `provenance.json` 记录确切的 `gitCommit`、逐技能
+> sha256 与 `scenarioSha256`；清单 sha 与采集不一致时 `check-demos.mjs`
+> 会直接判失败。
 
 | Scenario | Kind | Lang | Outcome | Wall time |
 |---|---|---|---|---|
@@ -71,8 +73,8 @@ All artifacts are **true runs** with commit + sha256 provenance per directory
 | [agent-interview-en](./artifacts/agent-interview-en/README.md) | agent | EN | PASS | 33 s |
 | [agent-pubmed-weekly-en](./artifacts/agent-pubmed-weekly-en/README.md) | agent | EN | PASS (rubric SATISFIED) | 56 s |
 | [agent-plot-making-en](./artifacts/agent-plot-making-en/README.md) | agent | EN | PASS (rubric SATISFIED) | 1064 s |
-| [mcp-tool-tour-en](./artifacts/mcp-tool-tour-en/README.md) | mcp-probe (no LLM) | EN | PASS | 40 s |
-| [mcp-tool-tour-zh](./artifacts/mcp-tool-tour-zh/README.md) | mcp-probe | ZH | PASS | 11 s |
+| [mcp-tool-tour-en](./artifacts/mcp-tool-tour-en/README.md) | mcp-probe (no LLM) | EN | PASS | 66 s |
+| [mcp-tool-tour-zh](./artifacts/mcp-tool-tour-zh/README.md) | mcp-probe | ZH | PASS | 6 s |
 
 ## Replay / 复现
 
@@ -122,10 +124,10 @@ demos/
 
 Self-containment: `demos/` executes no file outside itself at runtime except
 its declared subject — `../skills` (repo-relative; sha256-pinned in every
-provenance) and `biomcp@1.4.0` from npm. No runtime read of `agent-test/`,
+provenance) and `biomcp@1.6.0` from npm. No runtime read of `agent-test/`,
 `scripts/ci/`, or `docs/` (CI-time registry diffing by `check-demos.mjs`
 excepted). / 自包含：运行时除被演示对象（`../skills` 与 npm 的
-`biomcp@1.4.0`）外不读取 `demos/` 之外的任何文件（CI 时点由
+`biomcp@1.6.0`）外不读取 `demos/` 之外的任何文件（CI 时点由
 `check-demos.mjs` 做注册表一致性比对除外）。
 
 ## Notes / 说明
