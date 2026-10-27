@@ -13,7 +13,15 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
 `## [<VERSION>]` section for the release notes).
 
-## [Unreleased]
+## [1.12.0] - 2026-10-27
+
+### Summary
+
+- Repo-wide pin sweep to `biomcp@1.6.0`: bundled server configs, connector server pins, docs, agent-test MCP cases, and the vendored tool registry (43 core + 15 optional).
+- **BREAKING**: the OpenCode connector is rewritten for opencode v2 ONLY — framework-based (`@opencode/plugin`), requires opencode >= 2.0.29; users on opencode v1 stay on `opencode-bioresearcher@1.11.1`.
+- Agent-test harness and suites ported to opencode v2.
+- Skill bumps: `bioresearcher-deep-research` 1.8.0 and `bioresearcher-onboard` 1.2.0.
+- Demos: the `mcp-tool-tour-en/zh` true-run pack is re-captured at biomcp 1.6.0.
 
 ### bioresearcher-deep-research 1.8.0
 

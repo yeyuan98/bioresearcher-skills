@@ -7,7 +7,7 @@
   "description_en": "Biomedical research plugin for OpenCode v2: delivers the bioresearcher skills and the deep-research subagent via the v2 plugin API; the biomcp MCP server (literature, clinical trials, genes, variants, drugs, diseases, patents) is wired through mcp.servers config.",
   "source": "bioresearcher",
   "type": "plugin",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "harness": "opencode",
   "examples_zh": [
     "帮我做一个关于肿瘤免疫治疗的多方面文献综述并附引用",
