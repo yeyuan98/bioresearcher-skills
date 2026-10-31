@@ -1,0 +1,47 @@
+{
+  "id": "deep-research-q08-map-first-offer",
+  "name": "map-first offer: category-discovery query in default mode offers empirical cartography before any research",
+  "level": "L2",
+  "purpose": "Verifies that on a category-discovery-shaped query without prefixes, the Step 1 interview offers the optional map-first empirical cartography (with a recommendation) and asks about the primary scope, while firing zero research queries.",
+  "prompt": "Using the bioresearcher-deep-research skill: deep research on the experimental methods used to measure mitochondrial dynamics in live cells - what approaches exist and which are considered standard? I want a broad, well-organized view of the field.",
+  "inlineResources": [],
+  "timeoutMs": 300000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "[mM]ap-[fF]irst|[cC]artography|[fF]ield mapping",
+      "desc": "the interview must offer the map-first / cartography option"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "[sS]cope|[pP]riorit|[fF]ocus",
+      "desc": "the interview must ask which literature segment is the primary scope (or equivalent clarifiers)"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "\\?",
+      "desc": "the final assistant message must invite a user reply"
+    },
+    {
+      "type": "no_such_tool",
+      "tool": [
+        "biomcp_article_search",
+        "biomcp_trial_search",
+        "biomcp_gene_search"
+      ],
+      "desc": "zero evidence queries before the interview is answered"
+    }
+  ],
+  "expectedOutputs": []
+}

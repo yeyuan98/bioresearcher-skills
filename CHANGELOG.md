@@ -11,7 +11,14 @@ changes appear as `### <skill-name> <x.y.z>` subsections under the repo
 release that ships them; a skill bump that lands between repo releases goes
 under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
-`## [<VERSION>]` section for the release notes).
+  `## [<VERSION>]` section for the release notes).
+
+## [Unreleased]
+
+### bioresearcher-deep-research 1.9.0
+
+- NEW optional `map-first` mode: empirical field cartography before plan review for category-discovery questions (taxonomy/landscape deliverables) - field-, community-, and question-agnostic across the biomedical realm. Adds `references/cartography.md` (primary vs context scope with interview elicitation, two-tier axis dispatch - scoped synthesis-mining + boundary-vocabulary focus axes, anti-pinned context archetypes, conditional venue-sweep remediation, anti-pinning contract with category anchoring rule, taxonomy merge + coverage audit, interaction matrix), a conditional map-first offer inside the Step 1 interview (fires ONLY on category-discovery-shaped queries; primary-scope confirmation when accepted), a Step 1.5 cartography dispatch block, taxonomy-based plan review (the taxonomy walk-through IS the plan review, non-waivable except by `no-interview`, which converts autonomously with rationale recorded in `assumptions.md`), cartographer-worker support in `references/worker-protocol.md`, optional report sections (landscape of unselected categories + decision guide by question scenario, default-on) in `references/report-template.md`, and cartography discipline in `references/analysis-methods.md`. The `bioresearcher-dr-worker` plugin agent conditionally reads the cartography reference for `cartography_*` focuses; shell workers are now told to anchor commands to the workspace root.
+- Backward compatibility: with map-first OFF (not offered, declined, or inapplicable) every step, file, gate, and report section is unchanged - the offer question is the only default-mode addition and it fires only when the category-discovery heuristic matches. The existing deep-research agent-test suite (q01-q07) is untouched and remains the regression guarantee. Three new manual agent-test cases (q08 offer, q09 taxonomy gate, q10 no-interview autonomous degradation) use non-pharma topics to enforce mode genericity.
 
 ## [1.12.0] - 2026-10-27
 

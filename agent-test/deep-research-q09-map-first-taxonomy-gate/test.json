@@ -1,0 +1,37 @@
+{
+  "id": "deep-research-q09-map-first-taxonomy-gate",
+  "name": "map-first interactive: cartography runs, then the category taxonomy and plan are presented for user review before any deep-dive aspects",
+  "level": "L3",
+  "purpose": "Verifies that with map-first accepted, cartography subagents run (>= 2 axes) and the orchestrator ends its turn presenting the tiered category taxonomy / coverage audit and proposed plan for feedback, without dispatching deep-dive aspect workers first.",
+  "prompt": "Using the bioresearcher-deep-research skill, map-first mode. Answers to your Step 1 questions: yes to empirical field mapping; primary scope: academic cell-biology and bioinformatics methods research (NOT drug development); balanced report with explicit readiness tiers. Topic: categories of computational and experimental approaches for correcting batch effects in single-cell RNA-seq data. Proceed with cartography now, then present the category taxonomy and the proposed research plan for my review before any deep-dive research.",
+  "inlineResources": [],
+  "timeoutMs": 1200000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "subagent_count",
+      "min": 2,
+      "max": 5,
+      "desc": "at least two cartography worker subagents dispatched (focus + context axes)"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "[cC]ategor|[tT]axonm|[tT]axonom|[lL]andscape",
+      "desc": "the final assistant message must present the category taxonomy/map"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "\\?",
+      "desc": "the final assistant message must invite plan feedback (taxonomy walk-through gate)"
+    }
+  ],
+  "expectedOutputs": []
+}
