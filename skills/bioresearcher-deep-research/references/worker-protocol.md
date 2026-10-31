@@ -38,6 +38,18 @@ EXECUTION RULE: Do NOT read or inspect evidence-ledger.py or other skill scripts
   startup (via `${CLAUDE_PLUGIN_ROOT}`); the orchestrator sends ONLY the
   filled-in template below.
 
+## Cartographer workers (map-first mode)
+
+Cartography axes use the SAME worker contract (rules 1-9, file protocol,
+completion gate) with two substitutions: the deliverable is a CATEGORY MAP
+(`reports/<TOPIC>/category_map_<axis>.md`: one subsection per anchored
+category - name, one-line description, 1-3 anchor markers, maturity signals,
+surfacing queries - plus a Query Log and Evidence Gaps) instead of an aspect
+report, and the focus name is `cartography_<axis>`. The dispatch prompt
+template, axis archetypes, anti-pinning contract, and anchoring rule live in
+`references/cartography.md`. Tier A workers read that file too when the
+assigned focus starts with `cartography_`.
+
 ## File protocol
 
 - Output files (exactly TWO - together they are the self-contained
@@ -132,7 +144,10 @@ EXECUTION RULE: Do NOT read or inspect evidence-ledger.py or other skill scripts
       `python3 <SKILL_DIR>/scripts/evidence-ledger.py add <file> --stdin`,
       substituting the SKILL_DIR value from your prompt LITERALLY - it is a
       path string, NOT an environment variable (`$SKILL_DIR` in a shell
-      resolves to nothing and breaks the call). Pass records via a shell heredoc
+      resolves to nothing and breaks the call). Anchor every shell command
+      to the workspace root (`cd <workspace root> && python3 <SKILL_DIR>/...`)
+      so relative report paths resolve regardless of the shell's starting
+      directory. Pass records via a shell heredoc
       or with an array/JSONL file (`add <file> @<batch.json>`):
       ```bash
       python3 <SKILL_DIR>/scripts/evidence-ledger.py add reports/<TOPIC>/evidence/<YOUR-FOCUS>.jsonl --stdin << 'EOF'
