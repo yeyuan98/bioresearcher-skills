@@ -1,10 +1,10 @@
 ---
 name: bioresearcher-deep-research
-description: "Deep biomedical research orchestrator powered by the biomcp MCP server: clarifies the question, aligns research area plan with user, decomposes into 2-5 aspects, researches each aspect via subagents (sequential fallback), and synthesizes a fully cited report. Use for deep research, literature review, clinical trials, drugs, genes, variants, diseases, patents, PubMed, functional genomics, biomcp."
+description: "Deep biomedical research orchestrator powered by the biomcp MCP server: clarifies the question, aligns research area plan with user, decomposes into 2-5 aspects, researches each aspect via subagents (sequential fallback), and synthesizes a fully cited report; optional map-first empirical cartography for category/landscape questions. Use for deep research, literature review, clinical trials, drugs, genes, variants, diseases, patents, PubMed, functional genomics, biomcp."
 license: Apache-2.0
 compatibility: "Any Agent Skills harness (opencode, Claude Code, Codex, Cursor, Gemini CLI) with the biomcp MCP server connected; the Claude Code plugin bundles the server and the bioresearcher-dr-worker subagent; a subagent/Task tool is optional - a sequential fallback is provided. The allowed-tools mcp__ entries apply on Claude Code only"
 metadata:
-  version: "1.8.0"
+  version: "1.9.0"
   source: "opencode-bioresearcher-plugin@1.7.2"
 allowed-tools: Read Write Bash Task mcp__plugin_bioresearcher_biomcp mcp__biomcp
 ---
@@ -31,6 +31,10 @@ Harness-agnostic: works with or without a subagent/Task tool.
   generates the bibliography from the merged ledger, and `vet-references.py`
   audits the result (structural + NCBI) - producing `final_report.md` and, by
   default, `final_report.html` (the `no-html` prefix skips rendering).
+- Optionally (map-first mode, for category-discovery questions) maps the
+  field's method/category landscape empirically BEFORE plan review via
+  scoped + anti-pinned cartography workers - see
+  `references/cartography.md`.
 
 ## When to use (triggers)
 
@@ -41,6 +45,8 @@ Harness-agnostic: works with or without a subagent/Task tool.
 - Gene / variant / disease questions (annotations, associations, evidence).
 - Patent landscape or prior-art questions.
 - Multi-entity questions spanning several of the above.
+- Category/landscape discovery ("what methods/approaches/classes exist for
+  X", "landscape of X") - offer the map-first mode (Step 1).
 
 Single-fact lookups (e.g. "what is the HGNC symbol for HER2") do not need the
 full workflow - answer directly with the matching biomcp tool using
@@ -82,6 +88,7 @@ mid-query never trigger.
 | `no-interview` | Skip the interview workflow entirely (both Step 1 questions and Step 2 plan review) |
 | `light-research` | Combine and/or pick only the top TWO aspects (Step 2) |
 | `no-html` | Skip the Step 6 HTML rendering (markdown-only output) |
+| `map-first` | Run empirical field cartography (Step 1.5) before plan review, for category-discovery questions - see `references/cartography.md` |
 
 ## Workflow
 
@@ -102,6 +109,29 @@ answer your own questions. If the query carries `no-interview`, skip to Step 2.
 - Degrade to defaults ONLY if the question tool returns immediately empty in an
   unattended session: write questions and chosen defaults to
   `reports/<TOPIC>/assumptions.md` and cite that file in Limitations.
+
+**Map-first offer (conditional):** if the query is category-discovery shaped
+(the deliverable is a taxonomy/landscape: "what methods/approaches/classes/
+evidence types exist", "landscape of", "how is X done across ..."), include
+ONE additional interview question offering empirical cartography (recommend
+ON); if accepted, confirm the PRIMARY SCOPE in the same message per
+`references/cartography.md`. Entity-anchored queries: never ask. The
+`map-first` prefix forces the mode on without the question. When the mode is
+off (not offered or declined), Steps 1-6 run exactly as if this feature did
+not exist.
+
+### Step 1.5: Cartography (map-first mode only)
+
+Skipped entirely when map-first is off. Dispatch cartographers per
+`references/cartography.md`: 2 focus-tier axes scoped to the confirmed
+primary scope (synthesis-mining, boundary-vocabulary) plus 1-2 anti-pinned
+context axes, using the same tier dispatch, ledger discipline, and
+completion gates as Step 4 (cartographer template and anti-pinning contract
+live in the reference). Then merge the axis maps into
+`reports/<TOPIC>/category_taxonomy.md` (tiered categories, coverage audit
+against >= 2 scope-internal syntheses, unanchored leads); the venue-sweep
+remediation axis fires only when syntheses are scarce. Cartography ledgers
+land in `evidence/` and merge in Step 5a like any aspect ledger.
 
 ### Step 2: Decompose & Review Plan
 
@@ -125,6 +155,14 @@ focus, primary tools); never paste raw ABSTRACTs into the question UI.
      review the revised plan, present it in a new turn (max 2 rounds).
 4. **Waiver / Degrade:** Skip plan review turn if query has `no-interview`, or
    degrade per Step 1 rules if unattended (record plan in `assumptions.md`).
+
+**Map-first variant:** the plan review operates on the category taxonomy
+(`references/cartography.md`): present tiers, coverage-audit results, and a
+recommended selection; iterate until confirmed - this taxonomy walk-through
+IS the plan review, non-waivable except by `no-interview` (autonomous
+conversion records its rationale in `assumptions.md`). Selected categories
+become the aspects; each still gets a full deep-dive ABSTRACT with binding
+inclusion/exclusion criteria.
 
 Track finalized aspects in the harness's todo tool (TodoWrite or equivalent).
 
@@ -226,7 +264,9 @@ Read all per-aspect reports. Summarize findings into a succinct, accurate
 final report addressing the user's inquiry, following the mandatory 6-section
 structure in `references/report-template.md` (Executive Summary, Data Sources,
 Analysis Methodology, Findings, Limitations, References - the References
-section itself is generated later by `render`). Reconcile conflicting findings
+section itself is generated later by `render`). Under map-first, also apply
+that reference's optional landscape and decision-guide sections (decision
+guide default-on). Reconcile conflicting findings
 across aspects explicitly rather than silently dropping one side.
 
 Write the synthesized draft to `reports/<TOPIC>/final_report.draft.md` citing
@@ -336,9 +376,14 @@ python3 <skill_dir>/scripts/vet-references.py reports/<TOPIC>/final_report.md --
 ```
 reports/<TOPIC>/
 ├── plan.md                # durable research plan (Step 3; boundaries live here)
+├── category_map_<axis>.md # per-axis cartography maps (map-first only)
+├── category_taxonomy.md   # merged tiered taxonomy + coverage audit
+│                          # (map-first only)
 ├── evidence/
 │   ├── <aspect_1>.jsonl    # per-aspect evidence ledger (worker-written)
 │   ├── <aspect_2>.jsonl
+│   ├── cartography_<axis>.jsonl  # cartography ledgers (map-first only;
+│   │                             # merge like aspect ledgers)
 │   ├── ...
 │   ├── _invalid.jsonl      # merge quarantine (only when malformed lines occur)
 │   └── sources.jsonl       # merged + verified ledger (Step 5a output)
@@ -395,6 +440,7 @@ reports/<TOPIC>/
 | File | Contents |
 |------|----------|
 | `references/worker-protocol.md` | Worker prompt template, file protocol, no re-delegation, retry/degrade rules |
+| `references/cartography.md` | map-first mode: scopes, axis archetypes, anti-pinning contract, taxonomy + coverage audit, interaction matrix |
 | `references/tool-selection.md` | Question-type to tool decision tree; sections/limit/pagination patterns; biomcp_ prefix note |
 | `references/article-literature.md` | article_search / article_get: sources, dateRange, citations |
 | `references/clinical-trials.md` | trial_search / trial_get: filters, cursor paging, sections |

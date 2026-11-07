@@ -31,6 +31,7 @@ An aspect is DONE when ALL of these hold:
 | Variant evidence | Variant annotation + (if token) OncoKB + trials | variant_search, variant_get, variant_oncokb |
 | Patent landscape | 10-30 patents incl. seminal prior art | patent_search, patent_get |
 | Dataset hunt | Candidate accessions + linked publication | geo_search, sra_search, genbank_search |
+| Category cartography (map-first) | 15-30 anchored categories per axis; every category >= 1 synthesis structure or >= 2 primaries | article_search, article_get |
 
 ## Source-quality rules
 
@@ -117,6 +118,20 @@ ABSTRACT; these rules govern how workers apply any such criteria.
    framework adherence (unplaceable findings go to Limitations, never into
    improvised categories); re-check rules 1-2 whenever synthesis rewords a
    claim or transcribes a number from an aspect report.
+
+## Cartography discipline (map-first mode)
+
+- Category anchoring bar: a listed category needs >= 1 retrieved synthesis
+  whose structure demonstrably contains it, or >= 2 primary records -
+  keyword overlap is not coverage (anti-pinning contract:
+  `references/cartography.md`).
+- Scope-relative tiers: adoption tiers (1/2/3) are relative to the primary
+  scope's own practice; state the reference frame, never present a tier as
+  absolute.
+- Coverage audit: the merged taxonomy is reconciled against >= 2
+  scope-internal syntheses; synthesis-enumerated categories missing from
+  the map are added or declared as gaps - silent omission is the failure
+  mode this audit exists to catch.
 
 ## Failure modes
 

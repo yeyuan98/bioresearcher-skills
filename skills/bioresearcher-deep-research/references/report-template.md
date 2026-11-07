@@ -67,6 +67,23 @@ the source of truth for citations]
 [queries that failed after retries, with reasons]
 ```
 
+## Map-first optional sections
+
+When the run used empirical cartography (SKILL.md Step 1.5), two OPTIONAL
+sections extend the mandatory structure. Both cite through the normal
+merged-ledger markers - cartography anchors are ordinary ledger records.
+
+- **Landscape** (inside Findings, after the selected aspects): one line per
+  discovered-but-unselected category, citing its cartography anchors -
+  acknowledged, not researched; the report must say so explicitly.
+- **Decision guide by question scenario** (after the findings/evidence
+  tables; DEFAULT-ON in map-first mode, skippable only if the user
+  declines): one compact table per user-confirmed question scenario -
+  scenario | recommended method sequence | tier | caveat - built only from
+  ledger-verified sources, with tiers labeled scope-relative.
+- Taxonomy disagreements between the field's own syntheses are reported in
+  Analysis Methodology or Findings - never silently resolved.
+
 ## Citation placement rules
 
 - Authored text uses semantic cite-key markers `[@pmid:...]`, groups

@@ -1,0 +1,42 @@
+{
+  "id": "deep-research-q10-map-first-no-interview",
+  "name": "map-first + no-interview: autonomous taxonomy-to-plan conversion with recorded rationale and full map-first report sections",
+  "level": "L3",
+  "purpose": "Verifies the unattended map-first path: cartography runs, the taxonomy-to-plan conversion is performed autonomously with rationale recorded (plan.md / assumptions.md), and the final report includes the map-first sections (landscape of unselected categories, decision guide).",
+  "prompt": "Using the bioresearcher-deep-research skill: no-interview map-first deep research on the landscape of evidence types used to support microbiome-gut-brain axis claims. Infer the primary scope from the query, run cartography, select the aspects yourself with recorded rationale, and produce the final cited report including the default map-first sections.",
+  "inlineResources": [],
+  "timeoutMs": 1800000,
+  "checks": [
+    {
+      "type": "tool_count",
+      "tool": "skill",
+      "min": 1
+    },
+    {
+      "type": "subagent_count",
+      "min": 2,
+      "desc": "cartography plus aspect workers dispatched end to end"
+    },
+    {
+      "type": "text",
+      "source": "assistant",
+      "op": "regex",
+      "expect": "[aA]ssumption|[cC]overage [aA]udit|[rR]ationale",
+      "desc": "the orchestrator must narrate the autonomous conversion and coverage audit"
+    },
+    {
+      "type": "text",
+      "source": "final",
+      "op": "regex",
+      "expect": "[rR]eport|[cC]omplete",
+      "desc": "the run must conclude with a report summary"
+    },
+    {
+      "type": "rubric",
+      "manual": true,
+      "flag": "map-first-autonomous-conversion-artifacts",
+      "desc": "Human: verify reports/<TOPIC>/plan.md + assumptions.md contain the category-selection rationale and coverage-audit outcome, and the final report carries landscape + decision-guide sections."
+    }
+  ],
+  "expectedOutputs": []
+}

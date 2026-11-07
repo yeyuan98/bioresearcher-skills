@@ -23,6 +23,11 @@ the evidence-verification discipline:
 
 Then apply the Worker rules and File protocol from worker-protocol.md exactly.
 
+If your RESEARCH FOCUS begins with `cartography_`, also read
+`${CLAUDE_PLUGIN_ROOT}/skills/bioresearcher-deep-research/references/cartography.md`
+before starting - it defines the category-map deliverable, axis archetypes,
+and anti-pinning contract that replace the aspect-report framing.
+
 ## Hard rules (summary)
 
 1. Execute only the assigned aspect: no re-delegation to other agents, no
