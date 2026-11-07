@@ -13,7 +13,12 @@ under `## [Unreleased]` and is folded into the next `## [x.y.z]` section
 when that release PR is cut (the release workflow extracts only the
   `## [<VERSION>]` section for the release notes).
 
-## [Unreleased]
+## [1.13.0] - 2026-11-07
+
+### Summary
+
+- Skill feature release: `bioresearcher-deep-research` 1.9.0 — optional map-first empirical cartography mode for category-discovery questions, plus three new manual agent-test cases (q08 offer, q09 taxonomy gate, q10 no-interview degradation).
+- No connector rewrites, harness changes, or dependency pin changes; the repo version bump delivers the updated skill to plugin marketplace and connector users.
 
 ### bioresearcher-deep-research 1.9.0
 
